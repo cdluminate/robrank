@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-from . import res18
+import torch as th
+import pytorch_lightning as thl
+from .template import MetricTemplate28
 
 
-class Model(res18.Model):
-    '''
-    ResNet-152 For Ranking
-    '''
-    RESNET = 'resnet101'
+class Model(MetricTemplate28, thl.LightningModule):
+    is_advtrain = False
+    do_svd = False
+    backbone = 'c2f1'

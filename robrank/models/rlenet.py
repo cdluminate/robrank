@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-from . import c2f1
+from . import rc2f1
 
 
-class Model(c2f1.Model):
-    NET = 'rlenet'
+class Model(rc2f1.Model):
+    NET = 'lenet'

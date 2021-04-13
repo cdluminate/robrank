@@ -14,26 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-from . import lenet
-from . import rlenet as rl
-from . import rlenetd as rld
-from . import rlenete as rle
-from . import c2f2
-from . import c2f1
-from . import c2f1d
-from . import c2f1e
-from . import res18s
-from . import res18
-from . import res18d
-from . import res18e
-from . import res50
-from . import res50d
-from . import res101
-from . import res152
-from . import mnas05
-from . import mnas10
-from . import mnas10d
-from . import mnas13
-from . import enb0
-from . import enb0d
-from . import enb4
+# Naming conventions for these models
+# <task><backbone><modifier>
+# task in {c, r, h} for classification, ranking, hybrid
+# backbone e.g. lenet, res18, mnas10
+# moddifier in {, d, e} for vanilla, advrank:defense, experimental defense
+
+# Classification
+from . import cc2f2
+from . import clenet
+from . import csres18
+
+# Ranking / Metric Learning
+from . import rc2f1
+from . import rc2f1d
+from . import rc2f1e
+from . import rlenet
+from . import rlenetd
+from . import rlenete
+from . import rmnas05
+from . import rmnas10
+from . import rmnas10d
+from . import rres18
+from . import rres18d
+from . import rres18e
+from . import rres50
+from . import rres50d
+
+# Hybrid Metric+Classification models
+# TODO

@@ -90,6 +90,18 @@ def pdist(repres: th.Tensor, metric: str) -> th.Tensor:
     return pdist
 
 
+def orthogonalRegularization(model, loss):
+    losses = []
+    for m in model.modules():
+        if isinstance(m, th.nn.Linear):
+            w = m.weight
+            mat = th.matmul(w, w.t())
+            diff = mat - th.diag(th.diag(mat))
+            loss = th.mean(th.pow(diff, 2))
+            losses.append(loss)
+    return th.sum(losses)
+
+
 @contextlib.contextmanager
 def openlock(*args, **kwargs):
     lock = open(*args, **kwargs)

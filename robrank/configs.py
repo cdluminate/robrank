@@ -211,6 +211,7 @@ class lenet(__classify_model_28x28):
     batchsize: int = 1000
     lr: float = 1e-3
     weight_decay: float = 1e-7
+    validate_every: int = 1
 
 
 @dataclass
@@ -220,6 +221,7 @@ class c2f2(__classify_model_28x28):
     batchsize: int = 1000
     lr: float = 1e-3
     weight_decay: float = 1e-7
+    validate_every: int = 1
 
 
 @dataclass
@@ -241,7 +243,7 @@ class c2f1(__ranking_model_28x28):
 
 
 @dataclass
-class res18s(__classify_model_32x32):
+class csres18(__classify_model_32x32):
     maxepoch: int = 200  # [lock] resnet
     validate_every: int = 1
     loader_num_workers: int = min(8, mp.cpu_count())
@@ -250,6 +252,7 @@ class res18s(__classify_model_32x32):
     momentum: float = 9e-1  # [lock] resnet
     milestones: tuple = (100, 150)  # [lock] resnet
     weight_decay: float = 2e-4  # [lock] resnet
+    validate_every: int = 1
 
 
 @dataclass

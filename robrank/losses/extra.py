@@ -110,6 +110,7 @@ def test_pcontN():
     loss = pcontN()(output, labels)
     loss.backward()
 
+
 def test_pncaN():
     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
     loss = pncaN()(output, labels)

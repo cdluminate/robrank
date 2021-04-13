@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-from . import res18
+from . import rres18
 
 
-class Model(res18.Model):
-    RESNET = 'efficientnet-b0'
-    is_advtrain = True
+class Model(rres18.Model):
+    BACKBONE = 'mnas10'

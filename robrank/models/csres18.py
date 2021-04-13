@@ -169,27 +169,27 @@ class Model(ClassifierTemplate, thl.LightningModule):
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
         # dataset setup
-        assert(dataset in configs.res18s.allowed_datasets)
-        assert(loss in configs.res18s.allowed_losses)
+        assert(dataset in configs.csres18.allowed_datasets)
+        assert(loss in configs.csres18.allowed_losses)
         self.dataset = dataset
         self.loss = loss
-        self.config = configs.res18s(dataset, loss)
+        self.config = configs.csres18(dataset, loss)
         # modules
-        self.res18s = ResNet18()
+        self.sres18 = ResNet18()
 
     def forward(self, x):
         with th.no_grad():
             x = utils.renorm(x)
-        x = self.res18s(x)
+        x = self.sres18(x)
         return x
 
     def configure_optimizers(self):
         optim = th.optim.SGD(
-            self.parameters(), lr=configs.res18s.lr, momentum=configs.res18s.momentum,
-            weight_decay=configs.res18s.weight_decay)
-        if hasattr(configs.res18s, 'milestones'):
+            self.parameters(), lr=configs.csres18.lr, momentum=configs.csres18.momentum,
+            weight_decay=configs.csres18.weight_decay)
+        if hasattr(configs.csres18, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
-                                                          milestones=configs.res18s.milestones, gamma=0.1)
+                                                          milestones=configs.csres18.milestones, gamma=0.1)
             return [optim], [scheduler]
         return optim
 
@@ -200,15 +200,15 @@ class Model(ClassifierTemplate, thl.LightningModule):
 
     def train_dataloader(self):
         train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=configs.res18s.batchsize,
+                                                batch_size=configs.csres18.batchsize,
                                                 shuffle=True,
                                                 pin_memory=True,
-                                                num_workers=configs.res18s.loader_num_workers)
+                                                num_workers=configs.csres18.loader_num_workers)
         return train_loader
 
     def val_dataloader(self):
         val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=configs.res18s.batchsize,
+                                              batch_size=configs.csres18.batchsize,
                                               pin_memory=True,
-                                              num_workers=configs.res18s.loader_num_workers)
+                                              num_workers=configs.csres18.loader_num_workers)
         return val_loader

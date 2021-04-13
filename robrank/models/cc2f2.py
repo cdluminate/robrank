@@ -25,39 +25,6 @@ from termcolor import cprint
 from .template import ClassifierTemplate
 
 
-class LeNet(th.nn.Module):
-    """
-    LeNet convolutional neural network for classification
-    """
-
-    def __init__(self):
-        '''
-        reference: Caffe-LeNet
-        '''
-        super(LeNet, self).__init__()
-        self.conv1 = th.nn.Conv2d(1, 20, 5, stride=1)
-        self.conv2 = th.nn.Conv2d(20, 50, 5, stride=1)
-        self.fc1 = th.nn.Linear(800, 500)
-        self.fc2 = th.nn.Linear(500, 10)
-
-    def forward(self, x, *, l2norm=False):
-        # -1, 1, 28, 28
-        x = self.conv1(x)
-        # -1, 20, 24, 24
-        x = th.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
-        # -1, 20, 12, 12
-        x = self.conv2(x)
-        # -1, 50, 8, 8
-        x = th.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
-        # -1, 50, 4, 4
-        x = x.view(-1, 4 * 4 * 50)
-        # -1, 800
-        x = th.nn.functional.relu(self.fc1(x))
-        # -1, 500
-        x = self.fc2(x)
-        return x
-
-
 class Model(ClassifierTemplate, thl.LightningModule):
     '''
     A 2-Conv Layer 2-FC Layer Network for Classification
@@ -66,19 +33,33 @@ class Model(ClassifierTemplate, thl.LightningModule):
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
         # dataset setup
-        assert(dataset in configs.lenet.allowed_datasets)
-        assert(loss in configs.lenet.allowed_losses)
+        assert(dataset in configs.c2f2.allowed_datasets)
+        assert(loss in configs.c2f2.allowed_losses)
         self.dataset = dataset
         # modules
-        self.lenet = LeNet()
+        self.conv1 = th.nn.Conv2d(1, 32, kernel_size=5, padding=2)
+        self.conv2 = th.nn.Conv2d(32, 64, kernel_size=5, padding=2)
+        self.fc1 = th.nn.Linear(64 * 7 * 7, 1024)
+        self.fc2 = th.nn.Linear(1024, 10)
+        # config
+        self.config = getattr(configs, 'c2f2')(dataset, loss)
 
     def forward(self, x):
-        x = self.lenet(x)
+        __relu = th.nn.functional.relu
+        __pool = th.nn.functional.max_pool2d
+        x = __relu(self.conv1(x))  # -1, 32, 28, 28
+        x = __pool(x, kernel_size=2, stride=2)  # -1, 32, 14, 14
+        x = __relu(self.conv2(x))  # -1, 64, 14, 14
+        x = __pool(x, kernel_size=2, stride=2)  # -1, 64, 7, 7
+        x = x.view(-1, 64 * 7 * 7)
+        x = __relu(self.fc1(x))  # -1, 1024
+        x = th.nn.functional.dropout(x, p=0.4, training=self.training)
+        x = self.fc2(x)
         return x
 
     def configure_optimizers(self):
         optim = th.optim.Adam(
-            self.parameters(), lr=configs.lenet.lr, weight_decay=configs.lenet.weight_decay)
+            self.parameters(), lr=configs.c2f2.lr, weight_decay=configs.c2f2.weight_decay)
         return optim
 
     def setup(self, stage=None):
@@ -89,22 +70,22 @@ class Model(ClassifierTemplate, thl.LightningModule):
 
     def train_dataloader(self):
         train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=configs.lenet.batchsize,
+                                                batch_size=configs.c2f2.batchsize,
                                                 shuffle=True,
                                                 pin_memory=True,
-                                                num_workers=configs.lenet.loader_num_workers)
+                                                num_workers=configs.c2f2.loader_num_workers)
         return train_loader
 
     def val_dataloader(self):
         val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=configs.lenet.batchsize,
+                                              batch_size=configs.c2f2.batchsize,
                                               pin_memory=True,
-                                              num_workers=configs.lenet.loader_num_workers)
+                                              num_workers=configs.c2f2.loader_num_workers)
         return val_loader
 
     def test_dataloader(self):
         test_loader = th.utils.data.DataLoader(self.data_test,
-                                               batch_size=configs.lenet.batchsize,
+                                               batch_size=configs.c2f2.batchsize,
                                                pin_memory=True,
-                                               num_workers=configs.lenet.loader_num_workers)
+                                               num_workers=configs.c2f2.loader_num_workers)
         return test_loader

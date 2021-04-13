@@ -13,14 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-
 import torch as th
+import torchvision as vision
 import pytorch_lightning as thl
+from pytorch_lightning.utilities.enums import DistributedType
 import os
+import re
 import pytorch_lightning.metrics.functional
 import torch.nn.functional as F
 from .. import datasets
 from .. import configs
+from .. import utils
 import multiprocessing as mp
 from termcolor import cprint
 import numpy as np
@@ -28,11 +31,22 @@ from sklearn.metrics.cluster import normalized_mutual_info_score as __nmi
 from ..attacks import AdvRank
 from .svdreg import svdreg
 from tqdm import tqdm
+import functools
+from .. import losses
+#
 try:
     import faiss
     faiss.omp_set_num_threads(4)
 except ImportError:
     from sklearn.cluster import KMeans
+#
+try:
+    from efficientnet_pytorch import EfficientNet
+except ImportError:
+    pass
+#
+import rich
+c = rich.get_console()
 
 
 class ClassifierTemplate(object):
@@ -58,8 +72,10 @@ class ClassifierTemplate(object):
         return {'loss': loss.item(), 'accuracy': accuracy}
 
     def validation_epoch_end(self, outputs: list):
-        if self.use_ddp and th.distributed.get_rank() != 0:
-            return
+        if str(self._distrib_type) in (
+                'DistributedType.DDP', 'DistributedType.DDP2'):
+            if th.distributed.get_rank() != 0:
+                return
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
         cprint(
@@ -96,7 +112,7 @@ class MetricBase(object):
                 vallabs.append(labels.detach())
             valvecs, vallabs = th.cat(valvecs), th.cat(vallabs)
         # XXX: in DDP mode the size of valvecs is 10000, looks correct
-        # if self.use_ddp or self.use_ddp2:
+        # if str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
         #    th.distributed.barrier()
         #    sizes_slice = [th.tensor(0).to(self.device)
         #                   for _ in range(th.distributed.get_world_size())]
@@ -230,91 +246,6 @@ class MetricBase(object):
         return loss
 
 
-class MetricTemplate28(MetricBase):
-
-    def validation_step(self, batch, batch_idx):
-        #print('[', th.distributed.get_rank(), ']', batch_idx, '\n')
-        if self._valvecs is None:
-            self._recompute_valvecs()
-        with th.no_grad():
-            images, labels = (batch[0].to(self.device),
-                              batch[1].to(self.device))
-            output = self.forward(images)
-            if self.metric == 'C':
-                output = th.nn.functional.normalize(output, p=2, dim=-1)
-                dist = 1 - th.mm(output, self._valvecs.t())
-            elif self.metric in ('E', 'N'):
-                if self.metric == 'N':
-                    output = th.nn.functional.normalize(output, p=2, dim=-1)
-                #X, D = self._valvecs.size(0), output.size(1)
-                dist = th.cdist(output, self._valvecs)
-                # dist = th.cat(list(map(lambda x: (x.view(x.size(0), 1, D).expand(
-                #     x.size(0), X, D) - self._valvecs.view(1, X, D).expand(x.size(0),
-                #     X, D)).norm(p=2, dim=2), output.split(16))))
-            # XXX: [important] argsort(...)[:,1] for skipping the diagonal
-            # (R@1=1.0)
-            knnsearch = self._vallabs[dist.argsort(
-                dim=1, descending=False)[:, 1]].flatten()
-            recall1 = knnsearch.eq(labels).float().mean()
-            knn2 = self._vallabs[dist.argsort(
-                dim=1, descending=False)[:, 2]].flatten()
-            recall2 = th.logical_or(knn2 == labels, knnsearch == labels).float(
-            ).mean()
-            # AP
-            mAP = []
-            for i in range(dist.size(0)):
-                mAP.append(_get_ap(dist[i], labels[i], self._vallabs))
-            mAP = np.mean(mAP)
-        return {'r@1': recall1.item(), 'r@2': recall2.item(),
-                'mAP': mAP}
-
-    def validation_epoch_end(self, outputs: list):
-        if not hasattr(self, 'use_ddp'):
-            self.use_ddp = False
-            self.use_ddp2 = False
-        if self.use_ddp and th.distributed.get_rank() != 0:
-            return
-        # NMI
-        nmi = _get_nmi(self._valvecs, self._vallabs, self.config.num_class)
-        # if self.use_ddp or self.use_ddp2:
-        #    th.distributed.barrier()
-        #    sizes_slice = [th.tensor(0).to(self.device)
-        #                   for _ in range(th.distributed.get_world_size())]
-        #    size_slice = th.tensor(self._valvecs.size(0)).to(self.device)
-        #    th.distributed.all_gather(sizes_slice, size_slice)
-        #    print(sizes_slice)
-        self._valvecs = None
-        self._vallabs = None
-        summary = {key: np.mean(tuple(
-            x[key] for x in outputs)) for key in outputs[0].keys()}
-        summary['NMI'] = nmi
-        if self.use_ddp or self.use_ddp2:
-            th.distributed.barrier()
-            recall1 = th.tensor(summary['r@1']).to(self.device)
-            th.distributed.all_reduce(recall1, op=th.distributed.ReduceOp.SUM)
-            summary['r@1'] = recall1.item(
-            ) / th.distributed.get_world_size()
-            recall2 = th.tensor(summary['r@2']).to(self.device)
-            th.distributed.all_reduce(recall2, op=th.distributed.ReduceOp.SUM)
-            summary['r@2'] = recall2.item(
-            ) / th.distributed.get_world_size()
-            tmp = th.tensor(summary['mAP']).to(self.device)
-            th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
-            summary['mAP'] = tmp.item() / th.distributed.get_world_size()
-        # write into log
-        self.log('Validation/NMI', summary['NMI'])
-        self.log('Validation/r@1', summary['r@1'])
-        self.log('Validation/r@2', summary['r@2'])
-        self.log('Validation/mAP', summary['mAP'])
-        #
-        cprint(
-            f'\nValidation │ r@1= {summary["r@1"]:.5f}' +
-            f' r@2= {summary["r@2"]:.5f}' +
-            f' mAP= {summary["mAP"]:.3f}' +
-            f' NMI= {summary["NMI"]:.3f}',
-            'yellow')
-
-
 def _get_f1(dist: th.Tensor, label: th.Tensor,
             vallabels: th.Tensor, ks: list):
     pass
@@ -388,7 +319,342 @@ def _get_ap(dist: th.Tensor, label: th.Tensor, vallabels: th.Tensor) -> float:
     return ap
 
 
+###############################################################################
+class MetricTemplate28(MetricBase):
+    '''
+    Deep Metric Learning with MNIST-compatible Network.
+    '''
+    is_advtrain = False
+    do_svd = False
+    backbone = 'c2f1'
+
+    def __init__(self, *, dataset: str, loss: str):
+        super().__init__()
+        # dataset setup
+        assert(dataset in getattr(configs, self.backbone).allowed_datasets)
+        assert(loss in getattr(configs, self.backbone).allowed_losses)
+        self.dataset = dataset
+        self.loss = loss
+        self.lossfunc = getattr(losses, loss)()
+        self.metric = self.lossfunc.determine_metric()
+        self.datasetspec = self.lossfunc.datasetspec()
+        # configuration
+        self.config = getattr(configs, self.backbone)(dataset, loss)
+        # modules
+        if self.backbone == 'c2f1':
+            '''
+            A 2-Conv Layer 1-FC Layer Network For Ranking
+            See [Madry, advrank] for reference.
+            '''
+            self._model = th.nn.Sequential(
+                th.nn.Conv2d(1, 32, kernel_size=5, padding=2),
+                th.nn.ReLU(),
+                th.nn.MaxPool2d(kernel_size=2, stride=2),
+                th.nn.Conv2d(32, 64, kernel_size=5, padding=2),
+                th.nn.ReLU(),
+                th.nn.MaxPool2d(kernel_size=2, stride=2),
+                th.nn.Flatten(),
+                th.nn.Linear(64 * 7 * 7, 1024),
+            )
+        elif self.backbone == 'lenet':
+            self._model = th.nn.Sequential(
+                th.nn.Conv2d(1, 20, kernel_size=5, stride=1),
+                th.nn.MaxPool2d(kernel_size=2, stride=2),
+                th.nn.Conv2d(20, 50, kernel_size=5, stride=1),
+                th.nn.MaxPool2d(kernel_size=2, stride=2),
+                th.nn.Flatten(),
+                th.nn.Linear(800, 500),
+                th.nn.ReLU(),
+                th.nn.Linear(500, 128),
+            )
+        else:
+            raise ValueError('unknown backbone')
+        # validation
+        self._valvecs = None
+        self._vallabs = None
+        # summary
+        c.print('[green]Model Meta Information[/green]', {
+            'dataset': self.dataset,
+            'datasestspec': self.datasetspec,
+            'lossfunc': self.lossfunc,
+            'metric': self.metric,
+            'config': {k: v for (k, v) in self.config.__dict__.items()
+                       if k not in ('allowed_losses', 'allowed_datasets')},
+        })
+
+    def forward(self, x):
+        return self._model(x)
+
+    def configure_optimizers(self):
+        optim = th.optim.Adam(
+            self._model.parameters(), lr=self.config.lr, weight_decay=self.config.weight_decay)
+        if hasattr(self.lossfunc, 'getOptim'):
+            optim2 = self.lossfunc.getOptim()
+            return optim, optim2
+        return optim
+
+    def setup(self, stage=None):
+        train, test = getattr(
+            datasets, self.dataset).getDataset(self.datasetspec)
+        self.data_train = train
+        self.data_val = test
+
+    def train_dataloader(self):
+        train_loader = th.utils.data.DataLoader(self.data_train,
+                                                batch_size=self.config.batchsize,
+                                                shuffle=True,
+                                                pin_memory=True,
+                                                num_workers=self.config.loader_num_workers)
+        return train_loader
+
+    def val_dataloader(self):
+        val_loader = th.utils.data.DataLoader(self.data_val,
+                                              batch_size=self.config.valbatchsize,
+                                              pin_memory=True,
+                                              num_workers=self.config.loader_num_workers)
+        return val_loader
+
+    def validation_step(self, batch, batch_idx):
+        #print('[', th.distributed.get_rank(), ']', batch_idx, '\n')
+        if self._valvecs is None:
+            self._recompute_valvecs()
+        with th.no_grad():
+            images, labels = (batch[0].to(self.device),
+                              batch[1].to(self.device))
+            output = self.forward(images)
+            if self.metric == 'C':
+                output = th.nn.functional.normalize(output, p=2, dim=-1)
+                dist = 1 - th.mm(output, self._valvecs.t())
+            elif self.metric in ('E', 'N'):
+                if self.metric == 'N':
+                    output = th.nn.functional.normalize(output, p=2, dim=-1)
+                #X, D = self._valvecs.size(0), output.size(1)
+                dist = th.cdist(output, self._valvecs)
+                # dist = th.cat(list(map(lambda x: (x.view(x.size(0), 1, D).expand(
+                #     x.size(0), X, D) - self._valvecs.view(1, X, D).expand(x.size(0),
+                #     X, D)).norm(p=2, dim=2), output.split(16))))
+            # XXX: [important] argsort(...)[:,1] for skipping the diagonal
+            # (R@1=1.0)
+            knnsearch = self._vallabs[dist.argsort(
+                dim=1, descending=False)[:, 1]].flatten()
+            recall1 = knnsearch.eq(labels).float().mean()
+            knn2 = self._vallabs[dist.argsort(
+                dim=1, descending=False)[:, 2]].flatten()
+            recall2 = th.logical_or(knn2 == labels, knnsearch == labels).float(
+            ).mean()
+            # AP
+            mAP = []
+            for i in range(dist.size(0)):
+                mAP.append(_get_ap(dist[i], labels[i], self._vallabs))
+            mAP = np.mean(mAP)
+        return {'r@1': recall1.item(), 'r@2': recall2.item(),
+                'mAP': mAP}
+
+    def validation_epoch_end(self, outputs: list):
+        # if str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+        #    #if th.distributed.get_rank() != 0:
+        #    if self.local_rank != 0:
+        #        return
+        # NMI
+        nmi = _get_nmi(self._valvecs, self._vallabs, self.config.num_class)
+        # if str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+        #    th.distributed.barrier()
+        #    sizes_slice = [th.tensor(0).to(self.device)
+        #                   for _ in range(th.distributed.get_world_size())]
+        #    size_slice = th.tensor(self._valvecs.size(0)).to(self.device)
+        #    th.distributed.all_gather(sizes_slice, size_slice)
+        #    print(sizes_slice)
+        self._valvecs = None
+        self._vallabs = None
+        summary = {key: np.mean(tuple(
+            x[key] for x in outputs)) for key in outputs[0].keys()}
+        summary['NMI'] = nmi
+        if str(self._distrib_type) in (
+                'DistributedType.DDP', 'DistributedType.DDP2'):
+            #print(self._distrib_type, th.distributed.get_rank())
+            th.distributed.barrier()
+            recall1 = th.tensor(summary['r@1']).to(self.device)
+            th.distributed.all_reduce(recall1, op=th.distributed.ReduceOp.SUM)
+            summary['r@1'] = recall1.item(
+            ) / th.distributed.get_world_size()
+            recall2 = th.tensor(summary['r@2']).to(self.device)
+            th.distributed.all_reduce(recall2, op=th.distributed.ReduceOp.SUM)
+            summary['r@2'] = recall2.item(
+            ) / th.distributed.get_world_size()
+            tmp = th.tensor(summary['mAP']).to(self.device)
+            th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
+            summary['mAP'] = tmp.item() / th.distributed.get_world_size()
+        # write into log
+        self.log('Validation/NMI', summary['NMI'])
+        self.log('Validation/r@1', summary['r@1'])
+        self.log('Validation/r@2', summary['r@2'])
+        self.log('Validation/mAP', summary['mAP'])
+        #
+        cprint(
+            f'\nValidation │ r@1= {summary["r@1"]:.5f}' +
+            f' r@2= {summary["r@2"]:.5f}' +
+            f' mAP= {summary["mAP"]:.3f}' +
+            f' NMI= {summary["NMI"]:.3f}',
+            'yellow')
+
+
+###############################################################################
 class MetricTemplate224(MetricBase):
+    '''
+    Deep Metric Learning with Imagenet compatible network (2002.08473)
+
+    Overload the backbone vairable to switch to resnet50, mnasnet,
+    or even the efficientnet.
+    '''
+    BACKBONE = 'resnet18'
+    is_advtrain = False
+    do_svd = False
+
+    def __init__(self, *, dataset: str, loss: str):
+        super().__init__()
+        # configuration
+        if self.BACKBONE == 'resnet18':
+            self.config = configs.res18(dataset, loss)
+            self.backbone = vision.models.resnet18(pretrained=True)
+        elif self.BACKBONE == 'resnet50':
+            self.config = configs.res50(dataset, loss)
+            self.backbone = vision.models.resnet50(pretrained=True)
+        elif self.BACKBONE == 'resnet101':
+            self.config = configs.res50(dataset, loss)
+            self.backbone = vision.models.resnet101(pretrained=True)
+        elif self.BACKBONE == 'resnet152':
+            self.config = configs.res50(dataset, loss)
+            self.backbone = vision.models.resnet152(pretrained=True)
+        elif self.BACKBONE == 'mnas05':
+            self.config = configs.mnas(dataset, loss)
+            self.backbone = vision.models.mnasnet0_5(pretrained=True)
+        elif self.BACKBONE == 'mnas10':
+            self.config = configs.mnas(dataset, loss)
+            self.backbone = vision.models.mnasnet1_0(pretrained=True)
+        elif self.BACKBONE == 'mnas13':
+            self.config = configs.mnas(dataset, loss)
+            self.backbone = vision.models.mnasnet1_3(pretrained=True)
+        elif self.BACKBONE == 'efficientnet-b0':
+            self.config = configs.enb0(dataset, loss)
+            self.backbone = EfficientNet.from_pretrained('efficientnet-b0')
+        elif self.BACKBONE == 'efficientnet-b4':
+            self.config = configs.enb4(dataset, loss)
+            self.backbone = EfficientNet.from_pretrained('efficientnet-b4')
+        elif self.BACKBONE == 'efficientnet-b7':
+            self.config = configs.enb7(dataset, loss)
+            self.backbone = EfficientNet.from_pretrained('efficientnet-b7')
+        else:
+            raise ValueError()
+        assert(dataset in self.config.allowed_datasets)
+        self.dataset = dataset
+        assert(loss in self.config.allowed_losses)
+        self.loss = loss
+        self.lossfunc = getattr(losses, loss)()
+        self.metric = self.lossfunc.determine_metric()
+        self.datasetspec = self.lossfunc.datasetspec()
+        # modules
+        if re.match(r'resnet',
+                    self.BACKBONE) and self.config.embedding_dim > 0:
+            if '18' in self.BACKBONE:
+                emb_dim = 512
+            elif '50' in self.BACKBONE:
+                emb_dim = 2048
+            else:
+                emb_dim = 2048
+            self.backbone.fc = th.nn.Linear(emb_dim, self.config.embedding_dim)
+        elif re.match(r'resnet', self.BACKBONE):
+            self.backbone.fc = th.nn.Identity()
+        elif re.match(r'mnas', self.BACKBONE) and self.config.embedding_dim > 0:
+            self.backbone.classifier = th.nn.Linear(
+                1280, self.config.embedding_dim)
+        elif re.match(r'mnas', self.BACKBONE):
+            self.backbone.classifier = th.nn.Identity()
+        elif re.match(r'efficientnet', self.BACKBONE) and self.config.embedding_dim > 0:
+            if 'b0' in self.BACKBONE:
+                emb_dim = 1280
+            elif 'b7' in self.BACKBONE:
+                emb_dim = 2560
+            self.backbone._modules['_dropout'] = th.nn.Identity()
+            self.backbone._modules['_fc'] = th.nn.Linear(
+                emb_dim, self.config.embedding_dim)
+            # self.backbone._modules['_swish'] = th.nn.Identity() # XXX: don't
+            # override swish.
+        elif re.match(r'efficientnet', self.BACKBONE):
+            self.backbone._modules['_dropout'] = th.nn.Identity()
+            self.backbone._modules['_fc'] = th.nn.Identity()
+            # self.backbone._modules['_swish'] = th.nn.Identity() # XXX: don't
+            # override swish.
+        # Freeze BatchNorm2d
+        if self.config.freeze_bn and not self.is_advtrain:
+            def __freeze(mod):
+                if isinstance(mod, th.nn.BatchNorm2d):
+                    mod.eval()
+                    mod.train = lambda _: None
+            # self.backbone.apply(__freeze)
+            for mod in self.backbone.modules():
+                __freeze(mod)
+        # validation
+        self._valvecs = None
+        self._vallabs = None
+        # adversarial attack
+        self.wantsgrad = False
+        # Dump configurations
+        c.print('[green]Model Meta Information[/green]', {
+            'dataset': self.dataset,
+            'datasestspec': self.datasetspec,
+            'lossfunc': self.lossfunc,
+            'metric': self.metric,
+            'config': {k: v for (k, v) in self.config.__dict__.items()
+                       if k not in ('allowed_losses', 'allowed_datasets')},
+        })
+
+    def forward(self, x):
+        if self.wantsgrad:
+            return self.forward_wantsgrad(x)
+        x = x.view(-1, 3, 224, 224)  # incase of datasetspec in ('p', 't')
+        with th.no_grad():
+            x = utils.renorm(x)
+        x = self.backbone(x)
+        return x
+
+    def forward_wantsgrad(self, x):
+        x = utils.renorm(x.view(-1, 3, 224, 224))
+        x = self.backbone(x)
+        return x
+
+    def configure_optimizers(self):
+        optim = th.optim.Adam(
+            self.backbone.parameters(),
+            lr=self.config.lr, weight_decay=self.config.weight_decay)
+        if hasattr(self.config, 'milestones'):
+            scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
+                                                          milestones=self.config.milestones, gamma=0.1)
+            return [optim], [scheduler]
+        if hasattr(self.lossfunc, 'getOptim'):
+            optim2 = self.lossfunc.getOptim()
+            return optim, optim2
+        return optim
+
+    def setup(self, stage=None):
+        train, test = getattr(
+            datasets, self.dataset).getDataset(self.datasetspec)
+        self.data_train = train
+        self.data_val = test
+
+    def train_dataloader(self):
+        train_loader = th.utils.data.DataLoader(self.data_train,
+                                                batch_size=self.config.batchsize,
+                                                shuffle=True,
+                                                pin_memory=True,
+                                                num_workers=self.config.loader_num_workers)
+        return train_loader
+
+    def val_dataloader(self):
+        val_loader = th.utils.data.DataLoader(self.data_val,
+                                              batch_size=self.config.valbatchsize,
+                                              pin_memory=True,
+                                              num_workers=self.config.loader_num_workers)
+        return val_loader
 
     def validation_step(self, batch, batch_idx):
         if self._valvecs is None:
@@ -423,11 +689,10 @@ class MetricTemplate224(MetricBase):
         return {'r@M': r, 'r@1': r_1, 'r@2': r_2, 'mAP': mAP}
 
     def validation_epoch_end(self, outputs: list):
-        if not hasattr(self, 'use_ddp'):
-            self.use_ddp = False
-            self.use_ddp2 = False
-        if self.use_ddp and th.distributed.get_rank() != 0:
-            return
+        # if str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+        #    #if th.distributed.get_rank() != 0:
+        #    if self.local_rank != 0:
+        #        return
         # BEGIN: Calculate the rest scores
         nmi = _get_nmi(self._valvecs, self._vallabs, self.config.num_class)
         self.log('Validation/NMI', nmi)
@@ -436,7 +701,8 @@ class MetricTemplate224(MetricBase):
         self._vallabs = None
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
-        if self.use_ddp or self.use_ddp2:
+        if str(self._distrib_type) in (
+                'DistributedType.DDP', 'DistributedType.DDP2'):
             th.distributed.barrier()
             for key in summary.keys():
                 tmp = th.tensor(summary[key]).to(self.device)
