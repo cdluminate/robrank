@@ -1,14 +1,16 @@
-robrank
+RobRank
 ===
 
-# References
+A re-implementation of [AdvRank](https://github.com/cdluminate/advrank).
+
+### References
 
 1. https://github.com/Confusezius/Deep-Metric-Learning-Baselines
 2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
 3. https://github.com/idstcv/SoftTriple
 4. https://github.com/KevinMusgrave/pytorch-metric-learning
 
-# Copyright and License
+### Copyright and License
 
 ```
 Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
