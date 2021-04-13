@@ -1,0 +1,28 @@
+#!/bin/bash
+# Copyright (C) 2020 Mo Zhou <lumin@debian.org>
+# License: MIT/Expat
+set -e
+unset TMUX
+Usage(){
+  echo $0 -- dump the whole tmux session to a series of log files
+  echo Usage: $0 session
+}
+if test -z "$1"; then
+  echo Please specify a session! && false
+fi
+session="$1"
+echo ::: Trying to dump session "$session"
+
+wids=( $(tmux list-windows -t $session | awk '{print $1}' | sed -e 's/://g') )
+names=( $(tmux list-windows -t $session | awk '{print $2}') )
+echo ::: Found ${#wids[@]} windows
+
+for i in $(seq 0 $((${#wids[@]}-1))); do
+  wid=${wids[$i]}
+  name=${names[$i]}
+  echo Processing window $(($i+1)): wid=${wid} name=${name}
+  tmux attach -t ${session}:${wid}\;\
+	  capture-pane -S -\;\
+	  saveb ${session}_${wid}_${name}.log\;\
+	  detach
+done

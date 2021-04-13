@@ -1,0 +1,20 @@
+torch (>= 1.7.0)
+torchvision
+efficientnet-pytorch
+joblib
+ipython
+matplotlib
+Pillow
+pygments
+scipy
+scikit-learn
+termcolor
+tqdm
+faiss-gpu
+numpy
+pandas
+pretrainedmodels
+pytest
+pytorch-lightning
+rich
+pytorch-metric-learning (>= 0.9.98)
