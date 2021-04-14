@@ -17,5 +17,5 @@ from . import rres18
 
 
 class Model(rres18.Model):
-    BACKBONE = 'mnas10'
+    BACKBONE = 'rmnas10'
     is_advtrain = True

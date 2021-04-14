@@ -45,7 +45,7 @@ import torch
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-from .template import ClassifierTemplate
+from .template_classify import ClassifierTemplate
 
 
 class BasicBlock(nn.Module):
@@ -165,6 +165,7 @@ class Model(ClassifierTemplate, thl.LightningModule):
     '''
     A 2-Conv Layer 2-FC Layer Network for Classification
     '''
+    BACKBONE = 'csres18'
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
@@ -174,41 +175,4 @@ class Model(ClassifierTemplate, thl.LightningModule):
         self.dataset = dataset
         self.loss = loss
         self.config = configs.csres18(dataset, loss)
-        # modules
-        self.sres18 = ResNet18()
-
-    def forward(self, x):
-        with th.no_grad():
-            x = utils.renorm(x)
-        x = self.sres18(x)
-        return x
-
-    def configure_optimizers(self):
-        optim = th.optim.SGD(
-            self.parameters(), lr=configs.csres18.lr, momentum=configs.csres18.momentum,
-            weight_decay=configs.csres18.weight_decay)
-        if hasattr(configs.csres18, 'milestones'):
-            scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
-                                                          milestones=configs.csres18.milestones, gamma=0.1)
-            return [optim], [scheduler]
-        return optim
-
-    def setup(self, stage=None):
-        train, val, test = getattr(datasets, self.dataset).getDataset()
-        self.data_train = train
-        self.data_val = test
-
-    def train_dataloader(self):
-        train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=configs.csres18.batchsize,
-                                                shuffle=True,
-                                                pin_memory=True,
-                                                num_workers=configs.csres18.loader_num_workers)
-        return train_loader
-
-    def val_dataloader(self):
-        val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=configs.csres18.batchsize,
-                                              pin_memory=True,
-                                              num_workers=configs.csres18.loader_num_workers)
-        return val_loader
+        self.backbone = ResNet18()

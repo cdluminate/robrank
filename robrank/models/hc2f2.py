@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 import torch as th
-from .template_rank import MetricTemplate224
 import pytorch_lightning as thl
+from .template_hybrid import HybridModelBase
 
 
-class Model(MetricTemplate224, thl.LightningModule):
-    BACKBONE = 'rres18'
+class Model(HybridModelBase, thl.LightningModule):
     is_advtrain = False
     do_svd = False
+    BACKBONE = 'hc2f1'

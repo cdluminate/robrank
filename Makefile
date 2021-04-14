@@ -36,3 +36,11 @@ pytest:
 
 runtest:
 	$(MAKE) -C robrank runtest
+
+train-attack-defense-mnist-rc2f1-ptripletN:
+	python3 train.py -C mnist:rc2f1:ptripletN
+	python3 swipe.py -p pami28 -C 'logs_mnist-rc2f1-ptripletN/lightning_logs/version_0/checkpoints/epoch=7-step=943.ckpt'
+
+train-attack-defense-cub-rres18-ptripletN:
+	python3 train.py -C cub:rres18:ptripletN
+	python3 swipe.py -p pami224 -C 'logs_cub-rres18-ptripletN/lightning_logs/version_0/checkpoints/epoch=74-step=2699.ckpt'

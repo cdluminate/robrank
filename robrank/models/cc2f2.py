@@ -22,27 +22,20 @@ from .. import configs
 import multiprocessing as mp
 import statistics
 from termcolor import cprint
-from .template import ClassifierTemplate
+from .template_classify import ClassifierTemplate
 
 
-class Model(ClassifierTemplate, thl.LightningModule):
+class C2F2(th.nn.Module):
     '''
     A 2-Conv Layer 2-FC Layer Network for Classification
     '''
 
-    def __init__(self, *, dataset: str, loss: str):
-        super().__init__()
-        # dataset setup
-        assert(dataset in configs.c2f2.allowed_datasets)
-        assert(loss in configs.c2f2.allowed_losses)
-        self.dataset = dataset
-        # modules
+    def __init__(self):
+        super(C2F2, self).__init__()
         self.conv1 = th.nn.Conv2d(1, 32, kernel_size=5, padding=2)
         self.conv2 = th.nn.Conv2d(32, 64, kernel_size=5, padding=2)
         self.fc1 = th.nn.Linear(64 * 7 * 7, 1024)
         self.fc2 = th.nn.Linear(1024, 10)
-        # config
-        self.config = getattr(configs, 'c2f2')(dataset, loss)
 
     def forward(self, x):
         __relu = th.nn.functional.relu
@@ -57,35 +50,18 @@ class Model(ClassifierTemplate, thl.LightningModule):
         x = self.fc2(x)
         return x
 
-    def configure_optimizers(self):
-        optim = th.optim.Adam(
-            self.parameters(), lr=configs.c2f2.lr, weight_decay=configs.c2f2.weight_decay)
-        return optim
 
-    def setup(self, stage=None):
-        train, val, test = getattr(datasets, self.dataset).getDataset()
-        self.data_train = train
-        self.data_val = val
-        self.data_test = test
+class Model(ClassifierTemplate, thl.LightningModule):
+    BACKBONE = 'cc2f2'
 
-    def train_dataloader(self):
-        train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=configs.c2f2.batchsize,
-                                                shuffle=True,
-                                                pin_memory=True,
-                                                num_workers=configs.c2f2.loader_num_workers)
-        return train_loader
-
-    def val_dataloader(self):
-        val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=configs.c2f2.batchsize,
-                                              pin_memory=True,
-                                              num_workers=configs.c2f2.loader_num_workers)
-        return val_loader
-
-    def test_dataloader(self):
-        test_loader = th.utils.data.DataLoader(self.data_test,
-                                               batch_size=configs.c2f2.batchsize,
-                                               pin_memory=True,
-                                               num_workers=configs.c2f2.loader_num_workers)
-        return test_loader
+    def __init__(self, *, dataset: str, loss: str):
+        super().__init__()
+        # dataset setup
+        assert(dataset in configs.cc2f2.allowed_datasets)
+        assert(loss in configs.cc2f2.allowed_losses)
+        # config
+        self.dataset = dataset
+        self.loss = loss
+        self.config = getattr(configs, self.BACKBONE)(dataset, loss)
+        # backbone
+        self.backbone = C2F2()

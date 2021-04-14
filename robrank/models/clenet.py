@@ -22,7 +22,7 @@ from .. import configs
 import multiprocessing as mp
 import statistics
 from termcolor import cprint
-from .template import ClassifierTemplate
+from .template_classify import ClassifierTemplate
 
 
 class LeNet(th.nn.Module):
@@ -62,51 +62,14 @@ class Model(ClassifierTemplate, thl.LightningModule):
     '''
     A 2-Conv Layer 2-FC Layer Network for Classification
     '''
+    BACKBONE = 'clenet'
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
         # dataset setup
-        assert(dataset in configs.lenet.allowed_datasets)
-        assert(loss in configs.lenet.allowed_losses)
+        assert(dataset in configs.clenet.allowed_datasets)
+        assert(loss in configs.clenet.allowed_losses)
         self.dataset = dataset
-        # configs
-        self.config = configs.lenet(dataset, loss)
-        # modules
-        self.lenet = LeNet()
-
-    def forward(self, x):
-        x = self.lenet(x)
-        return x
-
-    def configure_optimizers(self):
-        optim = th.optim.Adam(
-            self.parameters(), lr=configs.lenet.lr, weight_decay=configs.lenet.weight_decay)
-        return optim
-
-    def setup(self, stage=None):
-        train, val, test = getattr(datasets, self.dataset).getDataset()
-        self.data_train = train
-        self.data_val = val
-        self.data_test = test
-
-    def train_dataloader(self):
-        train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=configs.lenet.batchsize,
-                                                shuffle=True,
-                                                pin_memory=True,
-                                                num_workers=configs.lenet.loader_num_workers)
-        return train_loader
-
-    def val_dataloader(self):
-        val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=configs.lenet.batchsize,
-                                              pin_memory=True,
-                                              num_workers=configs.lenet.loader_num_workers)
-        return val_loader
-
-    def test_dataloader(self):
-        test_loader = th.utils.data.DataLoader(self.data_test,
-                                               batch_size=configs.lenet.batchsize,
-                                               pin_memory=True,
-                                               num_workers=configs.lenet.loader_num_workers)
-        return test_loader
+        self.loss = loss
+        self.config = configs.clenet(dataset, loss)
+        self.backbone = LeNet()

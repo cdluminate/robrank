@@ -58,9 +58,9 @@ class TFdump:
 class Swipe:
     '''
     Conduct a batch of advrank attack
-    it stucks if we do not kill the child processes
+    it will get stuck if we do not kill the child processes
     '''
-    profile_eccv20_mnist = (
+    profile_eccv28 = (
         #'ES:eps=0.3:alpha=(math 2/255):pgditer=32',
         *[':'.join(x) for x in it.product(
             ('CA',), ('pm=+', 'pm=-'),
@@ -81,21 +81,7 @@ class Swipe:
                 'eps=0.3:alpha=0.01:pgditer=30',
             ))],
     )
-    profile_pami_mnist = (
-        *[':'.join(x) for x in it.product(
-            ('SPQA',), ('pm=+', 'pm=-'), ('M=10', 'M=1'),
-            (
-                'eps=0.007843:alpha=0.003922:pgditer=24',
-                'eps=0.300000:alpha=0.011764:pgditer=32',
-            ))],
-        *[':'.join(x) for x in it.product(
-            ('CA',), ('pm=+', 'pm=-'), ('W=10', 'W=1'),
-            (
-                'eps=0.007843:alpha=0.003922:pgditer=24',
-                'eps=0.300000:alpha=0.011764:pgditer=32',
-            ))],
-    )
-    profile_eccv20_imagenet = (
+    profile_eccv224 = (
         *[':'.join(x) for x in it.product(
             ('CA',), ('pm=+', 'pm=-'),
             ('W=1', 'W=2', 'W=5', 'W=10'),
@@ -113,18 +99,32 @@ class Swipe:
                 'eps=0.06:alpha=0.006:pgditer=20',
             ))],
     )
-    profile_pami_imagenet = (
+    profile_pami28 = (
         *[':'.join(x) for x in it.product(
-            ('SPQA',), ('pm=+', 'pm=-'), ('M=10', 'M=1'),
+            ('SPQA',), ('pm=+', 'pm=-'), ('M=1', 'M=2', 'M=5', 'M=10'),
             (
-                'eps=0.007843:alpha=0.003922:pgditer=24',
-                'eps=0.062745:alpha=0.011764:pgditer=32',
+                'eps=0.03137:alpha=0.003922:pgditer=32',
+                'eps=0.30196:alpha=0.011764:pgditer=32',
             ))],
         *[':'.join(x) for x in it.product(
-            ('CA',), ('pm=+', 'pm=-'), ('W=10', 'W=1'),
+            ('CA',), ('pm=+', 'pm=-'), ('W=1', 'W=2', 'W=5', 'W=10'),
             (
-                'eps=0.007843:alpha=0.003922:pgditer=24',
-                'eps=0.062745:alpha=0.011764:pgditer=32',
+                'eps=0.03137:alpha=0.003922:pgditer=32',
+                'eps=0.30196:alpha=0.011764:pgditer=32',
+            ))],
+    )
+    profile_pami224 = (
+        *[':'.join(x) for x in it.product(
+            ('SPQA',), ('pm=+', 'pm=-'), ('M=1', 'M=2', 'M=5', 'M=10'),
+            (
+                'eps=0.00784:alpha=0.003922:pgditer=32',
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('CA',), ('pm=+', 'pm=-'), ('W=1', 'W=2', 'W=5', 'W=10'),
+            (
+                'eps=0.00784:alpha=0.003922:pgditer=32',
+                'eps=0.03137:alpha=0.011764:pgditer=32',
             ))],
     )
 
@@ -139,8 +139,7 @@ class Swipe:
         ag.add_argument('-D', '--device', type=str, default='cuda'
                         if th.cuda.is_available() else 'cpu')
         ag.add_argument('-p', '--profile', type=str, required=True,
-                        choices=('pami_mnist', 'pami_imagenet',
-                                 'eccv20_mnist', 'eccv20_imagenet'))
+                        choices=('pami28', 'pami224', 'eccv28', 'eccv224'))
         ag.add_argument('-b', '--batchsize', type=int, default=-1)
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag.add_argument('-v', '--verbose', action='store_true')

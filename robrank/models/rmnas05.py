@@ -17,4 +17,4 @@ from . import rres18
 
 
 class Model(rres18.Model):
-    BACKBONE = 'mnas05'
+    BACKBONE = 'rmnas05'

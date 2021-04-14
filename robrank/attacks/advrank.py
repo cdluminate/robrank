@@ -71,9 +71,12 @@ class AdvRank(object):
         if isinstance(loss_sp, th.Tensor):
             loss_sp = loss_sp.item()
         # self.XI = np.exp(loss_sp.item() * 5e4) # very strict
-        # self.XI = np.exp(loss_sp * 3e4) # strict
-        self.XI = np.exp(loss_sp * 1e4)  # moderate
-        # self.XI = np.exp(loss_sp * 5e3) # permissive
+        if any(x in self.model.dataset for x in ('sop', 'cub', 'cars')):
+            self.XI = np.exp(loss_sp * 3e4)
+        elif any(x in self.model.dataset for x in ('mnist', 'fashion')):
+            self.XI = np.exp(loss_sp * 1e4)
+        else:
+            raise NotImplementedError
 
     def forwardmetric(self, images: th.Tensor) -> th.Tensor:
         '''

@@ -15,10 +15,10 @@ limitations under the License.
 '''
 import torch as th
 import pytorch_lightning as thl
-from .template import MetricTemplate28
+from .template_rank import MetricTemplate28
 
 
 class Model(MetricTemplate28, thl.LightningModule):
     is_advtrain = False
     do_svd = False
-    backbone = 'c2f1'
+    BACKBONE = 'rc2f1'

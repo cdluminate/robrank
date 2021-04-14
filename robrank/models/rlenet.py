@@ -17,4 +17,4 @@ from . import rc2f1
 
 
 class Model(rc2f1.Model):
-    NET = 'lenet'
+    BACKBONE = 'rlenet'

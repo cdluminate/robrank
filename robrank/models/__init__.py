@@ -42,4 +42,4 @@ from . import rres50
 from . import rres50d
 
 # Hybrid Metric+Classification models
-# TODO
+#from . import hc2f2
