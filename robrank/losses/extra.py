@@ -72,18 +72,6 @@ class pangularN(ExtraLossN):
     _metric = 'N'
 
 
-class pcontN(ExtraLossN):
-    _datasetspec = 'SPC-2'
-    _lossfunc = dml.losses.ContrastiveLoss(
-        pos_margin=configs.contrastive.margin_euclidean,
-        neg_margin=configs.contrastive.margin_euclidean
-    )
-    _miner = dml.miners.PairMarginMiner(
-        pos_margin=configs.contrastive.margin_euclidean,
-        neg_margin=configs.contrastive.margin_euclidean)
-    _metric = 'N'
-
-
 class pncaN(ExtraLossN):
     _datasetspec = 'SPC-2'
     _lossfunc = dml.losses.NCALoss()
@@ -102,12 +90,6 @@ def test_pstripN():
 def test_pangularN():
     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
     loss = pangularN()(output, labels)
-    loss.backward()
-
-
-def test_pcontN():
-    output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
-    loss = pcontN()(output, labels)
     loss.backward()
 
 

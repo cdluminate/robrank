@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+# pylint: disable=no-member
 import torch as th
-import torch.utils.data
 import torchvision as vision
 from torchvision import transforms
 import os
-import multiprocessing as mp
 from .. import configs
 from collections import defaultdict
 import random

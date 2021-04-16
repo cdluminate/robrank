@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+# pylint: disable=no-member,not-callable
 import os
-import gzip
-import numpy as np
 import torch as th
-import torch.utils.data
 import torchvision as vision
 from PIL import Image
 import random

@@ -14,24 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-from termcolor import cprint, colored
-from torchvision import transforms
 import argparse
 import os
 import pytorch_lightning as thl
 import re
 import robrank as rr
-import sys
 import torch as th
-import torch.utils.data
-import torchvision as V
-import torchvision as vision
 import gc
 import psutil
 import json
 import itertools as it
 import glob
 import rich
+import torchvision as vision
 c = rich.get_console()
 
 
@@ -50,9 +45,9 @@ class TFdump:
             # print(s)
             if len(s.summary.value) > 0:
                 if 'Valid' in s.summary.value[0].tag:
-                    cprint(s.summary.value[0].tag, 'red', end=' ')
-                    cprint(f'{s.step}', 'yellow', end=' ')
-                    cprint(s.summary.value[0].simple_value, 'blue')
+                    c.print('[red]' + str(s.summary.value[0].tag))
+                    c.print(f'[yellow]{s.step}', end=' ')
+                    c.print('[blue]' + str(s.summary.value[0].simple_value))
 
 
 class Swipe:
@@ -154,9 +149,8 @@ class Swipe:
             ndir = rr.utils.nsort(glob.glob(path), r'.*version_(\d+)')[0]
             path = os.path.join(ndir, 'checkpoints/epoch=*')
             nchk = rr.utils.nsort(glob.glob(path), r'.*epoch=(\d+)')[0]
-            cprint(
-                f'* Automatically discovered the latest checkpoint .. {nchk}',
-                'cyan')
+            c.print(
+                f'[cyan]* Automatically discovered the latest checkpoint .. {nchk}')
             ag.checkpoint = nchk
 
         instances = {}
@@ -172,13 +166,16 @@ class Swipe:
             instance = AdvRank(argv)
             instances[atk] = instance.stats
             del instance
-            parent = psutil.Process(os.getpid())
-            for child in parent.children(recursive=True):
-                child.kill()
+            children = psutil.Process(os.getpid()).children(recursive=True)
+            for child in children:
+                child.terminate()
+            gone, alive = psutil.wait_procs(children, timeout=3)
+            for p in alive:
+                p.kill()
             gc.collect()
         results = {key: val for (key, val) in instances.items()}
-        cprint('=== Final Swipe Results ====================================',
-               'white', 'on_red')
+        c.print(
+            '[white on red]=== Final Swipe Results ====================================')
         code = json.dumps(results, indent=2)
         print(rr.utils.rjson(code))
         with open(ag.checkpoint + f'.{ag.profile}.json', 'wt') as f:
@@ -209,7 +206,7 @@ class AdvRank:
                                  style='bold magenta'))
         c.print(vars(ag))
 
-        c.rule('[white on magenta]>_< Restoring Model from Checkpoint ...')
+        c.print('[white on magenta]>_< Restoring Model from Checkpoint ...')
         model = getattr(rr.models, ag.model).Model.load_from_checkpoint(
             checkpoint_path=ag.checkpoint,
             dataset=ag.dataset, loss=ag.loss)
@@ -217,11 +214,11 @@ class AdvRank:
         if ag.batchsize > 0:
             model.config.valbatchsize = ag.batchsize
 
-        c.rule('[white on magenta]>_< Initializing Attack Launcher ...')
+        c.print('[white on magenta]>_< Initializing Attack Launcher ...')
         atker = rr.attacks.AdvRankLauncher(ag.attack, ag.device, ag.verbose)
         print(atker)
 
-        c.rule('[white on magenta]>_< Getting Validation Loader ...')
+        c.print('[white on magenta]>_< Getting Validation Loader ...')
         model.setup()
         val_dataloader = model.val_dataloader()
         sorig, sadv = atker(model, val_dataloader, maxiter=ag.maxiter)
@@ -236,11 +233,8 @@ class Validate:
     def __init__(self, argv):
         ag = argparse.ArgumentParser()
         ag.add_argument('-C', '--checkpoint', type=str, default=None)
-        ag.add_argument(
-            '-g',
-            '--gpus',
-            type=int,
-            default=th.cuda.device_count())
+        ag.add_argument('-g', '--gpus', type=int,
+                        default=th.cuda.device_count())
         ag = ag.parse_args(argv)
         ag.dataset, ag.model, ag.loss = re.match(
             r'logs_(\w+)-(\w+)-(\w+)/', ag.checkpoint).groups()
@@ -251,9 +245,9 @@ class Validate:
         trainer = thl.Trainer(gpus=ag.gpus,
                               num_sanity_val_steps=-1,
                               resume_from_checkpoint=ag.checkpoint)
-        cprint('>_< Start Validating ...', 'white', 'on_magenta')
+        c.print('[white on magenta]>_< Start Validating ...')
         trainer.fit(model)
-        cprint('>_< Pulling Down ...', 'white', 'on_red')
+        c.print('[white on red]>_< Pulling Down ...')
 
 
 class Train:
@@ -287,10 +281,10 @@ class Train:
             ndir = rr.utils.nsort(glob.glob(path), r'.*version_(\d+)')[0]
             path = os.path.join(ndir, 'checkpoints/epoch=*')
             nchk = rr.utils.nsort(glob.glob(path), r'.*epoch=(\d+)')[0]
-            cprint(f'* Discovered the latest ckpt .. {nchk}', 'cyan')
+            c.print(f'[cyan]* Discovered the latest ckpt .. {nchk}')
             ag.checkpoint = nchk
 
-        c.rule('[white on magenta]>_< Initializing Model & Arguments ...')
+        c.print('[white on magenta]>_< Initializing Model & Arguments ...')
         model = getattr(rr.models, ag.model).Model(
             dataset=ag.dataset, loss=ag.loss)
 
@@ -298,7 +292,7 @@ class Train:
         if ag.svd:
             model.do_svd = True
 
-        c.rule('[white on magenta]>_< Initializing Optimizer ...')
+        c.status('[white on magenta]>_< Initializing Optimizer ...')
         if ag.dp:
             accel = 'dp'
         elif ag.gpus > 1:
@@ -321,12 +315,12 @@ class Train:
         # checkpoint_callback=checkpoint_callback)
         # print(checkpoint_callback.best_model_path)
 
-        c.rule('[white on magenta]>_< Start Training ...')
+        c.print('[white on magenta]>_< Start Training ...')
         trainer.fit(model)
         if ag.do_test:
             trainer.test(model)
 
-        cprint('>_< Pulling Down ...', 'white', 'on_red')
+        c.print('[white on red]>_< Pulling Down ...')
 
 
 class Download:
@@ -335,10 +329,10 @@ class Download:
     '''
 
     def __init__(self):
-        cprint('>_< MNIST', 'white', 'on_blue')
-        V.datasets.MNIST('~/.torch/', download=True)
+        c.print('[white on blue]>_< MNIST')
+        vision.datasets.MNIST('~/.torch/', download=True)
 
-        cprint('>_< FashionMNIST', 'white', 'on_blue')
-        V.datasets.FashionMNIST('~/.torch/', download=True)
+        c.print('[white on blue]>_< FashionMNIST')
+        vision.datasets.FashionMNIST('~/.torch/', download=True)
 
-        cprint('>_< Done!', 'white', 'on_green')
+        c.print('[white on green]>_< Done!')

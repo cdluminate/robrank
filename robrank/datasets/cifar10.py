@@ -14,16 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+# pylint: disable=too-many-function-args
 import os
-import gzip
 import numpy as np
-import torch as th
-import torch.utils.data
 import pickle
 from PIL import Image
 from torch.utils.data import Dataset
 import torchvision as V
-from .. import utils
 from .. import configs
 
 
@@ -43,8 +40,8 @@ def __get_classification_dataset():
 # https://www.cs.toronto.edu/~kriz/cifar.html
 def unpickle(file):
     with open(file, 'rb') as fo:
-        dict = pickle.load(fo, encoding='latin1')
-    return dict
+        dic = pickle.load(fo, encoding='latin1')
+    return dic
 
 
 class Cifar10Dataset(Dataset):

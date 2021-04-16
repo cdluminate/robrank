@@ -13,8 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+
+# pylint: disable=no-member
 import torch as th
 import torchvision as vision
+from torch.utils.data import DataLoader
+from torch.optim import SGD, Adam
 import pytorch_lightning as thl
 from pytorch_lightning.utilities.enums import DistributedType
 import os
@@ -64,41 +68,43 @@ class ClassifierTemplate(object):
             raise NotImplementedError
 
     def train_dataloader(self):
-        train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=getattr(configs, self.BACKBONE).batchsize,
-                                                shuffle=True,
-                                                pin_memory=True,
-                                                num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
+        train_loader = DataLoader(self.data_train,
+                                  batch_size=getattr(
+                                      configs, self.BACKBONE).batchsize,
+                                  shuffle=True,
+                                  pin_memory=True,
+                                  num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
         return train_loader
 
     def val_dataloader(self):
-        val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=getattr(configs, self.BACKBONE).batchsize,
-                                              pin_memory=True,
-                                              num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
+        val_loader = DataLoader(self.data_val,
+                                batch_size=getattr(
+                                    configs, self.BACKBONE).batchsize,
+                                pin_memory=True,
+                                num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
         return val_loader
 
     def test_dataloader(self):
-        test_loader = th.utils.data.DataLoader(self.data_test,
-                                               batch_size=getattr(configs, self.BACKBONE).batchsize,
-                                               pin_memory=True,
-                                               num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
+        test_loader = DataLoader(self.data_test,
+                                 batch_size=getattr(
+                                     configs, self.BACKBONE).batchsize,
+                                 pin_memory=True,
+                                 num_workers=getattr(configs, self.BACKBONE).loader_num_workers)
         return test_loader
 
     def configure_optimizers(self):
-        if self.BACKBONE == 'cifar10' and self.dataset == 'cifar10':
-            optim = th.optim.SGD(self.parameters(),
-                    lr=self.config.lr, momentum=self.config.momentum,
-                weight_decay=configs.csres18.weight_decay)
+        if self.BACKBONE == 'csres18' and self.dataset == 'cifar10':
+            optim = SGD(self.parameters(),
+                        lr=self.config.lr, momentum=self.config.momentum,
+                        weight_decay=configs.csres18.weight_decay)
         else:
-            optim = th.optim.Adam(self.parameters(),
-                    lr=self.config.lr, weight_decay=self.config.weight_decay)
+            optim = Adam(self.parameters(),
+                         lr=self.config.lr, weight_decay=self.config.weight_decay)
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
                                                           milestones=configs.csres18.milestones, gamma=0.1)
             return [optim], [scheduler]
         return optim
-
 
     def forward(self, x):
         if 'cifar10' == self.dataset:
@@ -137,7 +143,7 @@ class ClassifierTemplate(object):
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
         cprint(
-            f'\tValidation |  loss= {summary["loss"]:.5f}  accuracy= {summary["accuracy"]:.5f}',
+            f'Validation |  loss= {summary["loss"]:.5f}  accuracy= {summary["accuracy"]:.5f}',
             'yellow', None, ['bold'])
 
     def test_step(self, batch, batch_idx):

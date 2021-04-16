@@ -13,12 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-import torch as th
-import pytorch_lightning as thl
 from .template_hybrid import HybridModelBase
 
 
-class Model(HybridModelBase, thl.LightningModule):
-    is_advtrain = False
-    do_svd = False
-    BACKBONE = 'hc2f1'
+class Model(HybridModelBase):
+    BACKBONE = 'hc2f2'

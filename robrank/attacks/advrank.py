@@ -14,21 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+# pylint: disable=no-member,invalid-envvar-default,unused-argument,attribute-defined-outside-init
 import os
-import sys
-import re
 import json
-import functools
 import torch as th
-import collections
 from tqdm import tqdm
-import pylab as lab
-import traceback
-import math
 import statistics
-from scipy import stats
 import numpy as np
-import random
 import torch.nn.functional as F
 try:
     from .advrank_qcselector import QCSelector
@@ -37,7 +29,7 @@ except ImportError:
     from advrank_qcselector import QCSelector
     from advrank_loss import AdvRankLoss
 import pytest
-from termcolor import cprint, colored
+from termcolor import colored
 import itertools as it
 from ..utils import rjson
 
@@ -68,13 +60,28 @@ class AdvRank(object):
         self.XI = 1.
 
     def update_xi(self, loss_sp):
+        '''
+        ECCV20 paper (2002.11293) uses a fixed xi parameter.
+        Here we use a dynamic one which does not participate in backprop.
+        '''
+        if not hasattr(self.model, 'dataset'):
+            # we are running pytest.
+            self.XI = 1e0
+            return
         if isinstance(loss_sp, th.Tensor):
             loss_sp = loss_sp.item()
         # self.XI = np.exp(loss_sp.item() * 5e4) # very strict
-        if any(x in self.model.dataset for x in ('sop', 'cub', 'cars')):
-            self.XI = np.exp(loss_sp * 3e4)
-        elif any(x in self.model.dataset for x in ('mnist', 'fashion')):
-            self.XI = np.exp(loss_sp * 1e4)
+        if any(x in self.model.dataset for x in ('mnist',)):
+            self.XI = np.min((np.exp(loss_sp * 2e4), 1e9))
+        elif any(x in self.model.dataset for x in ('fashion',)):
+            self.XI = np.min((np.exp(loss_sp * 4e4), 1e9))
+        elif any(x in self.model.dataset for x in ('cub',)):
+            self.XI = np.min((np.exp(loss_sp * 4e4), 1e9))
+        elif any(x in self.model.dataset for x in ('cars',)):
+            # FIXME: confirm the param
+            self.XI = np.min((np.exp(loss_sp * 7e4), 1e9))
+        elif any(x in self.model.dataset for x in ('sop',)):
+            self.XI = np.min((np.exp(loss_sp * 3e4), 1e9))
         else:
             raise NotImplementedError
 
@@ -333,7 +340,7 @@ class AdvRank(object):
             if int(os.getenv('PGD', -1)) > 0:
                 print('(PGD)>', itermsg)
 
-        # XXX: It's very critical to clear the junk gradients
+        # note: It's very critical to clear the junk gradients
         optim.zero_grad()
         optimx.zero_grad()
         images.requires_grad = False
@@ -511,7 +518,7 @@ class AdvRank(object):
             # >> PGD: project SGD optimized result back to a valid region
             if self.pgditer > 1:
                 images.grad.data.copy_(self.alpha * th.sign(images.grad))
-                # XXX: don't know whether this trick helps
+                # note: don't know whether this trick helps
                 #alpha = self.alpha if iteration %2 == 0 else 2. * self.alpha
                 #images.grad.data.copy_(alpha * th.sign(images.grad))
             elif self.pgditer == 1:
@@ -567,6 +574,7 @@ class AdvRank(object):
 @pytest.mark.parametrize('metric, pgditer, eps',
                          it.product(('C', 'E', 'N'), (1, 4), (0., 0.1)))
 def test_es(metric, pgditer, eps):
+    # pylint: disable=unused-variable
     model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
@@ -595,6 +603,7 @@ def test_es(metric, pgditer, eps):
 @pytest.mark.parametrize('W, pm, metric, pgditer, eps',
                          it.product((1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (1, 4), (0., 0.1)))
 def test_ca(W, pm, metric, pgditer, eps):
+    # pylint: disable=unused-variable
     model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
@@ -623,6 +632,7 @@ def test_ca(W, pm, metric, pgditer, eps):
 @pytest.mark.parametrize('attack_type, M, pm, metric, pgditer, eps',
                          it.product(('QA', 'SPQA'), (1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (1, 4), (0., 0.1)))
 def test_qa(attack_type, M, pm, metric, pgditer, eps):
+    # pylint: disable=unused-variable
     model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))

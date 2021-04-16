@@ -14,12 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-from dataclasses import dataclass
-import dataclasses
 import os
-import multiprocessing as mp
-import torch as th
-import re
+from dataclasses import dataclass
 
 ###################
 # Dataset Configs #
@@ -29,16 +25,19 @@ import re
 @dataclass
 class mnist:
     path: str = os.path.expanduser('~/.torch')
+    num_class: int = 10
 
 
 @dataclass
 class fashion:
     path: str = os.path.expanduser('~/.torch')
+    num_class: int = 10
 
 
 @dataclass
 class cifar10:
     path: str = os.path.expanduser('~/.torch/cifar-10-batches-py')
+    num_class: int = 10
 
 
 @dataclass
@@ -48,6 +47,8 @@ class sop:
         else os.path.expanduser('~/.torch/Stanford_Online_Products/')
     list_train: str = 'Ebay_train.txt'
     list_test: str = 'Ebay_test.txt'
+    num_class_val: int = 11316
+    num_class: int = 22634
 
 
 @dataclass
@@ -57,10 +58,14 @@ class cub:
         os.path.expanduser('~/.torch/CUB_200_2011/')
     list_images: str = 'images.txt'
     list_split: str = 'train_test_split.txt'
+    num_class_val: int = 100
+    num_class: int = 200
 
 
 @dataclass
 class cars:
     path: str = os.path.expanduser('/dev/shm/cars/') if \
-            os.path.exists('/dev/shm/cars') else \
-            os.path.expanduser('~/.torch/cars/')
+        os.path.exists('/dev/shm/cars') else \
+        os.path.expanduser('~/.torch/cars/')
+    num_class_val: int = 98
+    num_class: int = 196

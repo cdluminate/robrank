@@ -26,9 +26,9 @@ from . import clenet
 from . import csres18
 
 # Ranking / Metric Learning
-from . import rc2f1
-from . import rc2f1d
-from . import rc2f1e
+from . import rc2f2
+from . import rc2f2d
+from . import rc2f2e
 from . import rlenet
 from . import rlenetd
 from . import rlenete
@@ -42,4 +42,5 @@ from . import rres50
 from . import rres50d
 
 # Hybrid Metric+Classification models
-#from . import hc2f2
+from . import hc2f2
+from . import hres18

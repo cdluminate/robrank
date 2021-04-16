@@ -13,12 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-import torch as th
-import pytorch_lightning as thl
 from .template_rank import MetricTemplate28
 
 
-class Model(MetricTemplate28, thl.LightningModule):
+class Model(MetricTemplate28):
     is_advtrain = False
     do_svd = False
-    BACKBONE = 'rc2f1'
+    BACKBONE = 'rc2f2'

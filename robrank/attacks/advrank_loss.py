@@ -14,20 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import os
-import sys
-import re
+# pylint: disable=no-member
 import functools
 import torch as th
-import collections
-from tqdm import tqdm
-import pylab as lab
-import traceback
-import math
 import statistics
 from scipy import stats
 import numpy as np
-import random
 import torch.nn.functional as F
 import pytest
 import itertools as it

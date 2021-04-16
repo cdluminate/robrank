@@ -13,8 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+
+# pylint: disable=no-member
 import torch as th
 import torchvision as vision
+from torch.utils.data import DataLoader
+from torch.optim import Adam
 import pytorch_lightning as thl
 from pytorch_lightning.utilities.enums import DistributedType
 import os
@@ -48,76 +52,11 @@ except ImportError:
 import rich
 c = rich.get_console()
 
-def _get_nmi(valvecs: th.Tensor, vallabs: th.Tensor, ncls: int) -> float:
-    '''
-    Compute the NMI score
-    '''
-    use_cuda: bool = th.cuda.is_available() and hasattr(faiss, 'StandardGpuResources')
-    if bool(os.getenv('FAISS_CPU', 0)):
-        use_cuda = False
-    npvecs = valvecs.detach().cpu().numpy().astype(np.float32)
-    nplabs = vallabs.detach().cpu().view(-1).numpy().astype(np.float32)
-    # a weird dispatcher but it works.
-    if 'faiss' in globals():
-        if use_cuda:
-            gpu_resource = faiss.StandardGpuResources()
-            cluster_idx = faiss.IndexFlatL2(npvecs.shape[1])
-            if not th.distributed.is_initialized():
-                cluster_idx = faiss.index_cpu_to_gpu(
-                    gpu_resource, 0, cluster_idx)
-            else:
-                cluster_idx = faiss.index_cpu_to_gpu(gpu_resource,
-                                                     th.distributed.get_rank(), cluster_idx)
-            kmeans = faiss.Clustering(npvecs.shape[1], ncls)
-            kmeans.verbose = False
-            kmeans.train(npvecs, cluster_idx)
-            _, pred = cluster_idx.search(npvecs, 1)
-            pred = pred.flatten()
-        else:
-            kmeans = faiss.Kmeans(
-                npvecs.shape[1], ncls, seed=123, verbose=False)
-            kmeans.train(npvecs)
-            _, pred = kmeans.index.search(npvecs, 1)
-            pred = pred.flatten()
-        nmi = __nmi(nplabs, pred)
-    elif 'KMeans' in globals():
-        kmeans = KMeans(n_clusters=ncls, random_state=0).fit(npvecs)
-        nmi = __nmi(nplabs, kmeans.labels_)
-    else:
-        raise NotImplementedError(
-            'please provide at leaste one kmeans implementation for the NMI metric.')
-    return nmi
 
+class MetricBase(thl.LightningModule):
 
-def _get_rank(dist: th.Tensor, label: th.Tensor,
-              vallabels: th.Tensor, ks: list) -> tuple:
-    '''
-    Flexibly get the rank of the topmost item in the same class
-    dist = [dist(anchor,x) for x in validation_set]
-    '''
-    assert(dist.nelement() == vallabels.nelement())
-    # XXX: [important] argsort(...)[:,1] for skipping the diagonal (R@1=1.0)
-    # we skip the smallest value as it's exactly for the anchor itself
-    argsort = dist.argsort(descending=False)[1:]
-    rank = th.where(vallabels[argsort] == label)[0].min().item()
-    return (rank,) + tuple(rank < k for k in ks)
-
-
-def _get_ap(dist: th.Tensor, label: th.Tensor, vallabels: th.Tensor) -> float:
-    '''
-    Get the overall average precision
-    '''
-    assert(dist.nelement() == vallabels.nelement())
-    # we skip the smallest value as it's exectly for the anchor itself
-    argsort = dist.argsort(descending=False)[1:]
-    argwhere1 = th.where(vallabels[argsort] == label)[0] + 1
-    ap = ((th.arange(len(argwhere1)).float() + 1).to(argwhere1.device) /
-          argwhere1).sum().item() / len(argwhere1)
-    return ap
-
-
-###############################################################################
-class MetricBase(object):
+    _valvecs = None
+    _vallabs = None
 
     def _recompute_valvecs(self):
         with th.no_grad():
@@ -157,18 +96,18 @@ class MetricBase(object):
         self.data_val = test
 
     def train_dataloader(self):
-        train_loader = th.utils.data.DataLoader(self.data_train,
-                                                batch_size=self.config.batchsize,
-                                                shuffle=True,
-                                                pin_memory=True,
-                                                num_workers=self.config.loader_num_workers)
+        train_loader = DataLoader(self.data_train,
+                                  batch_size=self.config.batchsize,
+                                  shuffle=True,
+                                  pin_memory=True,
+                                  num_workers=self.config.loader_num_workers)
         return train_loader
 
     def val_dataloader(self):
-        val_loader = th.utils.data.DataLoader(self.data_val,
-                                              batch_size=self.config.valbatchsize,
-                                              pin_memory=True,
-                                              num_workers=self.config.loader_num_workers)
+        val_loader = DataLoader(self.data_val,
+                                batch_size=self.config.valbatchsize,
+                                pin_memory=True,
+                                num_workers=self.config.loader_num_workers)
         return val_loader
 
     def forward(self, x):
@@ -180,7 +119,8 @@ class MetricBase(object):
                 x = self.backbone(x)
                 return x
             else:
-                # we don't want to track the gradients for the preprocessing step
+                # we don't want to track the gradients for the preprocessing
+                # step
                 with th.no_grad():
                     x = utils.renorm(x)
                 x = self.backbone(x)
@@ -193,9 +133,8 @@ class MetricBase(object):
             raise NotImplementedError
 
     def configure_optimizers(self):
-        optim = th.optim.Adam(
-            self.backbone.parameters(),
-            lr=self.config.lr, weight_decay=self.config.weight_decay)
+        optim = Adam(self.backbone.parameters(),
+                     lr=self.config.lr, weight_decay=self.config.weight_decay)
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
                                                           milestones=self.config.milestones, gamma=0.1)
@@ -342,12 +281,16 @@ class MetricBase(object):
             # metrics
             r, r_1, r_2, mAP = [], [], [], []
             for i in range(output.size(0)):
-                _r, _r1, _r2 = _get_rank(dist[i], labels[i],
-                        self._vallabs, ks=[1,2])
+                _r, _r1, _r2 = utils.metric_get_rank(dist[i], labels[i],
+                                                     self._vallabs, ks=[1, 2])
                 r.append(_r)
                 r_1.append(_r1)
                 r_2.append(_r2)
-                mAP.append(_get_ap(dist[i], labels[i], self._vallabs))
+                mAP.append(
+                    utils.metric_get_ap(
+                        dist[i],
+                        labels[i],
+                        self._vallabs))
             r, r_1, r_2 = np.mean(r), np.mean(r_1), np.mean(r_2)
             mAP = np.mean(mAP)
         return {'r@M': r, 'r@1': r_1, 'r@2': r_2, 'mAP': mAP}
@@ -372,7 +315,10 @@ class MetricBase(object):
                 summary[key] = tmp.item() / th.distributed.get_world_size()
 
         # Calculate the rest scores
-        nmi = _get_nmi(self._valvecs, self._vallabs, self.config.num_class)
+        nmi = utils.metric_get_nmi(
+            self._valvecs,
+            self._vallabs,
+            self.config.num_class)
         summary['NMI'] = nmi
 
         # clean up
@@ -386,20 +332,22 @@ class MetricBase(object):
         self.log('Validation/mAP', summary['mAP'])
         self.log('Validation/NMI', summary['NMI'])
         c.print(f'\nValidation │ ' +
-            f'r@M= {summary["r@M"]:.1f} ' +
-            f'r@1= {summary["r@1"]:.3f} ' +
-            f'r@2= {summary["r@2"]:.3f} ' +
-            f'mAP= {summary["mAP"]:.3f} ' +
-            f'NMI= {summary["NMI"]:.3f}')
+                f'r@M= {summary["r@M"]:.1f} ' +
+                f'r@1= {summary["r@1"]:.3f} ' +
+                f'r@2= {summary["r@2"]:.3f} ' +
+                f'mAP= {summary["mAP"]:.3f} ' +
+                f'NMI= {summary["NMI"]:.3f}')
 
 ###############################################################################
+
+
 class MetricTemplate28(MetricBase):
     '''
     Deep Metric Learning with MNIST-compatible Network.
     '''
     is_advtrain = False
     do_svd = False
-    BACKBONE = 'rc2f1'
+    BACKBONE = 'rc2f2'
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
@@ -414,7 +362,7 @@ class MetricTemplate28(MetricBase):
         # configuration
         self.config = getattr(configs, self.BACKBONE)(dataset, loss)
         # modules
-        if self.BACKBONE == 'rc2f1':
+        if self.BACKBONE == 'rc2f2':
             '''
             A 2-Conv Layer 1-FC Layer Network For Ranking
             See [Madry, advrank] for reference.
@@ -428,6 +376,8 @@ class MetricTemplate28(MetricBase):
                 th.nn.MaxPool2d(kernel_size=2, stride=2),
                 th.nn.Flatten(),
                 th.nn.Linear(64 * 7 * 7, 1024),
+                th.nn.ReLU(),
+                th.nn.Linear(1024, self.config.embedding_dim)
             )
         elif self.BACKBONE == 'rlenet':
             self.backbone = th.nn.Sequential(
@@ -438,13 +388,10 @@ class MetricTemplate28(MetricBase):
                 th.nn.Flatten(),
                 th.nn.Linear(800, 500),
                 th.nn.ReLU(),
-                th.nn.Linear(500, 128),
+                th.nn.Linear(500, self.config.embedding_dim),
             )
         else:
             raise ValueError('unknown backbone')
-        # validation
-        self._valvecs = None
-        self._vallabs = None
         # summary
         c.print('[green]Model Meta Information[/green]', {
             'dataset': self.dataset,
@@ -470,7 +417,7 @@ class MetricTemplate224(MetricBase):
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
-        # configuration
+        # configuration and backbone
         if self.BACKBONE == 'rres18':
             self.config = configs.rres18(dataset, loss)
             self.backbone = vision.models.resnet18(pretrained=True)
@@ -510,38 +457,35 @@ class MetricTemplate224(MetricBase):
         self.lossfunc = getattr(losses, loss)()
         self.metric = self.lossfunc.determine_metric()
         self.datasetspec = self.lossfunc.datasetspec()
-        # modules
-        if re.match(r'res', self.BACKBONE) and self.config.embedding_dim > 0:
-            if '18' in self.BACKBONE:
-                emb_dim = 512
-            elif '50' in self.BACKBONE:
-                emb_dim = 2048
+        # surgery
+        if re.match(r'res', self.BACKBONE):
+            emb_dim = 512 if '18' in self.BACKBONE else 2048
+            if self.config.embedding_dim > 0:
+                self.backbone.fc = th.nn.Linear(
+                    emb_dim, self.config.embedding_dim)
             else:
-                emb_dim = 2048
-            self.backbone.fc = th.nn.Linear(emb_dim, self.config.embedding_dim)
-        elif re.match(r'res', self.BACKBONE):
-            self.backbone.fc = th.nn.Identity()
-        elif re.match(r'mnas', self.BACKBONE) and self.config.embedding_dim > 0:
-            self.backbone.classifier = th.nn.Linear(
-                1280, self.config.embedding_dim)
+                self.backbone.fc = th.nn.Identity()
         elif re.match(r'mnas', self.BACKBONE):
-            self.backbone.classifier = th.nn.Identity()
-        elif re.match(r'enb', self.BACKBONE) and self.config.embedding_dim > 0:
-            if 'b0' in self.BACKBONE:
-                emb_dim = 1280
-            elif 'b7' in self.BACKBONE:
-                emb_dim = 2560
-            self.backbone._modules['_dropout'] = th.nn.Identity()
-            self.backbone._modules['_fc'] = th.nn.Linear(
-                emb_dim, self.config.embedding_dim)
-            # self.backbone._modules['_swish'] = th.nn.Identity() # XXX: don't
-            # override swish.
+            if self.config.embedding_dim > 0:
+                self.backbone.classifier = th.nn.Linear(
+                    1280, self.config.embedding_dim)
+            else:
+                self.backbone.classifier = th.nn.Identity()
         elif re.match(r'enb', self.BACKBONE):
-            self.backbone._modules['_dropout'] = th.nn.Identity()
-            self.backbone._modules['_fc'] = th.nn.Identity()
-            # self.backbone._modules['_swish'] = th.nn.Identity() # XXX: don't
-            # override swish.
-        # Freeze BatchNorm2d
+            if self.config.embedding_dim > 0:
+                if 'b0' in self.BACKBONE:
+                    emb_dim = 1280
+                elif 'b7' in self.BACKBONE:
+                    emb_dim = 2560
+                self.backbone._modules['_dropout'] = th.nn.Identity()
+                self.backbone._modules['_fc'] = th.nn.Linear(
+                    emb_dim, self.config.embedding_dim)
+                # note: don't override swish.
+                # self.backbone._modules['_swish'] = th.nn.Identity()
+            else:
+                self.backbone._modules['_dropout'] = th.nn.Identity()
+                self.backbone._modules['_fc'] = th.nn.Identity()
+        # Freeze BatchNorm2d (ICML20: revisiting ... in DML)
         if self.config.freeze_bn and not self.is_advtrain:
             def __freeze(mod):
                 if isinstance(mod, th.nn.BatchNorm2d):
@@ -550,10 +494,7 @@ class MetricTemplate224(MetricBase):
             # self.backbone.apply(__freeze)
             for mod in self.backbone.modules():
                 __freeze(mod)
-        # validation
-        self._valvecs = None
-        self._vallabs = None
-        # adversarial attack
+        # for adversarial attack
         self.wantsgrad = False
         # Dump configurations
         c.print('[green]Model Meta Information[/green]', {

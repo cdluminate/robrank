@@ -14,22 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import os
-import sys
 import re
 import json
-import functools
-import torch as th
-import collections
 from tqdm import tqdm
-import pylab as lab
-import traceback
-import math
-import statistics
-from scipy import stats
 import numpy as np
-import random
-from .advrank_qcselector import QCSelector
 from .advrank import AdvRank
 from termcolor import cprint
 from ..utils import rjson
@@ -74,6 +62,7 @@ class AdvRankLauncher(object):
         The model should be a ranking model. required methods:
             model._recompute_valvecs
         '''
+        # pylint: disable=unused-variable
         # calculate the embeddings for the whole validation set
         model.eval()
         candi = model._recompute_valvecs()

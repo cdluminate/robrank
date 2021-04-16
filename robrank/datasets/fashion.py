@@ -15,14 +15,9 @@ limitations under the License.
 '''
 
 import torch as th
-import torch.utils.data
 import torchvision as vision
 from torchvision import transforms
-import os
-import multiprocessing as mp
 from .. import configs
-from collections import defaultdict
-import random
 from .mnist import _MNIST_TRIPLET, MNISTPairDataset
 
 

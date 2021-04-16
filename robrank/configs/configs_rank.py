@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-from dataclasses import dataclass
-import dataclasses
-import os
-import multiprocessing as mp
-import torch as th
+# pylint: disable=invalid-name
+# pylint: disable=missing-class-docstring
+# pylint: disable=useless-super-delegation
+# pylint: disable=unused-argument
 import re
+from dataclasses import dataclass
+import multiprocessing as mp
 
 #################
 # Model Configs #
@@ -28,6 +29,7 @@ import re
 
 @dataclass
 class __ranking:
+    '''the ranking task'''
     allowed_losses: tuple = (
         'contrast',  # default setting of contrastive loss
         'contrastiveC', 'contrastiveE',
@@ -59,12 +61,14 @@ class __ranking:
 class __ranking_model_28x28(__ranking):
     allowed_datasets: tuple = ('mnist', 'fashion')
     advtrain_eps: float = 0.3
+    embedding_dim: int = 512
 
 
 @dataclass
 class __ranking_model_224x224(__ranking):
     allowed_datasets: tuple = ('sop', 'cub', 'cars')
     advtrain_eps: float = 16. / 255.
+    embedding_dim: int = 512
 
     def __init__(self, dataset, loss):
         if dataset == 'cub':
@@ -93,7 +97,7 @@ class __ranking_model_224x224_icml(__ranking_model_224x224):
 
 
 @dataclass
-class rc2f1(__ranking_model_28x28):
+class rc2f2(__ranking_model_28x28):
     maxepoch: int = 16  # eph-with-cls-batch, equals 2 * eph-with-spc2-batch
     loader_num_workers: int = min(8, mp.cpu_count())
     batchsize: int = 128
@@ -109,9 +113,10 @@ class rc2f1(__ranking_model_28x28):
         if re.match(r't.+', loss):
             self.maxepoch //= 3
 
+
 @dataclass
-class rlenet(rc2f1):
-    pass
+class rlenet(rc2f2):
+    embedding_dim: int = 128
 
 
 @dataclass
@@ -176,7 +181,7 @@ class renb4(__ranking_model_224x224_icml):
     loader_num_workers: int = min(8, mp.cpu_count())
     lr: float = 1e-5  # [lock]
     weight_decay: float = 4e-4  # [lock] 2002.08473
-    embedding_dim: int = -1
+    embedding_dim: int = 512
     freeze_bn: bool = True
     valbatchsize: int = 112
 
