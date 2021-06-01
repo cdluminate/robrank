@@ -1,37 +1,117 @@
-## Welcome to GitHub Pages
+RobRank
+===
 
-You can use the [editor on GitHub](https://github.com/cdluminate/robrank/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+A re-implementation of [AdvRank](https://github.com/cdluminate/advrank).
+Note, the name is `RobRank`, instead of `RobBank`.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Common Usage
 
-### Markdown
+Python library `RobRank` provides these functionalities: (1) training 
+classification or ranking (deep metric learning) models, either vanilla
+or defensive; (2) perform adversarial attack against the trained models;
+(3) perform batched adversarial attack. See below for detailed usage.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### Common Usage / Training
 
-```markdown
-Syntax highlighted code block
+Training deep metric learning model or classification model, either normally or adversarially.
+As `pytorch-lightning` is used by this project, the training process will automatically use `DistributedDataParallel` when more than one GPU are available.
 
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+```shell
+CUDA_VISIBLE_DEVICES=<GPUs> python3 train.py -C <dataset>:<model>:<loss>
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+where
+* dataset (for all available datasets see robrank/datasets/__init__.py)
+  * mnist, fashion, cub, cars, sop (for deep metric learning)
+  * mnist, cifar10 (for classification)
+* model (for all available models see robrank/models/__init__.py)
+  * rres18: resnet 18 for deep metric learning (DML)
+  * rres18d: resnet 18 for DML with EST defense
+  * rres18p: resnet 18 for DML with ACT defense
+  * csres18: resnet 18 for small-sized input (32x32)
+* loss (for all available losses see robrank/losses/__init__.py)
+  * ptripletN: triplet using Normalized Euclidean with SPC-2 batch.
+  * ce: cross-entropy for classification
 
-### Jekyll Themes
+For example:
+```shell
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:cc2f2:ce
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cifar10:csres18:ce
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2p:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cub:rres18:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cub:rres18p:ptripletN
+```
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/cdluminate/robrank/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+Tips:
+1. export `FAISS_CPU=1` to disable NMI score calculation on GPU. This could
+save a little bit of video memory.
 
-### Support or Contact
+### Common Usage / Adversarial Attack
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+TODO `advrank.py`
+
+### Common Usage / Batched Adversarial Attack
+
+TODO `swipe.py`
+
+### Project Files
+
+```
+(the following directory tree is manually edited and annotated)
+.
+├── requirements.txt              Python deps (`pip install -r ...txt`)
+├── advrank.py                    Entrance script for adversarial ranking.
+├── swipe.py                      Entrance script for batched attack.
+├── tfdump.py                     Entrance script for dumping tensorboard db.
+├── train.py                      Entrance script for training models.
+├── validate.py                   Entrance script for model validation.
+├── robrank                       RobRank library.
+│   ├── attacks                   Attack Implementations.
+│   │   └── advrank*.py           Adversarial ranking attack (ECCV'2020).
+│   ├── defenses/*                Defense Implementations.
+│   ├── configs/*                 Configurations (incl. hyper-parameters).
+│   ├── datasets/*                Dataset classes.
+│   ├── models                    Models and base classes.
+│   │   ├── template_classify.py  Base class for classification models.
+│   │   ├── template_hybrid.py    Base class for Classification+DML models.
+│   │   └── template_rank.py      Base class for DML/ranking models.
+│   ├── losses/*                  Deep metric learning loss functions.
+│   ├── cmdline.py                Command line interface implementation.
+│   └── utils.py                  Miscellaneous utilities.
+└── tools/*                       Miscellaneous tools for experiments.
+```
+
+### Tested Platform
+
+```
+OS: Debian unstable (May 2021), Ubuntu LTS
+Python: 3.8.5 (anaconda)
+PyTorch: 1.7.1, 1.8.1
+Python Dependencies: see requirements.txt
+```
+
+### References
+
+1. https://github.com/Confusezius/Deep-Metric-Learning-Baselines
+2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
+3. https://github.com/idstcv/SoftTriple
+4. https://github.com/KevinMusgrave/pytorch-metric-learning
+
+### Copyright and License
+
+```
+Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
