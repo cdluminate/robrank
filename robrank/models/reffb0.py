@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+from .template_rank import MetricTemplate224
 
-import sys
-import robrank as rr
-rr.cmdline.Validate(sys.argv[1:])
+
+class Model(MetricTemplate224):
+    BACKBONE = 'reffb0'
+    is_advtrain = False

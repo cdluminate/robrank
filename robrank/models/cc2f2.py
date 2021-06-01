@@ -21,7 +21,6 @@ from .. import datasets
 from .. import configs
 import multiprocessing as mp
 import statistics
-from termcolor import cprint
 from .template_classify import ClassifierTemplate
 
 

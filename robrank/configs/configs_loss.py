@@ -29,6 +29,11 @@ class contrastive:
 
 @dataclass
 class triplet:
+    '''
+    Setting margin_cosine: float = 0.8 can further improve the model
+    robustness with EST or ACT defense. But here we don't enable that
+    by default.
+    '''
     margin_cosine: float = 0.2
     margin_euclidean: float = 1.0
 
@@ -64,3 +69,9 @@ class multisim:
     neg_weight: float = 40  # [locked]
     margin: float = 0.1  # [locked]
     threshold: float = 0.5  # [locked]
+
+
+@dataclass
+class snr:
+    margin: float = 0.2  # [locked, ICML20]
+    reg_lambda: float = 0.005  # [locked, ICML20]

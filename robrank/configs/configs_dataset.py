@@ -69,3 +69,9 @@ class cars:
         os.path.expanduser('~/.torch/cars/')
     num_class_val: int = 98
     num_class: int = 196
+
+
+@dataclass
+class ilsvrc:
+    path: str = os.path.expanduser('~/.torch/ILSVRC/Data/CLS-LOC')
+    num_class: int = 1000

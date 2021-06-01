@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-import sys
-import robrank as rr
-rr.cmdline.TFdump(sys.argv[1:])
+from . import rres18
+
+
+class Model(rres18.Model):
+    is_advtrain_pnpx = True

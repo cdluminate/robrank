@@ -22,8 +22,19 @@ FDFIND_FLAGS = \
 	$(RSYNC_FLAGS)
 
 main:
-	fdfind $(FDFIND_FLAGS) -e py -x autopep8 -ai
+	-pyflakes3 .
+	fdfind $(FDFIND_FLAGS) -e py -x autopep8 -avi
 	$(MAKE) -C robrank
+
+doc:
+	# clone this repo to the parent directory (..) before building doc
+	# https://github.com/jothepro/doxygen-awesome-css.git
+	doxygen
+
+pylint:
+	pylint -j8 *.py
+	#pylint -j4 robrank
+	pylint -j8 -d C,R robrank/
 
 install_deps:
 	pip install -r requirements.txt
@@ -37,10 +48,19 @@ pytest:
 runtest:
 	$(MAKE) -C robrank runtest
 
+legion:
+	#rsync -rvlz . 169.254.169.219:~/Git/2021-robrank/ $(RSYNC_FLAGS)
+	rsync -rvlz . 192.168.1.106:~/Git/2021-robrank/ $(RSYNC_FLAGS)
+
 train-attack-defense-mnist-rc2f1-ptripletN:
-	python3 train.py -C mnist:rc2f1:ptripletN
-	python3 swipe.py -p pami28 -C 'logs_mnist-rc2f1-ptripletN/lightning_logs/version_0/checkpoints/epoch=7-step=943.ckpt'
+	python3 train.py -C mnist:rc2f2:ptripletN
+	python3 swipe.py -p pami28 -c logs_mnist-rc2f2-ptripletN
+	python3 tools/pjswipe.py logs_mnist-rc2f2-ptripletN
+	python3 train.py -C mnist:rc2f2d:ptripletN
+	python3 swipe.py -p pami28 -c logs_mnist-rc2f2d-ptripletN
+	python3 tools/pjswipe.py logs_mnist-rc2f2d-ptripletN
 
 train-attack-defense-cub-rres18-ptripletN:
 	python3 train.py -C cub:rres18:ptripletN
-	python3 swipe.py -p pami224 -C 'logs_cub-rres18-ptripletN/lightning_logs/version_0/checkpoints/epoch=74-step=2699.ckpt'
+	python3 swipe.py -p pami224 -c logs_cub-rres18-ptripletN
+	python3 advrank.py -D cuda -A SPQA:pm=-:M=1:eps=0.03137:alpha=0.011764:pgditer=32 -C $(ckpt_cub_rres18_ptripletN) --maxepoch 10

@@ -1,20 +1,21 @@
-torch (>= 1.7.0)
-torchvision
-efficientnet-pytorch
-joblib
-ipython
-matplotlib
 Pillow
-pygments
-scipy
-scikit-learn
-termcolor
-tqdm
+efficientnet-pytorch
 faiss-gpu
+ipython
+joblib
+matplotlib
 numpy
 pandas
 pretrainedmodels
+psutil
+pygments
 pytest
-pytorch-lightning (= 1.2.7)
-rich
+pytorch-lightning (== 1.2.7)
 pytorch-metric-learning (>= 0.9.98)
+rich
+scikit-learn
+scipy
+termcolor
+torch (>= 1.7.0)
+torchvision
+tqdm

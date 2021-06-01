@@ -26,7 +26,6 @@ from .. import datasets
 from .. import configs
 from .. import utils
 import multiprocessing as mp
-from termcolor import cprint
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score as __nmi
 from ..attacks import AdvRank

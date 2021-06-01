@@ -18,7 +18,7 @@ limitations under the License.
 import torch as th
 import numpy as np
 import itertools as it
-import functools as fun
+import functools as ft
 import random
 import torch.nn.functional as F
 import pytest
@@ -62,12 +62,17 @@ def miner(repres: th.Tensor, labels: th.Tensor, *,
     return (anchor, positive, negative)
 
 
+def __tester_repres_labels():
+    repres = F.normalize(th.rand(64, 8))
+    labels = th.randint(5, (32,)).view(-1, 1).expand(32, 2).flatten()
+    return (repres, labels)
+
+
 @pytest.mark.parametrize('mmethod, metric', it.product(['spc2-random',
                                                         'spc2-semihard', 'spc2-hard', 'spc2-softhard', 'spc2-distance',
                                                         'spc2-lifted', 'spc2-npair'], ['C', 'N', 'E']))
 def test_miner(mmethod, metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = miner(repres, labels, metric=metric,
                           method=mmethod, margin=0.2)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
@@ -98,8 +103,7 @@ def __miner_spc2_npair(repres: th.Tensor, labels: th.Tensor) -> tuple:
 
 
 def test_miner_spc2_npair():
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_npair(repres, labels)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, p, sn) in zip(anc, pos, neg):
@@ -135,8 +139,7 @@ def __miner_spc2_lifted(repres: th.Tensor, labels: th.Tensor) -> tuple:
 
 
 def test_miner_spc2_lifted():
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_lifted(repres, labels)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, sp, sn) in zip(anc, pos, neg):
@@ -214,8 +217,7 @@ def __miner_spc2_distance(
 
 @pytest.mark.parametrize('metric', ('C', 'N'))
 def test_miner_spc2_distance(metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_distance(repres, labels, metric=metric)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, p, n) in zip(anc, pos, neg):
@@ -228,22 +230,31 @@ def __miner_spc2_semihard(
         repres: th.Tensor, labels: th.Tensor, metric: str, margin: float) -> tuple:
     '''
     Sampling semihard negatives from pairwise (SPC-2) data batch.
+    https://arxiv.org/pdf/1503.03832.pdf
+    condition 1. d(a, p) < d(a, n)
+    condition 2. d(a, p) - d(a, n) + margin > 0
+    Note, if we turn condition 1 into d(a, p) > d(a, n), then it is actually
+    a part of the softhard sampling.
     '''
     negs = []
     pdist = __miner_pdist(repres, metric)
     for i in range(repres.size(0) // 2):
-        # XXX: the > is actually a part of Softhard
-        # mask_pdist = ((pdist[i, 2 * i] - pdist[i, 2 * i + 1]).pow(2) >
-        #               (pdist[i, 2 * i] - pdist[i, :]).pow(2))
+        # condition 1.
         mask_pdist = (pdist[2 * i, 2 * i + 1].pow(2) < pdist[2 * i, :].pow(2))
+        # condition 2.
         mask_tripl = (pdist[2 * i, 2 * i + 1] - pdist[2 * i, :] + margin > 0.0)
+        # is it negative?
         mask_label = (labels != labels[2 * i])
-        mask = fun.reduce(th.logical_and, [mask_pdist, mask_tripl, mask_label])
+        # reduce.
+        mask = ft.reduce(th.logical_and, [mask_pdist, mask_tripl, mask_label])
         if mask.sum() > 0:
+            # there is satisfying negative
             argwhere = th.where(mask)[0]
         elif mask_label.sum() > 0:
+            # no satisfying sample. just pick a negative one.
             argwhere = th.where(mask_label)[0]
         else:
+            # no negative sample. just pick anything.
             argwhere = th.arange(len(labels))
         negs.append(random.choice(argwhere).item())
     anchors = th.arange(0, len(labels), 2)
@@ -254,8 +265,7 @@ def __miner_spc2_semihard(
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))
 def test_miner_spc2_semihard(metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_semihard(
         repres, labels, metric=metric, margin=0.2)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
@@ -312,8 +322,7 @@ def __miner_spc2_softhard(
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))
 def test_miner_spc2_softhard(metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_softhard(repres, labels, metric=metric)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, p, n) in zip(anc, pos, neg):
@@ -344,8 +353,7 @@ def __miner_spc2_hard(
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))
 def test_miner_spc2_hard(metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_hard(repres, labels, metric=metric)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, p, n) in zip(anc, pos, neg):
@@ -384,8 +392,7 @@ def __miner_spc2_random(
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))
 def test_miner_spc2_random(metric):
-    repres = F.normalize(th.rand(10, 8))
-    labels = th.randint(3, (5,)).view(-1, 1).expand(5, 2).flatten()
+    repres, labels = __tester_repres_labels()
     anc, pos, neg = __miner_spc2_random(repres, labels)
     assert(len(anc) == len(pos) and len(anc) == len(neg))
     for (a, p, n) in zip(anc, pos, neg):
@@ -408,7 +415,7 @@ def __miner_random(repres: th.Tensor, labels: th.Tensor):
     #   apcomb = [list(it.filterfalse(lambda x: x[0] == x[1], x)) for x in apcomb]
     #   negs = [set(range(len(labels))) - set(cls2idx[x]) for (i,x) in enumerate(uniq) if counts[i]>1]
     #   groups = [list((*xx, yy) for (xx, yy) in it.product(x, y)) for (x,y) in zip(apcomb, negs)]
-    #   sampled_triplets = list(fun.reduce(list.__add__, groups))
+    #   sampled_triplets = list(ft.reduce(list.__add__, groups))
 
     # {0.051} sec slow
     # uniq, counts = np.unique(labels, return_counts=True)

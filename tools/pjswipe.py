@@ -1,11 +1,63 @@
-import json
-import re
-import argparse
-import sys
-import os
+#!/bin/python3
+'''
+Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+'''
+from collections import namedtuple
 from termcolor import cprint, colored
-import glob
+import argparse
 import csv
+import glob
+import json
+import numpy as np
+import os
+import re
+import sys
+import rich
+c = rich.get_console()
+
+
+Scores = namedtuple(
+    'Scores', [
+        'cap', 'cam', 'qap', 'qam', 'tma',
+        'esd', 'esr', 'ltm', 'gtm', 'gtt'])
+
+def _c(line: str):
+    return tuple(map(float, line.split('\t')))
+
+def ersnormalize(ss: Scores):
+    a = np.zeros(10)
+    a[0] = ss.cap * 2.0
+    a[1] = 100.0 - ss.cam
+    a[2] = ss.qap * 2.0
+    a[3] = 100.0 - ss.qam
+    a[4] = 100.0 * (1.0 - ss.tma)
+    a[5] = 100.0 * (2.0 - ss.esd) / 2
+    a[6] = ss.esr
+    a[7] = ss.ltm
+    a[8] = ss.gtm
+    a[9] = ss.gtt
+    return a
+
+def ers(ss: Scores):
+    '''
+    Calculate ERS from a given Scores instance.
+    '''
+    c.print('Raw Scores', ss)
+    a = ersnormalize(ss)
+    c.print('Rescaled Scores', a)
+    return f'{a.mean():.1f}'
 
 
 def nsort(L: list, R: str):
@@ -41,13 +93,13 @@ class TFdump:
                     cprint(s.summary.value[0].simple_value, 'blue')
                     value = s.summary.value[0].simple_value
                     if 'NMI' in tag:
-                        last['NMI'] = f'{value:.2f}'
+                        last['NMI'] = f'{100*value:.1f}'
                     if 'r@1' in tag:
                         last['r@1'] = f'{100*value:.1f}'
                     if 'r@2' in tag:
                         last['r@2'] = f'{100*value:.1f}'
                     if 'mAP' in tag:
-                        last['mAP'] = f'{value:.2f}'
+                        last['mAP'] = f'{100*value:.1f}'
                     for k in ('r@1', 'r@2', 'mAP', 'NMI'):
                         if k not in tag:
                             continue
@@ -61,7 +113,7 @@ class TFdump:
                             if float(value) > self.best[k]:
                                 self.best[k] = float(value)
         for (k, v) in last.items():
-            print(k, v)
+            print('LAST', k, v, f'(BEST is {100*self.best[k]:.1f}')
 
 
 def kfind(L: list, *args):
@@ -84,75 +136,77 @@ class Jdump:
         with open(ag.json, 'rt') as f:
             j = json.load(f)
         self.json = j
+        if 'rob' in ag.json:
+            Score = Scores(*((0.0,)*10))
         for (k, v) in j.items():
             cprint(k, 'blue')
             if k.startswith('CA'):
                 ca = tuple(x for x in v[-1].keys() if 'prank' in x)[0]
-                print('DEBUG', ca)
-                print(f'{100*float(v[-1][ca]):.1f}')
+                #print('DEBUG', ca)
+                print(f'PCTL {100*float(v[-1][ca]):.1f} / 100.0')
+                if 'rob' in ag.json:
+                    if 'pm=+' in k:
+                        Score = Score._replace(cap=100*float(v[-1][ca]))
+                    elif 'pm=-' in k:
+                        Score = Score._replace(cam=100*float(v[-1][ca]))
+            elif k.startswith('QA'):
+                qa = tuple(x for x in v[-1].keys() if 'prank' in x)[0]
+                print(f'PCTL {100*float(v[-1][qa]):.1f} / 100.0')
+                if 'rob' in ag.json:
+                    if 'pm=+' in k:
+                        Score = Score._replace(qap=100*float(v[-1][qa]))
+                    elif 'pm=-' in k:
+                        Score = Score._replace(qam=100*float(v[-1][qa]))
             elif k.startswith('SPQA'):
                 qa = tuple(x for x in v[-1].keys() if ':prank' in x)[0]
                 sp = tuple(x for x in v[-1].keys() if 'GTprank' in x)[0]
-                print('DEBUG', qa, sp)
-                print('DEBUG', 100 * float(v[-1][qa]), 100 * float(v[-1][sp]))
+                #print('DEBUG', qa, sp)
+                #print('DEBUG', 100 * float(v[-1][qa]), 100 * float(v[-1][sp]))
                 print(
-                    f'{100.*float(v[-1][qa]):.1f}',
-                    f'{100.*float(v[-1][sp]):.1f}')
+                    f'PCTL {100.*float(v[-1][qa]):.1f} / 100.0',
+                    f'PCTL {100.*float(v[-1][sp]):.1f} / 100.0')
+            elif k.startswith('ES'):
+                r1 = float(v[-1]['r@1'])
+                es = float(v[-1]['embshift'])
+                #print('DEBUG', f'{r1:.1f}/100', f'{es:.3f}/2')
+                print(f'ES {es:.3f} / 2.000')
+                print(f'R1 {r1:.1f} / 100.0')
+                if 'rob' in ag.json:
+                    Score = Score._replace(esd=es, esr=r1)
+            elif k.startswith('TMA'):
+                cs = float(v[-1]['Cosine-SIM'])
+                print(f'COS {cs:.3f} / 1.000')
+                if 'rob' in ag.json:
+                    Score = Score._replace(tma=cs)
+            elif k.startswith('LTM'):
+                r1 = float(v[-1]['r@1'])
+                print(f'R1 {100.*r1:.1f} / 100.0')
+                if 'rob' in ag.json:
+                    Score = Score._replace(ltm=100*r1)
+            elif k.startswith('GTM'):
+                r1 = 100 * float(v[-1]['r@1'])
+                #print('DEBUG', f'{r1:.1f}/100')
+                print(f'R1 {r1:.1f} / 100.0')
+                if 'rob' in ag.json:
+                    Score = Score._replace(gtm=r1)
+            elif k.startswith('GTT'):
+                rt4 = 100 * float(v[-1]['retain@4'])
+                print(f'RETAIN4 {rt4:.1f} / 100.0')
+                if 'rob' in ag.json:
+                    Score = Score._replace(gtt=rt4)
+            else:
+                raise NotImplementedError(k)
         #print(kfind(j.keys(), 'CA', 'pm=+', 'eps=0.3'))
-        elo = 'eps=0.0' if any(
-            x in ag.json for x in (
-                'mnist', 'fashion')) else 'eps=0.00'
-        ehi = 'eps=0.3' if any(
-            x in ag.json for x in (
-                'mnist', 'fashion')) else 'eps=0.06'
 
-        # export CA+
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'CA', 'pm=+', 'W=1:', elo)[0]][1]['CA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'CA', 'pm=+', 'W=1:', ehi)[0]][1]['CA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'CA', 'pm=+', 'W=10:', elo)[0]][1]['CA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'CA', 'pm=+', 'W=10:', ehi)[0]][1]['CA+:prank'])))
-        # export CA-
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'CA', 'pm=-', 'W=1:', elo)[0]][1]['CA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'CA', 'pm=-', 'W=1:', ehi)[0]][1]['CA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'CA', 'pm=-', 'W=10:', elo)[0]][1]['CA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'CA', 'pm=-', 'W=10:', ehi)[0]][1]['CA-:prank']))
-        # export QA+
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'QA', 'pm=+', 'M=1:', elo)[0]][1]['SPQA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'QA', 'pm=+', 'M=1:', ehi)[0]][1]['SPQA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'QA', 'pm=+', 'M=10:', elo)[0]][1]['SPQA+:prank'])))
-        self.brief.append("%.1f" % (
-            100 * min(0.5, j[kfind(j.keys(), 'QA', 'pm=+', 'M=10:', ehi)[0]][1]['SPQA+:prank'])))
-        rgt = max([j[x][1]['SPQA+:GTprank']
-                   for x in kfind(j.keys(), 'QA', 'pm=+')])
-        self.brief.append("%.1f" % (100 * rgt))
-        # export QA-
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'QA', 'pm=-', 'M=1:', elo)[0]][1]['SPQA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'QA', 'pm=-', 'M=1:', ehi)[0]][1]['SPQA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'QA', 'pm=-', 'M=10:', elo)[0]][1]['SPQA-:prank']))
-        self.brief.append("%.1f" % (
-            100 * j[kfind(j.keys(), 'QA', 'pm=-', 'M=10:', ehi)[0]][1]['SPQA-:prank']))
-        rgt = max([j[x][1]['SPQA-:GTprank']
-                   for x in kfind(j.keys(), 'QA', 'pm=-')])
-        self.brief.append("%.1f" % (100 * rgt))
-
+        # get the ERS for robxxx.json
+        if 'rob' in ag.json:
+            #c.print(Score)
+            c.print('Eventual ERS', ers(Score))
 
 def autodiscoverjsontf(logdir: str):
     path = os.path.join(logdir, 'lightning_logs/version_*')
-    ndir = nsort(glob.glob(path), r'.*version_(\d+)')[0]
+    ITH = int(os.getenv('ITH', '0'))
+    ndir = nsort(glob.glob(path), r'.*version_(\d+)')[ITH]
 
     try:
         path = os.path.join(ndir, 'events.out.tfevents.*')
@@ -162,10 +216,10 @@ def autodiscoverjsontf(logdir: str):
         exit(1)
     cprint(f'* Automatically discovered latest tfevent .. {ntfe}', 'cyan')
     tfe = TFdump(['-f', ntfe])
-    print('BEST', tfe.best)
 
+    JTYPE = str(os.getenv('JTYPE', ''))
     try:
-        path = os.path.join(ndir, 'checkpoints/epoch=*.json')
+        path = os.path.join(ndir, f'checkpoints/epoch=*{JTYPE}.json')
         nchk = nsort(glob.glob(path), r'.*epoch=(\d+)')[0]
     except IndexError:
         print('cannot find any json for the latest version')
@@ -173,34 +227,14 @@ def autodiscoverjsontf(logdir: str):
     cprint(f'* Automatically discovered latest checkpoint .. {nchk}', 'cyan')
     J = Jdump(['-j', nchk])
 
-    dataset, model, loss = re.match(
-        r'.*?logs_(\w+)-(\w+)-(\w+)', logdir).groups()
-    print('-- CSV/TeX --------------------------------')
-    w = csv.writer(sys.stdout, delimiter='&')
-    w.writerow([
-        dataset,
-        model,
-        loss,
-        "%.1f" % (tfe.best['r@1'] * 100),
-        "%.1f" % (tfe.best['r@2'] * 100),
-        "%.2f" % (tfe.best['mAP']),
-        "%.2f" % (tfe.best['NMI']),
-        *J.brief,
-    ])
-    #print(kfind(j.keys(), 'CA', 'pm=+', 'eps=0.3'))
-    with open('pjswipe.csv', 'a+') as f:
-        w = csv.writer(f, delimiter='&')
-        w.writerow([
-            dataset,
-            model,
-            loss,
-            "%.1f" % (tfe.best['r@1'] * 100),
-            "%.1f" % (tfe.best['r@2'] * 100),
-            "%.2f" % (tfe.best['mAP']),
-            "%.2f" % (tfe.best['NMI']),
-            *J.brief,
-        ])
-
 
 if __name__ == '__main__':
+    print('''\
+Usage: pjswipe.py xxx/logs_mnist-rc2f2-ptripletN
+
+export JTYPE={rob28,rob224,pami28,pami224} to select json.
+export ITH=int to select version
+''')
     autodiscoverjsontf(sys.argv[1])
+
+

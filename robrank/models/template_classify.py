@@ -29,7 +29,6 @@ from .. import datasets
 from .. import configs
 from .. import utils
 import multiprocessing as mp
-from termcolor import cprint
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score as __nmi
 from ..attacks import AdvRank
@@ -142,9 +141,8 @@ class ClassifierTemplate(object):
                 return
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
-        cprint(
-            f'Validation |  loss= {summary["loss"]:.5f}  accuracy= {summary["accuracy"]:.5f}',
-            'yellow', None, ['bold'])
+        c.print(f'[yellow]\nValidation |  loss= {summary["loss"]:.5f} '
+                + f'accuracy= {summary["accuracy"]:.5f}')
 
     def test_step(self, batch, batch_idx):
         images, labels = (batch[0].to(self.device), batch[1].to(self.device))

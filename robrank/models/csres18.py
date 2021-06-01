@@ -34,7 +34,6 @@ SOFTWARE.
 from .. import configs
 from .. import datasets
 from .. import utils
-from termcolor import cprint, colored
 from tqdm import tqdm
 import collections
 import multiprocessing as mp

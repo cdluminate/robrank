@@ -17,5 +17,4 @@ from . import rres18
 
 
 class Model(rres18.Model):
-    is_advtrain = True
-    is_advtrain_embshift = True
+    is_advtrain_ses = True

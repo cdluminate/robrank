@@ -36,14 +36,24 @@ except ImportError:
 
 IMmean = th.tensor([0.485, 0.456, 0.406])  # pylint: disable=not-callable
 IMstd = th.tensor([0.229, 0.224, 0.225])   # pylint: disable=not-callable
+IMmean_ibn = th.tensor([0.502, 0.4588, 0.4078])
+IMstd_ibn = th.tensor([0.0039, 0.0039, 0.0039])
 
 
 def renorm(im): return im.sub(IMmean[:, None, None].to(
     im.device)).div(IMstd[:, None, None].to(im.device))
 
 
+def renorm_ibn(im): return im.sub(IMmean_ibn[:, None, None].to(
+    im.device)).div(IMstd_ibn[:, None, None].to(im.device))[:, range(3)[::-1], :, :]
+
+
 def denorm(im): return im.mul(IMstd[:, None, None].to(
     im.device)).add(IMmean[:, None, None].to(im.device))
+
+
+def denorm_ibn(im): return im[:, range(3)[::-1], :, :].mul(IMmean_ibn[:, None, None].to(
+    im.device)).add(IMstd_ibn[:, None, None].to(im.device))
 
 
 def xdnorm(im): return im.div(IMstd[:, None, None].to(
@@ -56,10 +66,25 @@ def chw2hwc(im): return im.transpose((0, 2, 3, 1)) if len(
 
 def metric_get_nmi(valvecs: th.Tensor, vallabs: th.Tensor, ncls: int) -> float:
     '''
+    wrapper with a CUDA-OOM (out of memory) guard
+    '''
+    try:
+        nmi = __metric_get_nmi(valvecs, vallabs, ncls)
+    except RuntimeError as e:
+        print('! FAISS(GPU) Triggered CUDA OOM. Falling back to CPU clustering...')
+        os.putenv('FAISS_CPU', '1')
+        nmi = __metric_get_nmi(valvecs, vallabs, ncls, use_cuda=False)
+    return nmi
+
+
+def __metric_get_nmi(valvecs: th.Tensor, vallabs: th.Tensor,
+            ncls: int, use_cuda: bool = True) -> float:
+    '''
     Compute the NMI score
     '''
-    use_cuda: bool = th.cuda.is_available() and hasattr(faiss, 'StandardGpuResources')
-    if bool(os.getenv('FAISS_CPU', 0)):
+    use_cuda: bool = use_cuda and th.cuda.is_available() \
+            and hasattr(faiss, 'StandardGpuResources')
+    if int(os.getenv('FAISS_CPU', 0)) > 0:
         use_cuda = False
     npvecs = valvecs.detach().cpu().numpy().astype(np.float32)
     nplabs = vallabs.detach().cpu().view(-1).numpy().astype(np.float32)

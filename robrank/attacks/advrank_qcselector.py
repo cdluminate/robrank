@@ -29,7 +29,7 @@ class QCSelector(object):
 
     def __init__(self, attack_type: str, M: int = None,
                  W: int = None, SP: bool = False):
-        if attack_type == 'ES':
+        if attack_type in ('ES', 'GTM', 'GTT'):
             assert((M is None) and (W is None))
         elif attack_type == 'FOA':
             assert((M is not None) and (M >= 2))
@@ -44,7 +44,7 @@ class QCSelector(object):
         self.W = W
         self.SP = SP
         # sensible choice due to SOP dataset property
-        self.M_GT = 5  # [2002.11293 Fixed]
+        self.M_GT = 5  # [2002.11293 Locked. Don't modify!]
         self.map = {
             'ES': self._sel_es,
             'FOA': self._sel_foa,
@@ -52,10 +52,15 @@ class QCSelector(object):
             'CA-': self._sel_caminus,
             'QA+': self._sel_qaplus,
             'QA-': self._sel_qaminus,
+            'GTM': self._sel_gtm,
+            'GTT': self._sel_gtt,
+            'TMA': self._sel_tma,
         }
 
-    def __call__(self, *argv):
-        return self.map[self.attack_type](*argv)
+    def __call__(self, *argv, **kwargs):
+        with th.no_grad():
+            ret = self.map[self.attack_type](*argv, **kwargs)
+        return ret
 
     def _sel_es(self, dist, candi):
         # -- [orig] untargeted attack, UT
@@ -185,7 +190,7 @@ class QCSelector(object):
         else:
             return (embpairs, msample)
 
-    def _sel_qaminus(self, dist, candi):
+    def _sel_qaminus(self, dist, candi) -> tuple:
         M_GT = self.M_GT
         M = self.M
         # random sampling from top-3M for QA-
@@ -209,43 +214,100 @@ class QCSelector(object):
         else:
             return (embpairs, msample)
 
+    def _sel_tma(self, dist, candi) -> tuple:
+        # random sampling is enough. -- like QA+
+        idxrand = th.randint(candi[0].size(0), (dist.size(0),))
+        embrand = candi[0][idxrand, :]
+        return (embrand, idxrand)
+
+    def _sel_gtm(self, dist, candi, loc_self) -> tuple:
+        # top-1 matching and top-1 unmatching
+        d = dist.clone()
+        # filter out the query itself
+        d[range(len(loc_self)), loc_self] = 1e38
+        argsort = d.argsort(dim=1, descending=False)
+        argrank = argsort.argsort(dim=1, descending=False)
+        mylabel = candi[1][argsort[:, 0]].view(-1, 1)
+        mask_match = (candi[1].view(1, -1) == mylabel)
+        mask_unmatch = (candi[1].view(1, -1) != mylabel)
+        fstmatch = th.stack([argrank[i, mask_match[i]].argmin()
+                             for i in range(mask_match.size(0))])
+        fstunmatch = th.stack([argrank[i, mask_unmatch[i]].argmin()
+                               for i in range(mask_unmatch.size(0))])
+        ret = ((candi[0][fstmatch, None, :], fstmatch),
+               (candi[0][fstunmatch, None, :], fstunmatch),
+               (candi[0][loc_self, None, :], loc_self))
+        return ret
+
+    def _sel_gtt(self, dist, candi, loc_self) -> tuple:
+        # non-self top-2
+        d = dist.clone()
+        d[range(len(loc_self)), loc_self] = 1e38
+        idtop2 = d.topk(2, dim=-1, largest=False)[1]
+        fstidm = idtop2[:, 0]
+        fstidum = idtop2[:, 1]
+        ret = ((candi[0][fstidm, None, :], fstidm),
+               (candi[0][fstidum, None, :], fstidum),
+               (candi[0][loc_self, None, :], loc_self))
+        return ret
+
 
 def test_qcs_es():
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
     _ = QCSelector('ES', None, None, False)(dist, candi)
 
 
 @pytest.mark.parametrize('W, pm', it.product((2, 5, 10), ('+', '-')))
 def test_qcs_ca(pm: str, W: int):
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
     _ = QCSelector(f'CA{pm}', None, W, False)(dist, candi)
 
 
 @pytest.mark.parametrize('pm, M', it.product(('+', '-'), (2, 5, 10)))
 def test_qcs_qa(pm: str, M: int):
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
     _ = QCSelector(f'QA{pm}', M, None, False)(dist, candi)
 
 
 @pytest.mark.parametrize('pm, M', it.product(('+', '-'), (2, 5, 10)))
 def test_qcs_spqa(pm: str, M: int):
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
     _ = QCSelector(f'QA{pm}', M, None, True)(dist, candi)
 
 
 @pytest.mark.parametrize('M', (2, 5, 10))
 def test_qcs_foa(M: int):
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
-    _ = QCSelector(f'FOA', M, None, False)(dist, candi)
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
+    _ = QCSelector('FOA', M, None, False)(dist, candi)
 
 
 @pytest.mark.parametrize('M', (2, 5, 10))
 def test_qcs_spfoa(M: int):
     dist = th.rand(10, 128)
-    candi = (th.rand(128, 128), th.rand(128))
-    _ = QCSelector(f'FOA', M, None, True)(dist, candi)
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
+    _ = QCSelector('FOA', M, None, True)(dist, candi)
+
+
+def test_gtm():
+    dist = th.rand(10, 128)
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
+    loc_self = th.randint(128, (10,))
+    _ = QCSelector('GTM', None, None)(dist, candi, loc_self)
+
+
+def test_gtt():
+    dist = th.rand(10, 128)
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
+    loc_self = th.randint(128, (10,))
+    _ = QCSelector('GTT', None, None)(dist, candi, loc_self)
+
+
+def test_tma():
+    dist = th.rand(10, 128)
+    candi = (th.rand(128, 128), th.randint(5, (128,)))
+    _ = QCSelector('TMA', None, None)(dist, candi)

@@ -19,9 +19,11 @@ import json
 from tqdm import tqdm
 import numpy as np
 from .advrank import AdvRank
-from termcolor import cprint
 from ..utils import rjson
+import rich
+c = rich.get_console()
 
+_LEGAL_ATTAKS_ = ('ES', 'QA', 'CA', 'SPQA', 'GTM', 'GTT', 'TMA', 'LTM')
 
 class AdvRankLauncher(object):
     '''
@@ -36,13 +38,15 @@ class AdvRankLauncher(object):
         # parse the attack
         self.kw['device'] = device
         self.kw['verbose'] = verbose
-        attack_type, tmp = re.match(r'(\w+?):(.*)', attack).groups()
+        attack_type, atk_arg = re.match(r'(\w+?):(.*)', attack).groups()
         self.kw['attack_type'] = attack_type
-        self.kw.update(dict(re.findall(r'(\w+)=([\-\+\.\w]+)', tmp)))
+        self.kw.update(dict(re.findall(r'(\w+)=([\-\+\.\w]+)', atk_arg)))
         # sanity check and type conversion
         print('* Attack', self.kw)
-        assert(attack_type in ('ES', 'QA', 'CA', 'SPQA'))
+        assert(attack_type in _LEGAL_ATTAKS_)
         if attack_type == 'ES':
+            pass
+        elif attack_type in ('GTM', 'GTT', 'TMA', 'LTM'):
             pass
         elif attack_type == 'CA':
             assert('W' in self.kw)
@@ -68,12 +72,8 @@ class AdvRankLauncher(object):
         candi = model._recompute_valvecs()
         # XXX: this is tricky, but we need it.
         model.wantsgrad = True
-        print()
-        print(
-            '* Validation Embeddings',
-            candi[0].shape,
-            'Labels',
-            candi[1].shape)
+        print('\n* Validation Embeddings', candi[0].shape,
+              'Labels', candi[1].shape)
 
         # initialize attacker
         advrank = AdvRank(model, metric=model.metric, **self.kw)
@@ -92,23 +92,19 @@ class AdvRankLauncher(object):
             Sumadv.append(sumadv)
 
         # let's summarize!
-        cprint(
-            '=== Summary ==============================================',
-            'yellow')
-        cprint('Original Example:', 'green', None, ['bold'])
+        c.print('[yellow]=== Summary ========================================')
+        c.print('[bold green]Original Example:')
         sorig = {key: np.mean([y[key] for y in Sumorig])
                  for key in Sumorig[0].keys()}
         print(rjson(json.dumps(sorig, indent=2)))
-        cprint('Adversarial Example:', 'red', None, ['bold'])
+        c.print('[bold red]Adversarial Example:')
         sadv = {key: np.mean([y[key] for y in Sumadv])
                 for key in Sumadv[0].keys()}
         print(rjson(json.dumps(sadv, indent=2)))
-        cprint('Difference:', 'yellow', None, ['bold'])
+        c.print('[bold yello]Difference:')
         ckeys = set(sorig.keys()).intersection(set(sadv.keys()))
         diff = {key: np.mean([y[key] for y in Sumadv]) -
                 np.mean([y[key] for y in Sumorig]) for key in ckeys}
         print(rjson(json.dumps(diff, indent=2)))
-        cprint(
-            '==========================================================',
-            'yellow')
+        c.print('[yellow]====================================================')
         return (sorig, sadv)

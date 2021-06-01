@@ -24,6 +24,7 @@ import gc
 import psutil
 import json
 import itertools as it
+import numpy as np
 import glob
 import rich
 import torchvision as vision
@@ -122,6 +123,46 @@ class Swipe:
                 'eps=0.03137:alpha=0.011764:pgditer=32',
             ))],
     )
+    profile_rob28 = (
+        *[':'.join(x) for x in it.product(
+            ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
+                'eps=0.30196:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('QA',), ('pm=+', 'pm=-'), ('M=1',), (
+                'eps=0.30196:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('TMA', 'ES', 'LTM', 'GTM', 'GTT'), (
+                'eps=0.30196:alpha=0.011764:pgditer=32',
+            ))],
+    )
+    profile_rob224 = (
+        *[':'.join(x) for x in it.product(
+            ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('QA',), ('pm=+', 'pm=-'), ('M=1',), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('TMA', 'ES', 'LTM', 'GTM', 'GTT'), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+    )
+    profile_qccurve28 = (
+    *[':'.join(x) for x in it.product(
+        ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
+            f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+            for i in range(0, 11+1))
+        )],
+    *[':'.join(x) for x in it.product(
+        ('SPQA',), ('pm=+', 'pm=-'), ('M=1',), (
+            f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+            for i in range(0, 11+1))
+        )],
+    )
 
     def __init__(self, argv):
         ag = argparse.ArgumentParser()
@@ -134,7 +175,8 @@ class Swipe:
         ag.add_argument('-D', '--device', type=str, default='cuda'
                         if th.cuda.is_available() else 'cpu')
         ag.add_argument('-p', '--profile', type=str, required=True,
-                        choices=('pami28', 'pami224', 'eccv28', 'eccv224'))
+                        choices=('pami28', 'pami224', 'eccv28', 'eccv224',
+                                 'rob28', 'rob224', 'qccurve28'))
         ag.add_argument('-b', '--batchsize', type=int, default=-1)
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag.add_argument('-v', '--verbose', action='store_true')
@@ -201,7 +243,7 @@ class AdvRank:
                         help='override batchsize')
         ag = ag.parse_args(argv)
         ag.dataset, ag.model, ag.loss = re.match(
-            r'logs_(\w+)-(\w+)-(\w+)/.*\.ckpt', ag.checkpoint).groups()
+            r'.*logs_(\w+)-(\w+)-(\w+)/.*\.ckpt', ag.checkpoint).groups()
         c.print(rich.panel.Panel(' '.join(argv), title='RobRank::AdvRank',
                                  style='bold magenta'))
         c.print(vars(ag))
@@ -266,6 +308,8 @@ class Train:
         ag.add_argument('--do_test', action='store_true')
         ag.add_argument('-m', '--monitor', type=str, default='Validation/r@1')
         ag.add_argument('-r', '--resume', action='store_true')
+        ag.add_argument('--clip', type=float, default=0.0,
+                        help='do gradient clipping by value')
         ag.add_argument('--svd', action='store_true')
         ag = ag.parse_args(argv)
         c.print(rich.panel.Panel(' '.join(argv), title='RobRank::Train',
@@ -293,12 +337,17 @@ class Train:
             model.do_svd = True
 
         c.status('[white on magenta]>_< Initializing Optimizer ...')
+        other_options = {}
         if ag.dp:
-            accel = 'dp'
+            other_options['accelerator'] = 'dp'
         elif ag.gpus > 1:
-            accel = 'ddp'
+            other_options['accelerator'] = 'ddp'
         else:
-            accel = None
+            pass
+        if ag.clip > 0.0:
+            other_options['gradient_clip_val'] = ag.clip
+        else:
+            pass
         # checkpoint_callback = thl.callbacks.ModelCheckpoint(
         #        monitor=ag.monitor,
         #        mode='max')
@@ -309,8 +358,8 @@ class Train:
             val_check_interval=1.0,
             check_val_every_n_epoch=model.config.validate_every,
             default_root_dir='logs_' + re.sub(r':', '-', ag.config),
-            accelerator=accel,
             resume_from_checkpoint=ag.checkpoint if ag.resume else None,
+            **other_options,
         )
         # checkpoint_callback=checkpoint_callback)
         # print(checkpoint_callback.best_model_path)

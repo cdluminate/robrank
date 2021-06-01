@@ -22,6 +22,7 @@ from tqdm import tqdm
 import statistics
 import numpy as np
 import torch.nn.functional as F
+import functools as ft
 try:
     from .advrank_qcselector import QCSelector
     from .advrank_loss import AdvRankLoss
@@ -59,6 +60,12 @@ class AdvRank(object):
         self.metric = metric
         self.XI = 1.
 
+    def __call__(self, images, labels, candi) -> tuple:
+        '''
+        Main entrance of this class
+        '''
+        return self.attack(images, labels, candi)
+
     def update_xi(self, loss_sp):
         '''
         ECCV20 paper (2002.11293) uses a fixed xi parameter.
@@ -78,10 +85,9 @@ class AdvRank(object):
         elif any(x in self.model.dataset for x in ('cub',)):
             self.XI = np.min((np.exp(loss_sp * 4e4), 1e9))
         elif any(x in self.model.dataset for x in ('cars',)):
-            # FIXME: confirm the param
             self.XI = np.min((np.exp(loss_sp * 7e4), 1e9))
         elif any(x in self.model.dataset for x in ('sop',)):
-            self.XI = np.min((np.exp(loss_sp * 3e4), 1e9))
+            self.XI = np.min((np.exp(loss_sp * 7e4), 1e9))
         else:
             raise NotImplementedError
 
@@ -129,6 +135,7 @@ class AdvRank(object):
     def eval_advrank(self, images, labels, candi, *, resample=True) -> dict:
         '''
         evaluate original images or adversarial images for ranking
+        `resample` is used for retaining selection for multiple times of evals.
 
         side effect:
             it sets self.qcsel when resample is toggled
@@ -140,52 +147,116 @@ class AdvRank(object):
 
         # [[[ dispatch: qcselection and original evaluation ]]]
         # -> dispatch: ES
-        if (attack_type == 'ES') and resample:
+        if (attack_type == 'ES'):
             # select queries and candidates for ES
-            _ = QCSelector('ES', M, W, 'SP' in attack_type)(dist, candi)
-            self.output_orig = output.clone().detach()
+            if resample:
+                self.qcsel = QCSelector('ES', M, W, False)(dist, candi)
+                self.output_orig = output.clone().detach()
+            output_orig = self.output_orig
             # evaluate the attack
             allLab = candi[1].cpu().numpy().squeeze()
             localLab = labels.cpu().numpy().squeeze()
             r_1, r_10, r_100 = [], [], []
-            for i in range(dist.shape[0]):
-                agsort = dist[i].cpu().numpy().argsort()[1:]
-                rank = np.where(allLab[agsort] == localLab[i])[0].min()
-                r_1.append(rank == 0)
-                r_10.append(rank < 10)
-                r_100.append(rank < 100)
+            if resample:
+                for i in range(dist.shape[0]):
+                    agsort = dist[i].cpu().numpy().argsort()[1:]
+                    rank = np.where(allLab[agsort] == localLab[i])[0].min()
+                    r_1.append(rank == 0)
+                    r_10.append(rank < 10)
+                    r_100.append(rank < 100)
+            else:
+                # We are now evaluating adversarial examples
+                # hence masking the query itself in this way
+                for i in range(dist.shape[0]):
+                    if self.metric == 'C':
+                        loc = 1 - candi[0] @ output_orig[i].view(-1, 1)
+                        loc = loc.flatten().argmin().cpu().numpy()
+                    else:
+                        loc = (candi[0] - output_orig[i]).norm(2, dim=1)
+                        loc = loc.flatten().argmin().cpu().numpy()
+                    dist[i][loc] = 1e38  # according to float32 range.
+                    agsort = dist[i].cpu().numpy().argsort()[0:]
+                    rank = np.where(allLab[agsort] == localLab[i])[0].min()
+                    r_1.append(rank == 0)
+                    r_10.append(rank < 10)
+                    r_100.append(rank < 100)
             r_1, r_10, r_100 = 100 * \
                 np.mean(r_1), 100 * np.mean(r_10), 100 * np.mean(r_100)
-            loss, _ = AdvRankLoss('ES', self.metric)(output, self.output_orig)
+            loss, _ = AdvRankLoss('ES', self.metric)(output, output_orig)
             # summary
             summary_orig = {'loss': loss.item(), 'r@1': r_1,
                             'r@10': r_10, 'r@100': r_100}
 
-        elif (attack_type == 'ES') and not resample:
-            # We are now evaluating adversarial examples
-            output_orig = self.output_orig
-            allLab = candi[1].cpu().numpy()
-            localLab = labels.cpu().numpy()
-            r_1, r_10, r_100 = [], [], []
-            for i in range(dist.shape[0]):
-                if self.metric == 'C':
-                    loc = (1 - candi[0] @ output_orig[i].view(-1, 1)
-                           ).flatten().argmin().cpu().numpy()
-                else:
-                    loc = (candi[0] - output_orig[i]).norm(2,
-                                                           dim=1).flatten().argmin().cpu().numpy()
-                dist[i][loc] = 1e30
-                agsort = dist[i].cpu().numpy().argsort()[0:]
-                rank = np.where(allLab[agsort] == localLab[i])[0].min()
+        # -> dispatch: LTM
+        elif attack_type == 'LTM':
+            if resample:
+                self.output_orig = output.clone().detach()
+                self.loc_self = dist.argmin(dim=-1).view(-1)
+            allLab = candi[1].cpu().numpy().squeeze()
+            localLab = labels.cpu().numpy().squeeze()
+            r_1 = []
+            for i in range(dist.size(0)):
+                dist[i][self.loc_self[i]] = 1e38
+                argsort = dist[i].cpu().numpy().argsort()[0:]
+                rank = np.where(allLab[argsort] == localLab[i])[0].min()
                 r_1.append(rank == 0)
-                r_10.append(rank < 10)
-                r_100.append(rank < 100)
-            r_1, r_10, r_100 = 100 * \
-                np.mean(r_1), 100 * np.mean(r_10), 100 * np.mean(r_100)
-            loss, _ = AdvRankLoss('ES', self.metric)(output, self.output_orig)
+            r_1 = np.mean(r_1)
             # summary
-            summary_orig = {'loss': loss.item(), 'r@1': r_1,
-                            'r@10': r_10, 'r@100': r_100}
+            summary_orig = {'r@1': r_1}
+
+        # -> dispatch: TMA
+        elif attack_type == 'TMA':
+            if resample:
+                self.output_orig = output.clone().detach()
+                self.qcsel = QCSelector('TMA', None, None)(dist, candi)
+            (embrand, _) = self.qcsel
+            cossim = F.cosine_similarity(output, embrand).mean().item()
+            # summary
+            summary_orig = {'Cosine-SIM': cossim}
+
+        # -> dispatch: GTM
+        elif (attack_type == 'GTM'):
+            if resample:
+                self.output_orig = output.clone().detach()
+                self.dist_orig = dist.clone().detach()
+                self.loc_self = self.dist_orig.argmin(dim=-1).view(-1)
+                self.qcsel = QCSelector('GTM', None, None)(dist, candi,
+                        self.loc_self)
+            output_orig = self.output_orig
+            # evaluate the attack
+            allLab = candi[1].cpu().numpy().squeeze()
+            localLab = labels.cpu().numpy().squeeze()
+            r_1 = []
+            # the process is similar to that for ES attack
+            # except that we only evaluate recall at 1 (r_1)
+            for i in range(dist.shape[0]):
+                dist[i][self.loc_self[i]] = 1e38
+                argsort = dist[i].cpu().numpy().argsort()[0:]
+                rank = np.where(allLab[argsort] == localLab[i])[0].min()
+                r_1.append(rank == 0)
+            r_1 = np.mean(r_1)
+            # summary
+            summary_orig = {'r@1': r_1}
+
+        # -> dispatch: GTT
+        elif (attack_type == 'GTT'):
+            if resample:
+                self.output_orig = output.clone().detach()
+                self.dist_orig = dist.clone().detach()
+                self.loc_self = self.dist_orig.argmin(dim=-1).view(-1)
+                self.qcsel = QCSelector('GTT', None, None)(
+                        dist, candi, self.loc_self)
+            dist[range(len(self.loc_self)), self.loc_self] = 1e38
+            ((_, idm), (_, _), (_, _)) = self.qcsel
+            re1 = (dist.argmin(dim=-1).view(-1) == idm).float().mean().item()
+            dk ={}
+            for k in (4,):
+                topk = dist.topk(k, dim=-1, largest=False)[1]
+                seq = [topk[:, j].view(-1) == idm for j in range(k)]
+                idrecall = ft.reduce(th.logical_or, seq)
+                dk[f'retain@{k}'] = idrecall.float().mean().item()
+            # summary
+            summary_orig = {'ID-Retain@1': re1, **dk}
 
         # -> dispatch: FOA M=2
         elif (attack_type == 'FOA') and (M == 2):
@@ -276,12 +347,6 @@ class AdvRank(object):
             raise Exception("Unknown attack")
         # note: QCSelector results are stored in self.qcsel
         return output, dist, summary_orig
-
-    def __call__(self, images, labels, candi) -> tuple:
-        '''
-        Main entrance of this class
-        '''
-        return self.attack(images, labels, candi)
 
     def embShift(self, images: th.Tensor, orig: th.Tensor = None) -> th.Tensor:
         '''
@@ -509,6 +574,42 @@ class AdvRank(object):
                     loss = loss_qa + self.XI * loss_sp
                 itermsg = {'loss': loss.item(), 'loss_qa': loss_qa.item(),
                            'loss_sp': loss_sp.item()}
+            elif (attack_type == 'GTM'):
+                ((emm, _), (emu, _), (ems, _)) = self.qcsel
+                loss = AdvRankLoss('GTM', self.metric)(
+                    output, emm, emu, ems, candi[0])
+                itermsg = {'loss': loss.item()}
+                # Note: greedy qc selection / resample harms performance
+                #with th.no_grad():
+                #    if self.metric in ('C',):
+                #        dist = 1 - output @ candi[0].t()
+                #    elif self.metric in ('E', 'N'):
+                #        dist = th.cdist(output, candi[0])
+                #self.qcsel = QCSelector('GTM', None, None)(dist, candi,
+                #        self.dist_orig)
+            elif (attack_type == 'GTT'):
+                ((emm, idm), (emu, idum), (ems, _)) = self.qcsel
+                loss = AdvRankLoss('GTT', self.metric)(
+                        output, emm, emu, ems, candi[0])
+                itermsg = {'loss': loss.item()}
+            elif attack_type == 'TMA':
+                (embrand, _) = self.qcsel
+                loss = AdvRankLoss('TMA', self.metric)(output, embrand)
+                itermsg = {'loss': loss.item()}
+            elif attack_type == 'LTM':
+                mask_same = (candi[1].view(1, -1) == labels.view(-1, 1))
+                mask_same.scatter(1, self.loc_self.view(-1, 1), False)
+                mask_diff = (candi[1].view(1, -1) != labels.view(-1, 1))
+                if self.metric in ('E', 'N'):
+                    dist = th.cdist(output, candi[0])
+                elif self.metrci == 'C':
+                    dist = 1 - output @ candi[0].t()
+                maxdan = th.stack([dist[i, mask_diff[i]].max()
+                                   for i in range(dist.size(0))])
+                mindap = th.stack([dist[i, mask_same[i]].min()
+                                   for i in range(dist.size(0))])
+                loss = (maxdan - mindap).relu().sum()
+                itermsg = {'loss': loss.item()}
             else:
                 raise Exception("Unknown attack")
             if self.verbose and int(os.getenv('PGD', -1)) > 0:
@@ -658,12 +759,28 @@ def test_qa(attack_type, M, pm, metric, pgditer, eps):
         assert(r.abs().mean() > 1e-3)  # sanity test
 
 
-if __name__ == '__main__':
-    #test_ca(2, '+', 'E', 24, 0.1)
-    #test_ca(2, '-', 'E', 24, 0.1)
-    #test_qa('QA', 2, '+', 'E', 24, 0.1)
-    #test_qa('QA', 2, '-', 'E', 24, 0.1)
-    #test_qa('SPQA', 2, '+', 'E', 24, 0.1)
-    #test_qa('SPQA', 2, '-', 'E', 24, 0.1)
-    #test_es('C', 24, 0.1)
-    pass
+@pytest.mark.parametrize('metric, pgditer, eps',
+                         it.product(('N', 'E', 'C'), (1, 4), (0., 0.1)))
+def test_gtm(metric: str, pgditer: int, eps: float):
+    # pylint: disable=unused-variable
+    model = th.nn.Sequential(th.nn.Linear(8, 8))
+    print(model)
+    dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
+    with th.no_grad():
+        if metric in ('C', 'N'):
+            candi = (F.normalize(model(dataset[0])), dataset[1])
+        else:
+            candi = (model(dataset[0]), dataset[1])
+    print(candi)
+    # attack the model to reduce r@1
+    images, labels = dataset[0][:8], dataset[1][:8]
+    advrank = AdvRank(model, attack_type='GTM', eps=eps,
+                      metric=metric, pgditer=pgditer, verbose=True)
+    print(advrank)
+    xr, r, sumorig, sumadv = advrank(images, labels, candi)
+    print('DEBUG: sumorig', sumorig)
+    print('DEBUG: sumadv', sumadv)
+    if eps == 0.:
+        assert(abs(sumorig['r@1'] - sumadv['r@1']) < 1e3)
+    # else:
+    #    assert(sumorig['r@1'] >= sumadv['r@1'])

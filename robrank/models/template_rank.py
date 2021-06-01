@@ -29,7 +29,6 @@ from .. import datasets
 from .. import configs
 from .. import utils
 import multiprocessing as mp
-from termcolor import cprint
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score as __nmi
 from ..attacks import AdvRank
@@ -37,6 +36,7 @@ from .svdreg import svdreg
 from tqdm import tqdm
 import functools
 from .. import losses
+from .. import defenses
 #
 try:
     import faiss
@@ -49,6 +49,11 @@ try:
 except ImportError:
     pass
 #
+try:
+    import pretrainedmodels as ptm
+except ImportError:
+    pass
+#
 import rich
 c = rich.get_console()
 
@@ -58,10 +63,16 @@ class MetricBase(thl.LightningModule):
     _valvecs = None
     _vallabs = None
 
+    def post_init_hook(self):
+        '''
+        A customizable function that should be overriden by child classes.
+        This function is runed at the end of child.__init__(...)
+        '''
+        pass
+
     def _recompute_valvecs(self):
         with th.no_grad():
-            cprint('\nRe-Computing Validation Set Representations ...',
-                   'yellow', end=' ')
+            c.print('[yellow]\nComputing Val Set Repres ...', end=' ')
             valvecs, vallabs = [], []
             dataloader = self.val_dataloader()
             #iterator = tqdm(enumerate(dataloader), total=len(dataloader))
@@ -114,15 +125,22 @@ class MetricBase(thl.LightningModule):
         if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
             x = x.view(-1, 3, 224, 224)
             # this is used for adversarial attack / adversarial training
+            # we have to track the gradient for the very initial input
             if hasattr(self, 'wantsgrad') and self.wantsgrad:
-                x = utils.renorm(x)
+                if hasattr(self, 'is_inceptionbn') and self.is_inceptionbn:
+                    x = utils.renorm_ibn(x)
+                else:
+                    x = utils.renorm(x)
                 x = self.backbone(x)
                 return x
             else:
                 # we don't want to track the gradients for the preprocessing
                 # step
                 with th.no_grad():
-                    x = utils.renorm(x)
+                    if hasattr(self, 'is_inceptionbn') and self.is_inceptionbn:
+                        x = utils.renorm_ibn(x)
+                    else:
+                        x = utils.renorm(x)
                 x = self.backbone(x)
                 return x
         elif any(x in self.dataset for x in ('mnist', 'fashion')):
@@ -146,7 +164,32 @@ class MetricBase(thl.LightningModule):
 
     def training_step(self, batch, batch_idx, optimizer_idx=None):
         if hasattr(self, 'is_advtrain') and self.is_advtrain:
-            return self.adv_training_step(batch, batch_idx)
+            return defenses.est_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_est') and self.is_advtrain_est:
+            return defenses.est_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_ses') and self.is_advtrain_ses:
+            return defenses.ses_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_pnp') and self.is_advtrain_pnp:
+            return defenses.pnp_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_pnp_adapt') and self.is_advtrain_pnp_adapt:
+            return defenses.pnp_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_pnpx') and self.is_advtrain_pnpx:
+            '''
+            Benign + adversarial training mode (PNP/Augment, postfix=px)
+            '''
+            if np.random.random() > 0.5:
+                return defenses.pnp_training_step(self, batch, batch_idx)
+            else:
+                pass  # do the normal training step
+        elif hasattr(self, 'is_advtrain_mmt') and self.is_advtrain_mmt:
+            return defenses.mmt_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_tbc') and self.is_advtrain_tbc:
+            return defenses.tbc_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_acap') and self.is_advtrain_acap:
+            return defenses.acap_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_rest') and self.is_advtrain_rest:
+            return defenses.rest_training_step(self, batch, batch_idx)
+        # else: normal training.
         images, labels = (batch[0].to(self.device), batch[1].to(self.device))
         if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
             output = self.forward(images.view(-1, 3, 224, 224))
@@ -160,108 +203,6 @@ class MetricBase(thl.LightningModule):
         self.log('Train/loss', loss)
         #tqdm.write(f'* OriLoss {loss.item():.3f}')
         self.log('Train/OriLoss', loss.item())
-        return loss
-
-    def adv_training_step(self, batch, batch_idx):
-        '''
-        Do adversarial training using Mo's defensive triplet (2002.11293)
-        Confirmed for MNIST/Fashion-MNIST
-        [ ] for CUB/SOP
-        '''
-        if hasattr(self, 'is_advtrain_embshift') and self.is_advtrain_embshift:
-            return self.adv_training_step_embshift(batch, batch_idx)
-        images, labels = (batch[0].to(self.device), batch[1].to(self.device))
-        # generate adversarial examples
-        advatk_metric = 'C' if self.dataset in ('mnist', 'fashion') else 'C'
-        advrank = AdvRank(self, eps=self.config.advtrain_eps,
-                          alpha=3. / 255. if self.config.advtrain_eps > 0.1 else 1. / 255.,
-                          pgditer=32 if self.config.advtrain_eps > 0.1 else 24,
-                          device=self.device,
-                          metric=advatk_metric, verbose=False)
-        # set shape
-        if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
-            shape = (-1, 3, 224, 224)
-        elif any(x in self.dataset for x in ('mnist', 'fashion')):
-            shape = (-1, 1, 28, 28)
-        else:
-            raise ValueError(f'does not recognize dataset {self.dataset}')
-        # eval orig
-        with th.no_grad():
-            output_orig = self.forward(images.view(*shape))
-            loss_orig = self.lossfunc(output_orig, labels)
-        # generate adv examples
-        self.wantsgrad = True
-        self.eval()
-        advimgs = advrank.embShift(images.view(*shape))
-        self.train()
-        output = self.forward(advimgs.view(*shape))
-        self.wantsgrad = False
-        # compute loss
-        loss = self.lossfunc(output, labels)
-        if hasattr(self, 'do_svd') and self.do_svd:
-            loss += svdreg(self, output)
-        self.log('Train/loss', loss)
-        #tqdm.write(f'* OriLoss {loss_orig.item():.3f} | [AdvLoss] {loss.item():.3f}')
-        self.log('Train/OriLoss', loss_orig.item())
-        self.log('Train/AdvLoss', loss.item())
-        return loss
-
-    def adv_training_step_embshift(self, batch, batch_idx):
-        '''
-        Adversarial training by directly supressing embedding shift
-        max(*.es)->advimg, min(advimg->emb,oriimg->img;*.metric)
-        Confirmed for MNIST/Fashion-MNIST
-        [ ] for CUB/SOP
-        '''
-        images, labels = (batch[0].to(self.device), batch[1].to(self.device))
-        # generate adversarial examples
-        advatk_metric = self.metric
-        advrank = AdvRank(self, eps=self.config.advtrain_eps,
-                          alpha=3. / 255. if self.config.advtrain_eps > 0.1 else 1. / 255.,
-                          pgditer=32 if self.config.advtrain_eps > 0.1 else 24,
-                          device=self.device,
-                          metric=advatk_metric, verbose=False)
-        # setup shape
-        if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
-            shape = (-1, 3, 224, 224)
-        elif any(x in self.dataset for x in ('mnist', 'fashion')):
-            shape = (-1, 1, 28, 28)
-        else:
-            raise ValueError('illegal dataset!')
-        # find adversarial example
-        self.wantsgrad = True
-        self.eval()
-        advimgs = advrank.embShift(images.view(*shape))
-        self.train()
-        self.watnsgrad = False
-        # evaluate advtrain loss
-        output_orig = self.forward(images.view(*shape))
-        loss_orig = self.lossfunc(output_orig, labels)
-        output_adv = self.forward(advimgs.view(*shape))
-        # select defense method
-        if self.metric == 'E':
-            # this is a trick to normalize non-normed Euc embedding,
-            # or the loss could easily diverge.
-            nadv = F.normalize(output_adv)
-            embshift = F.pairwise_distance(nadv, output_orig).mean()
-        elif self.metric == 'N':
-            nori = F.normalize(output_orig)
-            nadv = F.normalize(output_adv)
-            embshift = F.pairwise_distance(nadv, nori).mean()
-        elif self.metric == 'C':
-            embshift = (
-                1 -
-                F.cosine_similarity(
-                    output_adv,
-                    output_orig)).mean()
-        # loss and log
-        loss = loss_orig + embshift * 1.0
-        if hasattr(self, 'do_svd') and self.do_svd:
-            loss += svdreg(self, output_adv)
-        self.log('Train/loss', loss)
-        self.log('Train/OriLoss', loss_orig.item())
-        self.log('Train/AdvLoss', embshift.item())
-        self.log('Train/embShift', embshift.item())
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -401,6 +342,7 @@ class MetricTemplate28(MetricBase):
             'config': {k: v for (k, v) in self.config.__dict__.items()
                        if k not in ('allowed_losses', 'allowed_datasets')},
         })
+        self.post_init_hook()
 
 
 ###############################################################################
@@ -414,6 +356,7 @@ class MetricTemplate224(MetricBase):
     BACKBONE = 'resnet18'
     is_advtrain = False
     do_svd = False
+    is_inceptionbn = False
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
@@ -439,15 +382,16 @@ class MetricTemplate224(MetricBase):
         elif self.BACKBONE == 'rmnas13':
             self.config = configs.rmnas(dataset, loss)
             self.backbone = vision.models.mnasnet1_3(pretrained=True)
-        elif self.BACKBONE == 'renb0':
-            self.config = configs.renb0(dataset, loss)
+        elif self.BACKBONE == 'reffb0':
+            self.config = configs.reffb0(dataset, loss)
             self.backbone = EfficientNet.from_pretrained('efficientnet-b0')
-        elif self.BACKBONE == 'renb4':
-            self.config = configs.renb4(dataset, loss)
+        elif self.BACKBONE == 'reffb4':
+            self.config = configs.reffb4(dataset, loss)
             self.backbone = EfficientNet.from_pretrained('efficientnet-b4')
-        elif self.BACKBONE == 'renb7':
-            self.config = configs.renb7(dataset, loss)
-            self.backbone = EfficientNet.from_pretrained('efficientnet-b7')
+        elif self.BACKBONE == 'ribn':
+            self.config = configs.ribn(dataset, loss)
+            self.backbone = ptm.__dict__['bninception'](num_classes=1000,
+                                                        pretrained='imagenet')
         else:
             raise ValueError()
         assert(dataset in self.config.allowed_datasets)
@@ -458,20 +402,20 @@ class MetricTemplate224(MetricBase):
         self.metric = self.lossfunc.determine_metric()
         self.datasetspec = self.lossfunc.datasetspec()
         # surgery
-        if re.match(r'res', self.BACKBONE):
+        if re.match(r'rres.*', self.BACKBONE):
             emb_dim = 512 if '18' in self.BACKBONE else 2048
             if self.config.embedding_dim > 0:
                 self.backbone.fc = th.nn.Linear(
                     emb_dim, self.config.embedding_dim)
             else:
                 self.backbone.fc = th.nn.Identity()
-        elif re.match(r'mnas', self.BACKBONE):
+        elif re.match(r'rmnas.*', self.BACKBONE):
             if self.config.embedding_dim > 0:
                 self.backbone.classifier = th.nn.Linear(
                     1280, self.config.embedding_dim)
             else:
                 self.backbone.classifier = th.nn.Identity()
-        elif re.match(r'enb', self.BACKBONE):
+        elif re.match(r'reff.*', self.BACKBONE):
             if self.config.embedding_dim > 0:
                 if 'b0' in self.BACKBONE:
                     emb_dim = 1280
@@ -485,6 +429,14 @@ class MetricTemplate224(MetricBase):
             else:
                 self.backbone._modules['_dropout'] = th.nn.Identity()
                 self.backbone._modules['_fc'] = th.nn.Identity()
+        elif re.match(r'ribn.*', self.BACKBONE):
+            assert(self.config.embedding_dim > 0)
+            self.backbone.global_pool = th.nn.AdaptiveAvgPool2d(1)
+            self.backbone.last_linear = th.nn.Linear(
+                self.backbone.last_linear.in_features,
+                self.config.embedding_dim)
+        else:
+            raise NotImplementedError('how to perform surgery for such net?')
         # Freeze BatchNorm2d (ICML20: revisiting ... in DML)
         if self.config.freeze_bn and not self.is_advtrain:
             def __freeze(mod):
@@ -505,3 +457,4 @@ class MetricTemplate224(MetricBase):
             'config': {k: v for (k, v) in self.config.__dict__.items()
                        if k not in ('allowed_losses', 'allowed_datasets')},
         })
+        self.post_init_hook()

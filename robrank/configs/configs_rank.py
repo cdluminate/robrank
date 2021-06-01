@@ -49,26 +49,38 @@ class __ranking:
         'pquadC', 'pquadE', 'pquadN', 'pdquadN',
         'prhomC', 'prhomE', 'prhomN', 'pdrhomN',
         'pmsC', 'pmsN',
+        'pgilC', 'pgilE', 'pgilN', 'ptripxaN',
         # extra.py: borrowed functions
         'pstripN',
         'pangularN',
         'pcontN',
         'pncaN',
+        'psnrN', 'psnrE', 'psnrC',
     )
 
 
 @dataclass
 class __ranking_model_28x28(__ranking):
+    '''
+    Set pgditer = 1 to enable FGSM adversarial training.
+    '''
     allowed_datasets: tuple = ('mnist', 'fashion')
-    advtrain_eps: float = 0.3
     embedding_dim: int = 512
+    advtrain_eps: float = 77. / 255.
+    advtrain_alpha: float = 3. / 255.
+    advtrain_pgditer: int = 32
 
 
 @dataclass
 class __ranking_model_224x224(__ranking):
+    '''
+    Set pgditer = 1 to enable FGSM adversarial training.
+    '''
     allowed_datasets: tuple = ('sop', 'cub', 'cars')
-    advtrain_eps: float = 16. / 255.
     embedding_dim: int = 512
+    advtrain_eps: float = 8. / 255.
+    advtrain_alpha: float = 1. / 255.
+    advtrain_pgditer: int = 32
 
     def __init__(self, dataset, loss):
         if dataset == 'cub':
@@ -83,8 +95,6 @@ class __ranking_model_224x224(__ranking):
 class __ranking_model_224x224_icml(__ranking_model_224x224):
     def __init__(self, dataset, loss):
         super().__init__(dataset, loss)
-        if dataset == 'sop':
-            self.maxepoch = 100
         self.validate_every = {'sop': 5, 'cub': 5, 'cars': 5}[dataset]
         if re.match(r'c.+', loss):
             self.batchsize = 112  # [lock]
@@ -162,7 +172,7 @@ class rmnas(__ranking_model_224x224_icml):
 
 
 @dataclass
-class renb0(__ranking_model_224x224_icml):
+class ribn(__ranking_model_224x224_icml):
     maxepoch: int = 150
     loader_num_workers: int = min(8, mp.cpu_count())
     lr: float = 1e-5  # [lock]
@@ -176,7 +186,21 @@ class renb0(__ranking_model_224x224_icml):
 
 
 @dataclass
-class renb4(__ranking_model_224x224_icml):
+class reffb0(__ranking_model_224x224_icml):
+    maxepoch: int = 150
+    loader_num_workers: int = min(8, mp.cpu_count())
+    lr: float = 1e-5  # [lock]
+    weight_decay: float = 4e-4  # [lock] 2002.08473
+    embedding_dim: int = 512
+    freeze_bn: bool = True
+    valbatchsize: int = 112
+
+    def __init__(self, dataset, loss):
+        super().__init__(dataset, loss)
+
+
+@dataclass
+class reffb4(__ranking_model_224x224_icml):
     maxepoch: int = 150
     loader_num_workers: int = min(8, mp.cpu_count())
     lr: float = 1e-5  # [lock]

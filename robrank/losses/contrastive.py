@@ -15,12 +15,34 @@ limitations under the License.
 '''
 
 import torch as th
+import torch.nn.functional as F
 import numpy as np
 from .. import configs
 import functools as ft
 from .miner import miner
 import pytest
 import itertools as it
+
+
+def fn_pcontrast_kernel(repA: th.Tensor, repP: th.Tensor, repN: th.Tensor,
+                        *, metric: str, margin: float):
+    '''
+    <functional> the core computation for spc-2 contrastive loss.
+    '''
+    if metric in ('C',):
+        targets = th.ones(repA.size(0)).to(repA.device)
+        lap = F.cosine_embedding_loss(repA, repP, targets, margin=margin)
+        lan = F.cosine_embedding_loss(repA, repN, -targets, margin=margin)
+        loss = lap + lan
+    elif metric in ('E', 'N'):
+        __pd = ft.partial(th.nn.functional.pairwise_distance, p=2)
+        lap = __pd(repA, repP).mean()
+        lap = th.tensor(0.).to(repA.device) if th.isnan(lap) else lap
+        lan = margin - __pd(repA, repN)
+        lan = th.masked_select(lan, lan > 0.).mean()
+        lan = th.tensor(0.).to(repA.device) if th.isnan(lan) else lan
+        loss = lap + lan
+    return loss
 
 
 def fn_pcontrast(repres: th.Tensor, labels: th.Tensor, *,
@@ -43,38 +65,34 @@ def fn_pcontrast(repres: th.Tensor, labels: th.Tensor, *,
     ancs, poss, negs = miner(
         repres, labels, method=minermethod, metric=metric, margin=margin, p_switch=p_switch)
     # loss
-    if metric == 'C':
-        __cosemb = ft.partial(
-            th.nn.functional.cosine_embedding_loss, margin=margin)
-        targets = th.ones(repres.size(0) // 2).to(repres.device)
-        lap = __cosemb(repres[ancs, :], repres[poss, :], targets)
-        lan = __cosemb(repres[ancs, :], repres[negs, :], -targets)
-        loss = lap + lan
-    elif metric in ('E', 'N'):
-        __pdist = ft.partial(th.nn.functional.pairwise_distance, p=2)
-        lap = __pdist(repres[ancs, :], repres[poss, :]).mean()
-        lap = th.tensor(0.).to(repres.device) if th.isnan(lap) else lap
-        lan = margin - __pdist(repres[ancs, :], repres[negs, :])
-        lan = th.masked_select(lan, lan > 0.).mean()
-        lan = th.tensor(0.).to(repres.device) if th.isnan(lan) else lan
-        loss = lap + lan
-    else:
-        raise ValueError('illegal metric')
+    loss = fn_pcontrast_kernel(repres[ancs, :], repres[poss, :],
+                               repres[negs, :], metric=metric, margin=margin)
     return loss
 
 
 class pcontrastC(th.nn.Module):
     _metric = 'C'
     _datasetspec = 'SPC-2'
+    _minermethod = 'spc2-random'
 
     def __call__(self, *args, **kwargs):
-        return ft.partial(fn_pcontrast, metric=self._metric)(*args, **kwargs)
+        return ft.partial(fn_pcontrast, metric=self._metric,
+                          minermethod=self._minermethod)(*args, **kwargs)
 
     def determine_metric(self):
         return self._metric
 
     def datasetspec(self):
         return self._datasetspec
+
+    def raw(self, repA, repP, repN):
+        if self._metric in ('C', 'N'):
+            margin = configs.contrastive.margin_cosine
+        elif self._metric in ('E', ):
+            margin = configs.contrastive.margin_euclidean
+        loss = fn_pcontrast_kernel(repA, repP, repN,
+                                   metric=self._metric, margin=margin)
+        return loss
 
 
 class pcontrastE(pcontrastC):
@@ -115,44 +133,22 @@ class pDcontrastN(th.nn.Module):
         return self._datasetspec
 
 
-def __contrastive(repres: th.Tensor, labels: th.Tensor, *, metric: str):
-    '''
-    Functional version of contrastive loss function with cosine distance
-    as the distance metric. Metric is either 'C' (for cosine) or 'E' for
-    euclidean.
-    '''
-    anchor, positive, negative = tuple(zip(*miner(repres, labels)))
-    if metric == 'C':
-        # repres = th.nn.functional.normalize(repres, p=2, dim=-1)
-        __cosine_embedding = ft.partial(th.nn.functional.cosine_embedding_loss,
-                                        margin=configs.contrastive.margin_cosine)
-        targets = th.ones(len(anchor)).to(repres.device)
-        lap = __cosine_embedding(
-            repres[anchor, :], repres[positive, :], targets)
-        lan = __cosine_embedding(
-            repres[anchor, :], repres[negative, :], -targets)
-        loss = lap + lan
-    elif metric == 'E':
-        __pdist = ft.partial(th.nn.functional.pairwise_distance, p=2)
-        margin = configs.contrastive.margin_euclidean
-        lap = __pdist(repres[anchor, :], repres[positive, :]).mean()
-        lan = margin - __pdist(repres[anchor, :], repres[negative, :])
-        lan = th.masked_select(lan, lan > 0.).mean()
-        loss = lap + lan
-    else:
-        raise ValueError('Illegal metric type!')
-    return loss
-
-
-contrastiveC = ft.partial(__contrastive, metric='C')
-contrastiveE = ft.partial(__contrastive, metric='E')
-for metric in ('C', 'E'):
-    locals()[f'contrastive{metric}_determine_metric'] = lambda: metric
-
-
 @pytest.mark.parametrize('metric, minermethod',
                          it.product(('C', 'E', 'N'), ('spc2-random', 'spc2-distance')))
-def test_contrastive(metric, minermethod):
+def test_pcontrast(metric, minermethod):
     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
     loss = fn_pcontrast(output, labels, metric=metric, minermethod=minermethod)
+    loss.backward()
+
+
+@pytest.mark.parametrize('metric', 'CEN')
+def test_pcontrast_raw(metric: str):
+    rA, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
+    rP = th.rand(10, 32, requires_grad=True)
+    rN = th.rand(10, 32, requires_grad=True)
+    lossfunc = {'C': pcontrastC, 'N': pcontrastN, 'E': pcontrastE}[metric]()
+    if metric in ('C', 'N'):
+        _N = ft.partial(F.normalize, dim=-1)
+        rA, rP, rN = _N(rA), _N(rP), _N(rN)
+    loss = lossfunc.raw(rA, rP, rN)
     loss.backward()

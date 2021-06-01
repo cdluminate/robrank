@@ -25,33 +25,45 @@ import itertools as it
 import pytest
 
 
+def fn_pmargin_kernel(repA: th.Tensor, repP: th.Tensor, repN: th.Tensor,
+                      *, metric: str, margin: float, beta: th.Tensor):
+    '''
+    <functional> the core computation for spc-2 margin loss.
+    see ICML20 "revisiting deep metric learing ..."
+    '''
+    if metric in ('E', 'N'):
+        dap = F.pairwise_distance(repA, repP)
+        dan = F.pairwise_distance(repA, repN)
+    elif metric in ('C',):
+        dap = 1 - F.cosine_similarity(repA, repP)
+        dan = 1 - F.cosine_similarity(repA, repN)
+    else:
+        raise ValueError
+    lap = (dap - beta + margin).relu()
+    lan = (beta - dan + margin).relu()
+    lap = th.masked_select(lap, lap > 0.).mean()
+    lap = th.tensor(0.).to(repA.device) if th.isnan(lap) else lap
+    lan = th.masked_select(lan, lan > 0.).mean()
+    lan = th.tensor(0.).to(repA.device) if th.isnan(lan) else lan
+    loss = lap + lan
+    return loss
+
+
 def fn_pmargin(repres: th.Tensor, labels: th.Tensor, *,
                beta: float = configs.margin.beta,
                margin: float = configs.margin.margin,
                metric: str, minermethod: str = 'spc2-random'):
     '''
-    Margin loss, functional version
+    Margin loss, functional version.
     '''
     # normalize representations on demand
-    repres = F.normalize(repres, dim=-1)
+    if metric in ('C', 'N'):
+        repres = F.normalize(repres, dim=-1)
     # select triplets
     ancs, poss, negs = miner(repres, labels, method=minermethod, metric=metric)
     # loss
-    if metric in ('E', 'N'):
-        dap = F.pairwise_distance(repres[ancs, :], repres[poss, :])
-        dan = F.pairwise_distance(repres[ancs, :], repres[negs, :])
-    elif metric == 'C':
-        dap = 1 - F.cosine_similarity(repres[ancs, :], repres[poss, :])
-        dan = 1 - F.cosine_similarity(repres[ancs, :], repres[negs, :])
-    else:
-        raise ValueError('Illegal metric')
-    lap = (dap - beta + margin).relu()
-    lan = (beta - dan + margin).relu()
-    lap = th.masked_select(lap, lap > 0.).mean()
-    lap = th.tensor(0.).to(repres.device) if th.isnan(lap) else lap
-    lan = th.masked_select(lan, lan > 0.).mean()
-    lan = th.tensor(0.).to(repres.device) if th.isnan(lan) else lan
-    loss = lap + lan
+    loss = fn_pmargin_kernel(repres[ancs, :], repres[poss, :], repres[negs, :],
+                             metric=metric, margin=margin, beta=beta)
     return loss
 
 
@@ -63,6 +75,14 @@ class pmarginC(th.nn.Module):
     def __init__(self):
         super(pmarginC, self).__init__()
         self.beta = th.nn.Parameter(th.tensor(configs.margin.beta))
+
+    def raw(self, repA, repP, repN):
+        '''
+        raw mode used by robrank/defenses/pnp
+        '''
+        loss = fn_pmargin_kernel(repA, repP, repN, metric=self._metric,
+                                 margin=self._margin, beta=self.beta)
+        return loss
 
     def forward(self, *args, **kwargs):
         return self.__call__(*args, **kwargs)
@@ -109,4 +129,16 @@ def test_fn_pmargin(metric, minermethod):
 def test_pmargin(func):
     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
     loss = func()(output, labels)
+    loss.backward()
+
+
+@pytest.mark.parametrize('func', (pmarginC, pmarginE, pmarginN, pdmarginN))
+def test_pmargin_raw(func: object):
+    rA = th.rand(10, 32, requires_grad=True)
+    rP = th.rand(10, 32, requires_grad=True)
+    rN = th.rand(10, 32, requires_grad=True)
+    if func._metric in ('C', 'N'):
+        _N = ft.partial(F.normalize, dim=-1)
+        rA, rP, rN = _N(rA), _N(rP), _N(rN)
+    loss = func().raw(rA, rP, rN)
     loss.backward()
