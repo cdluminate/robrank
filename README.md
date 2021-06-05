@@ -51,7 +51,19 @@ save a little bit of video memory.
 
 ### 1.2. Adversarial Attack
 
-TODO `advrank.py`
+Script `advrank.py` is the entrance for conducting adversarial attacks
+against a trained model. For example, to conduct CA (w=1) with several
+manually specified PGD parameters, you can do it as follows:
+
+```shell
+python3 advrank.py -v -A CA:pm=+:W=1:eps=0.30196:alpha=0.011764:pgditer=32 -C <xxx.ckpt>
+```
+where `xxx.ckpt` is the path to the trained model (saved as a pytorch-lightning checkpoint).
+The arguments specific to adversarial attacks are joined with a colon ":"
+in order to avoid lengthy python code based `argparse` module.
+
+Please browse the bash scripts under the `tools/` directory for examples
+of other types of attacks discussed in the paper.
 
 ### 1.3. Batched Adversarial Attack
 
