@@ -218,9 +218,10 @@ def autodiscoverjsontf(logdir: str):
     tfe = TFdump(['-f', ntfe])
 
     JTYPE = str(os.getenv('JTYPE', ''))
+    EPH = int(os.getenv('EPH', 0))
     try:
         path = os.path.join(ndir, f'checkpoints/epoch=*{JTYPE}.json')
-        nchk = nsort(glob.glob(path), r'.*epoch=(\d+)')[0]
+        nchk = nsort(glob.glob(path), r'.*epoch=(\d+)')[EPH]
     except IndexError:
         print('cannot find any json for the latest version')
         exit(2)

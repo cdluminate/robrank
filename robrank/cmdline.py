@@ -310,6 +310,8 @@ class Train:
         ag.add_argument('-r', '--resume', action='store_true')
         ag.add_argument('--clip', type=float, default=0.0,
                         help='do gradient clipping by value')
+        ag.add_argument('--trail', action='store_true',
+                        help='keep the intermediate checkpoints')
         ag.add_argument('--svd', action='store_true')
         ag = ag.parse_args(argv)
         c.print(rich.panel.Panel(' '.join(argv), title='RobRank::Train',
@@ -351,6 +353,10 @@ class Train:
         # checkpoint_callback = thl.callbacks.ModelCheckpoint(
         #        monitor=ag.monitor,
         #        mode='max')
+        if ag.trail:
+            checkpoint_callback = thl.callbacks.ModelCheckpoint(
+                    save_top_k = -1)
+            other_options['checkpoint_callback'] = checkpoint_callback
         trainer = thl.Trainer(
             max_epochs=model.config.maxepoch,
             gpus=ag.gpus,

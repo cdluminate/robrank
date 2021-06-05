@@ -29,10 +29,12 @@ from . import csres18
 # [group C2F2]
 from . import rc2f2
 from . import rc2f2d
+from . import rc2f2df
 from . import rc2f2e
 from . import rc2f2p
 from . import rc2f2px
 from . import rc2f2pa
+from . import rc2f2pf
 from . import rc2f2t
 from . import rc2f2a
 from . import rc2f2r
@@ -52,9 +54,11 @@ from . import rmnas10p
 # [group ResNet]
 from . import rres18
 from . import rres18d
+from . import rres18df
 from . import rres18e
 from . import rres18p
 from . import rres18px
+from . import rres18pf
 from . import rres18t
 from . import rres18r
 from . import rres50

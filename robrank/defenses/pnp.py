@@ -402,7 +402,8 @@ class PositiveNegativePerplexing(object):
         return images
 
 
-def pnp_training_step(model: th.nn.Module, batch, batch_idx):
+def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
+        pgditer: int = None):
     '''
     Adversarial training with Positive/Negative Perplexing (PNP) Attack.
     Function signature follows pytorch_lightning.LightningModule.training_step,
@@ -448,7 +449,7 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx):
     model.eval()
     pnp = PositiveNegativePerplexing(model, eps=model.config.advtrain_eps,
                                      alpha=model.config.advtrain_alpha,
-                                     pgditer=model.config.advtrain_pgditer,
+                                     pgditer=model.config.advtrain_pgditer if pgditer is None else pgditer,
                                      device=model.device, metric=model.metric,
                                      verbose=False)
     # Collapsing positive and negative -- Anti-Collapse Triplet (ACT) defense.

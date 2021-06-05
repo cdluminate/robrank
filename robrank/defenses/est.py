@@ -21,7 +21,7 @@ import rich
 c = rich.get_console()
 
 
-def est_training_step(model, batch, batch_idx):
+def est_training_step(model, batch, batch_idx, *, pgditer: int = None):
     '''
     Do adversarial training using Mo's defensive triplet (2002.11293 / ECCV'20)
     Embedding-Shifted Triplet (EST)
@@ -39,7 +39,7 @@ def est_training_step(model, batch, batch_idx):
     #advatk_metric = 'C' if model.dataset in ('mnist', 'fashion') else 'C'
     advrank = AdvRank(model, eps=model.config.advtrain_eps,
                       alpha=model.config.advtrain_alpha,
-                      pgditer=model.config.advtrain_pgditer,
+                      pgditer=model.config.advtrain_pgditer if pgditer is None else pgditer,
                       device=model.device,
                       metric=model.metric, verbose=False)
     # set shape
