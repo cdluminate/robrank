@@ -1,17 +1,19 @@
-RobRank
+RobRank: Adversarial Robustness in Deep Ranking
 ===
 
-A re-implementation of [AdvRank](https://github.com/cdluminate/advrank).
-Note, the name is `RobRank`, instead of `RobBank`.
+RobRank is a re-implementation of the code of
+[AdvRank (ECCV'2020)](https://github.com/cdluminate/advrank),
+but focus more on adversarial defense and adversarial robustness.
+Note, the name is Rob**R**ank, instead of Rob**B**ank.
 
-## Common Usage
+## 1. Common Usage of CLI
 
 Python library `RobRank` provides these functionalities: (1) training 
 classification or ranking (deep metric learning) models, either vanilla
 or defensive; (2) perform adversarial attack against the trained models;
 (3) perform batched adversarial attack. See below for detailed usage.
 
-### Common Usage / Training
+### 1.1. Training
 
 Training deep metric learning model or classification model, either normally or adversarially.
 As `pytorch-lightning` is used by this project, the training process will automatically use `DistributedDataParallel` when more than one GPU are available.
@@ -47,15 +49,17 @@ Tips:
 1. export `FAISS_CPU=1` to disable NMI score calculation on GPU. This could
 save a little bit of video memory.
 
-### Common Usage / Adversarial Attack
+### 1.2. Adversarial Attack
 
 TODO `advrank.py`
 
-### Common Usage / Batched Adversarial Attack
+### 1.3. Batched Adversarial Attack
 
 TODO `swipe.py`
 
-### Project Files
+## 2. Project Information
+
+### 2.1. Directory Hierarchy
 
 ```
 (the following directory tree is manually edited and annotated)
@@ -82,7 +86,7 @@ TODO `swipe.py`
 └── tools/*                       Miscellaneous tools for experiments.
 ```
 
-### Tested Platform
+### 2.2. Tested Platform
 
 ```
 OS: Debian unstable (May 2021), Ubuntu LTS
@@ -91,14 +95,14 @@ PyTorch: 1.7.1, 1.8.1
 Python Dependencies: see requirements.txt
 ```
 
-### References
+### 2.3. References
 
 1. https://github.com/Confusezius/Deep-Metric-Learning-Baselines
 2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
 3. https://github.com/idstcv/SoftTriple
 4. https://github.com/KevinMusgrave/pytorch-metric-learning
 
-### Copyright and License
+### 2.4. Copyright and License
 
 ```
 Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
