@@ -1,10 +1,13 @@
 RobRank: Adversarial Robustness in Deep Ranking
 ===
 
-RobRank is a re-implementation of the code of
-[AdvRank (ECCV'2020)](https://github.com/cdluminate/advrank),
-but focus more on adversarial defense and adversarial robustness.
-Note, the name is Rob**R**ank, instead of Rob**B**ank.
+RobRank is extended from previous ECCV'2020 work [*"Adversarial Ranking
+Attack and Defense,"*](https://github.com/cdluminate/advrank) with a major
+code refactor. We newly introduce an "Anti-Collapse Triplet" defense method
+which achieves at least 60% and at most 540% improvement in adversarial
+robustness compared to the ECCV work.
+
+Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 
 ## 1. Common Usage of CLI
 
@@ -67,7 +70,19 @@ of other types of attacks discussed in the paper.
 
 ### 1.3. Batched Adversarial Attack
 
-TODO `swipe.py`
+Script `swipe.py` is used for conducting a batch of attacks against a specified
+model (pytorch-lightning checkpoint), automatically. And it will save the
+output in json format as `<model_ckpt>.ckpt.<swipe_profile>.json`.
+Available `swipe_profile` includes `rob28`, `rob224` for ERS score;
+and `pami28`, `pami224` for CA and QA in various settings. A full list
+of possible profiles can be found in `robrank/cmdline.py`. You can even
+customize the code and create your own profile for batched evaluation.
+
+```shell
+python3 swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
+```
+
+Currently only single-GPU mode is supported.
 
 ## 2. Project Information
 
@@ -107,7 +122,24 @@ PyTorch: 1.7.1, 1.8.1
 Python Dependencies: see requirements.txt
 ```
 
-### 2.3. References
+### 2.3. References and Bibtex
+
+If you found the paper/code useful/inspiring, please consider citing my work:
+
+```bibtex
+@misc{robrank,
+      title={Adversarial Attack and Defense in Deep Ranking}, 
+      author={Mo Zhou and Le Wang and Zhenxing Niu and Qilin Zhang and Nanning Zheng and Gang Hua},
+      year={2021},
+      eprint={2106.03614},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
+
+Or if you need the Bibtex of the ECCV'20 version: [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.](https://github.com/cdluminate/advrank)
+
+**Software Projects:**
 
 1. https://github.com/Confusezius/Deep-Metric-Learning-Baselines
 2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
