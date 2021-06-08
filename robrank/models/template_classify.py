@@ -92,16 +92,16 @@ class ClassifierTemplate(object):
         return test_loader
 
     def configure_optimizers(self):
-        if self.BACKBONE == 'csres18' and self.dataset == 'cifar10':
+        if self.BACKBONE == 'cres18' and self.dataset == 'cifar10':
             optim = SGD(self.parameters(),
                         lr=self.config.lr, momentum=self.config.momentum,
-                        weight_decay=configs.csres18.weight_decay)
+                        weight_decay=configs.cres18.weight_decay)
         else:
             optim = Adam(self.parameters(),
                          lr=self.config.lr, weight_decay=self.config.weight_decay)
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
-                                                          milestones=configs.csres18.milestones, gamma=0.1)
+                                                          milestones=configs.cres18.milestones, gamma=0.1)
             return [optim], [scheduler]
         return optim
 

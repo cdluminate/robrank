@@ -23,7 +23,7 @@ limitations under the License.
 # Classification
 from . import cc2f2
 from . import clenet
-from . import csres18
+from . import cres18
 
 # Ranking / Metric Learning
 # [group C2F2]

@@ -33,7 +33,6 @@ where
   * rres18: resnet 18 for deep metric learning (DML)
   * rres18d: resnet 18 for DML with EST defense
   * rres18p: resnet 18 for DML with ACT defense
-  * csres18: resnet 18 for small-sized input (32x32)
 * loss (for all available losses see robrank/losses/__init__.py)
   * ptripletN: triplet using Normalized Euclidean with SPC-2 batch.
   * ce: cross-entropy for classification
@@ -41,7 +40,6 @@ where
 For example:
 ```shell
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:cc2f2:ce
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cifar10:csres18:ce
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2:ptripletN
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2p:ptripletN
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cub:rres18:ptripletN
