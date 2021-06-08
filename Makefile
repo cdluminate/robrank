@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# NOTE: you can write some targets like the following "legion" in
+# Makefile.private for convenient code synchronization to your own
+# servers without leaking secret.
+
+-include ../../Makefile.private
+-include ../Makefile.private
+-include Makefile.private
+
+RSYNC_DEST = ~/2021-robrank/
+
 RSYNC_FLAGS = \
 	--exclude=.git \
 	--exclude=__pycache__  \
@@ -50,7 +60,7 @@ runtest:
 
 legion:
 	#rsync -rvlz . 169.254.169.219:~/Git/2021-robrank/ $(RSYNC_FLAGS)
-	rsync -rvlz . 192.168.1.106:~/Git/2021-robrank/ $(RSYNC_FLAGS)
+	rsync -rvlz . 192.168.1.106:$(RSYNC_DEST) $(RSYNC_FLAGS)
 
 train-attack-defense-mnist-rc2f1-ptripletN:
 	python3 train.py -C mnist:rc2f2:ptripletN
