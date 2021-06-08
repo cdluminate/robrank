@@ -137,7 +137,7 @@ If you found the paper/code useful/inspiring, please consider citing my work:
 }
 ```
 
-Or if you need the Bibtex of the ECCV'20 version: [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.](https://github.com/cdluminate/advrank)
+Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.](https://github.com/cdluminate/advrank) can be found in the linked page.
 
 **Software Projects:**
 
