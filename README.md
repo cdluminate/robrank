@@ -115,12 +115,26 @@ json files and calculate the corresponding ERS.
 
 ### 2.2. Tested Platform
 
+Tested Software:
+
 ```
 OS: Debian unstable (May 2021), Ubuntu LTS
 Python: 3.8.5 (anaconda)
 PyTorch: 1.7.1, 1.8.1
 Python Dependencies: see requirements.txt
 ```
+
+Mainly Tested Hardware:
+```
+CPU: Intel Xeon 6226R
+GPU: Nvidia RTX3090 (24GB)
+```
+With 8 RTX3090 GPUs, most experiments can be finished within 1 day.
+With older configurations (such as `4* GTX1080Ti`), most experiments can be
+finished within 3 days, including adversarial training.
+
+Memory requirement: `12GB` is required for adversarial training of RN18, Mnas,
+and IBN. In contrast, adversarial training of RN50 requires `24GB`.
 
 ### 2.3. References and Bibtex
 
