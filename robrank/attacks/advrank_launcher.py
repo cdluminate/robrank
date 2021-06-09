@@ -25,6 +25,7 @@ c = rich.get_console()
 
 _LEGAL_ATTAKS_ = ('ES', 'QA', 'CA', 'SPQA', 'GTM', 'GTT', 'TMA', 'LTM')
 
+
 class AdvRankLauncher(object):
     '''
     Entrace Class for adversarial ranking attack [ArXiv:2002.11293]

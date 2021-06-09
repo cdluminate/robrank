@@ -256,7 +256,7 @@ class AdvRankLoss(object):
         return (loss, tau)
 
     def RankLossGreedyTop1Misrank(self, qs: th.Tensor, emm: th.Tensor,
-            emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
+                                  emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
         '''
         <Compound loss> Greedy Top-1 Misranking. (GTM)
         Goal: top1.class neq original class.
@@ -296,7 +296,7 @@ class AdvRankLoss(object):
         return loss
 
     def RankLossGreedyTop1Translocation(self, qs: th.Tensor, emm: th.Tensor,
-            emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
+                                        emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
         '''
         <Compound loss> Greedy Top-1 Translocation (GTT)
         Goal: top1.identity neq original identity.
@@ -310,22 +310,23 @@ class AdvRankLoss(object):
         #loss_match, _ = self.funcmap['QA-DIST'](qs, emm, Xs, pm='-')
         #loss_unmatch, _ = self.funcmap['QA+'](qs, emu, Xs)
         #loss_unmatch, _ = self.funcmap['QA-DIST'](qs, emu, Xs, pm='+')
-        loss = loss_match #+ loss_unmatch
+        loss = loss_match  # + loss_unmatch
         # [scratch]
         #emm = emm.squeeze()
         #emu = emu.squeeze()
         #ems = ems.squeeze()
-        #if self.metric in ('C',):
+        # if self.metric in ('C',):
         #    #l_m = -(1 - F.cosine_similarity(qs, emm))
         #    l_u = (1 - F.cosine_similarity(qs, emu))
-        #elif self.metric in ('E', 'N'):
+        # elif self.metric in ('E', 'N'):
         #    #l_m = -F.pairwise_distance(qs, emm)
         #    #l_u = F.pairwise_distance(qs, emu)
         #    l_s = -F.pairwise_distance(qs, ems)
         #loss = (l_s).mean()
         return loss
 
-    def RankLossTargetedMismatchAttack(self, qs: th.Tensor, embrand: th.Tensor):
+    def RankLossTargetedMismatchAttack(
+            self, qs: th.Tensor, embrand: th.Tensor):
         '''
         Targeted Mismatch Attack using Global Descriptor (ICCV'19)
         https://arxiv.org/pdf/1908.09163.pdf
@@ -336,7 +337,7 @@ class AdvRankLoss(object):
         return loss
 
     def RankLossLearningToMisrank(self, qs: th.Tensor, embp: th.Tensor,
-            embn: th.Tensor):
+                                  embn: th.Tensor):
         '''
         Learning-To-Mis-Rank
         But the paper did not specify a margin.
@@ -348,9 +349,8 @@ class AdvRankLoss(object):
                    (1 - F.cosine_similarity(qs, embp))
         elif self.metric in ('N', 'E'):
             loss = F.pairwise_distance(qs, embn) - \
-                   F.pairwise_distance(qs, embp)
+                F.pairwise_distance(qs, embp)
         return loss.mean()
-
 
     def __init__(self, request: str, metric: str):
         '''
@@ -466,12 +466,14 @@ def test_arl_gtt(metric: str):
     loss = AdvRankLoss('GTT', metric)(qs, emm, emu, emm, Xs)
     loss.backward()
 
+
 @pytest.mark.parametrize('metric', 'NC')
 def test_arl_tma(metric: str):
     qs = th.rand(10, 8, requires_grad=True)
     embrand = th.rand(10, 8)
     loss = AdvRankLoss('TMA', metric)(qs, embrand)
     loss.backward()
+
 
 @pytest.mark.parametrize('metric', 'NEC')
 def test_arl_ltm(metric: str):

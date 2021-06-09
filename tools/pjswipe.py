@@ -33,8 +33,10 @@ Scores = namedtuple(
         'cap', 'cam', 'qap', 'qam', 'tma',
         'esd', 'esr', 'ltm', 'gtm', 'gtt'])
 
+
 def _c(line: str):
     return tuple(map(float, line.split('\t')))
+
 
 def ersnormalize(ss: Scores):
     a = np.zeros(10)
@@ -49,6 +51,7 @@ def ersnormalize(ss: Scores):
     a[8] = ss.gtm
     a[9] = ss.gtt
     return a
+
 
 def ers(ss: Scores):
     '''
@@ -137,7 +140,7 @@ class Jdump:
             j = json.load(f)
         self.json = j
         if 'rob' in ag.json:
-            Score = Scores(*((0.0,)*10))
+            Score = Scores(*((0.0,) * 10))
         for (k, v) in j.items():
             cprint(k, 'blue')
             if k.startswith('CA'):
@@ -146,17 +149,17 @@ class Jdump:
                 print(f'PCTL {100*float(v[-1][ca]):.1f} / 100.0')
                 if 'rob' in ag.json:
                     if 'pm=+' in k:
-                        Score = Score._replace(cap=100*float(v[-1][ca]))
+                        Score = Score._replace(cap=100 * float(v[-1][ca]))
                     elif 'pm=-' in k:
-                        Score = Score._replace(cam=100*float(v[-1][ca]))
+                        Score = Score._replace(cam=100 * float(v[-1][ca]))
             elif k.startswith('QA'):
                 qa = tuple(x for x in v[-1].keys() if 'prank' in x)[0]
                 print(f'PCTL {100*float(v[-1][qa]):.1f} / 100.0')
                 if 'rob' in ag.json:
                     if 'pm=+' in k:
-                        Score = Score._replace(qap=100*float(v[-1][qa]))
+                        Score = Score._replace(qap=100 * float(v[-1][qa]))
                     elif 'pm=-' in k:
-                        Score = Score._replace(qam=100*float(v[-1][qa]))
+                        Score = Score._replace(qam=100 * float(v[-1][qa]))
             elif k.startswith('SPQA'):
                 qa = tuple(x for x in v[-1].keys() if ':prank' in x)[0]
                 sp = tuple(x for x in v[-1].keys() if 'GTprank' in x)[0]
@@ -182,7 +185,7 @@ class Jdump:
                 r1 = float(v[-1]['r@1'])
                 print(f'R1 {100.*r1:.1f} / 100.0')
                 if 'rob' in ag.json:
-                    Score = Score._replace(ltm=100*r1)
+                    Score = Score._replace(ltm=100 * r1)
             elif k.startswith('GTM'):
                 r1 = 100 * float(v[-1]['r@1'])
                 #print('DEBUG', f'{r1:.1f}/100')
@@ -200,8 +203,9 @@ class Jdump:
 
         # get the ERS for robxxx.json
         if 'rob' in ag.json:
-            #c.print(Score)
+            # c.print(Score)
             c.print('Eventual ERS', ers(Score))
+
 
 def autodiscoverjsontf(logdir: str):
     path = os.path.join(logdir, 'lightning_logs/version_*')
@@ -237,5 +241,3 @@ export JTYPE={rob28,rob224,pami28,pami224} to select json.
 export ITH=int to select version
 ''')
     autodiscoverjsontf(sys.argv[1])
-
-

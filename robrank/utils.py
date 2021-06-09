@@ -78,12 +78,12 @@ def metric_get_nmi(valvecs: th.Tensor, vallabs: th.Tensor, ncls: int) -> float:
 
 
 def __metric_get_nmi(valvecs: th.Tensor, vallabs: th.Tensor,
-            ncls: int, use_cuda: bool = True) -> float:
+                     ncls: int, use_cuda: bool = True) -> float:
     '''
     Compute the NMI score
     '''
     use_cuda: bool = use_cuda and th.cuda.is_available() \
-            and hasattr(faiss, 'StandardGpuResources')
+        and hasattr(faiss, 'StandardGpuResources')
     if int(os.getenv('FAISS_CPU', 0)) > 0:
         use_cuda = False
     npvecs = valvecs.detach().cpu().numpy().astype(np.float32)

@@ -18,4 +18,5 @@ class Model(ClassifierTemplate, thl.LightningModule):
         self.config = configs.cres18(dataset, loss)
         self.backbone = vision.models.resnet18(False)
         # perform surgery
-        self.backbone.fc = th.nn.Linear(512, getattr(configs, dataset).num_class)
+        self.backbone.fc = th.nn.Linear(
+            512, getattr(configs, dataset).num_class)

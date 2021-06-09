@@ -26,6 +26,7 @@ rcParams['font.family'] = 'serif'
 rcParams['font.serif'] = 'Linux Libertine O'
 rcParams['font.size'] = 14
 
+
 def readr1(path: str) -> np.array:
     with open(path, 'rt') as f:
         data = f.readlines()
@@ -34,16 +35,19 @@ def readr1(path: str) -> np.array:
     data = np.array(data) * 100
     return data
 
+
 class Curve:
     def svg(self, path: str):
         plt.savefig(path)
 
+
 class ExpR1Curve(Curve):
     tsize = 16
     lsize = 14
+
     def __init__(self):
 
-        plt.figure(figsize=[5*5,4.8], tight_layout=True)
+        plt.figure(figsize=[5 * 5, 4.8], tight_layout=True)
 
         plt.subplot(1, 5, 1)
         plt.grid(True, linestyle=':')
@@ -60,7 +64,11 @@ class ExpR1Curve(Curve):
         plt.grid(True, linestyle=':')
         x = np.arange(0, 8) + 1
         plt.plot(x, readr1('expr1/fashion.txt'), marker='.', color='tab:gray')
-        plt.plot(x, readr1('expr1/fashion-d.txt'), marker='v', color='tab:blue')
+        plt.plot(
+            x,
+            readr1('expr1/fashion-d.txt'),
+            marker='v',
+            color='tab:blue')
         plt.plot(x, readr1('expr1/fashion-p.txt'), marker='*', color='tab:red')
         plt.legend(['Vanilla', 'EST', 'ACT'])
         plt.xlabel('Number of Epochs', size=self.lsize)
@@ -69,36 +77,40 @@ class ExpR1Curve(Curve):
 
         plt.subplot(1, 5, 3)
         plt.grid(True, linestyle=':')
-        x = (np.arange(0, 15)+1)*10
+        x = (np.arange(0, 15) + 1) * 10
         plt.plot(x, readr1('expr1/cub.txt'), marker='.', color='tab:gray')
         plt.plot(x, readr1('expr1/cub-d.txt'), marker='v', color='tab:blue')
         plt.plot(x, readr1('expr1/cub-p.txt'), marker='*', color='tab:red')
-        plt.legend(['Vanilla', 'EST', 'ACT'], loc='center right', bbox_to_anchor=(1.0, 0.7))
+        plt.legend(['Vanilla', 'EST', 'ACT'],
+                   loc='center right', bbox_to_anchor=(1.0, 0.7))
         plt.xlabel('Number of Epochs', size=self.lsize)
         plt.ylabel('Recall@1', size=self.lsize)
         plt.title('R@1 Curve of Defense Methods on CUB', size=self.tsize)
 
         plt.subplot(1, 5, 4)
         plt.grid(True, linestyle=':')
-        x = (np.arange(0, 15)+1)*10
+        x = (np.arange(0, 15) + 1) * 10
         plt.plot(x, readr1('expr1/cars.txt'), marker='.', color='tab:gray')
         plt.plot(x, readr1('expr1/cars-d.txt'), marker='v', color='tab:blue')
         plt.plot(x, readr1('expr1/cars-p.txt'), marker='*', color='tab:red')
-        plt.legend(['Vanilla', 'EST', 'ACT'], loc='center right', bbox_to_anchor=(1.0, 0.7))
+        plt.legend(['Vanilla', 'EST', 'ACT'],
+                   loc='center right', bbox_to_anchor=(1.0, 0.7))
         plt.xlabel('Number of Epochs', size=self.lsize)
         plt.ylabel('Recall@1', size=self.lsize)
         plt.title('R@1 Curve of Defense Methods on CARS', size=self.tsize)
 
         plt.subplot(1, 5, 5)
         plt.grid(True, linestyle=':')
-        x = (np.arange(0, 15)+1)*10
+        x = (np.arange(0, 15) + 1) * 10
         plt.plot(x, readr1('expr1/sop.txt'), marker='.', color='tab:gray')
         plt.plot(x, readr1('expr1/sop-d.txt'), marker='v', color='tab:blue')
         plt.plot(x, readr1('expr1/sop-p.txt'), marker='*', color='tab:red')
-        plt.legend(['Vanilla', 'EST', 'ACT'], loc='center right', bbox_to_anchor=(1.0, 0.7))
+        plt.legend(['Vanilla', 'EST', 'ACT'],
+                   loc='center right', bbox_to_anchor=(1.0, 0.7))
         plt.xlabel('Number of Epochs', size=self.lsize)
         plt.ylabel('Recall@1', size=self.lsize)
         plt.title('R@1 Curve of Defense Methods on SOP', size=self.tsize)
+
 
 class FashionR1Curve(Curve):
     def __init__(self):
@@ -109,13 +121,24 @@ class FashionR1Curve(Curve):
         x = np.arange(0, 8) + 1
         #plt.plot(x, readr1('far1/fashion.txt'), marker='.', color='tab:gray')
         plt.plot(x, readr1('far1/fashion-d.txt'), marker='v', color='tab:blue')
-        plt.plot(x, readr1('far1/fashion-db.txt'), marker='v', color='xkcd:dark blue')
+        plt.plot(x, readr1('far1/fashion-db.txt'),
+                 marker='v', color='xkcd:dark blue')
         plt.plot(x, readr1('far1/fashion-p.txt'), marker='*', color='tab:red')
-        plt.plot(x, readr1('far1/fashion-pb.txt'), marker='*', color='xkcd:dark red')
-        plt.plot(x, readr1('far1/fashion-r.txt'), marker='d', color='xkcd:cyan')
-        plt.plot(x, readr1('far1/fashion-rb.txt'), marker='d', color='xkcd:dark cyan')
-        plt.plot(x, readr1('far1/fashion-o.txt'), marker='o', color='xkcd:bright pink')
-        plt.legend([#'Vanilla',
+        plt.plot(x, readr1('far1/fashion-pb.txt'),
+                 marker='*', color='xkcd:dark red')
+        plt.plot(
+            x,
+            readr1('far1/fashion-r.txt'),
+            marker='d',
+            color='xkcd:cyan')
+        plt.plot(x, readr1('far1/fashion-rb.txt'),
+                 marker='d', color='xkcd:dark cyan')
+        plt.plot(
+            x,
+            readr1('far1/fashion-o.txt'),
+            marker='o',
+            color='xkcd:bright pink')
+        plt.legend([  # 'Vanilla',
             'EST', 'EST($\\beta$)',
             'ACT', 'ACT($\\beta$)',
             'REST', 'REST($\\beta$)',
@@ -124,9 +147,11 @@ class FashionR1Curve(Curve):
         plt.ylabel('Recall@1', size=12)
         plt.title('R@1 Curve of Defense Methods on Fashion-MNIST', size=14)
 
+
 class RobustnessCurve(Curve):
     lsize = 13
     bbox = (0.92, 0.18)
+
     def __init__(self):
         from pjswipe import Scores, ersnormalize
 
@@ -136,10 +161,10 @@ class RobustnessCurve(Curve):
         print(data)
 
         categories = ['CA+', 'CA-', 'QA+', 'QA-', 'TMA', 'ES:D', 'ES:R',
-                'LTM', 'GTM', 'GTT', '']
+                      'LTM', 'GTM', 'GTT', '']
         label_loc = np.linspace(start=0, stop=2 * np.pi, num=len(data[0]))
 
-        plt.figure(figsize=(5*5, 5+0.5), tight_layout=True)
+        plt.figure(figsize=(5 * 5, 5 + 0.5), tight_layout=True)
 
         ax = plt.subplot(1, 5, 1, polar=True)
         ax.set_theta_zero_location('E')
@@ -150,10 +175,15 @@ class RobustnessCurve(Curve):
         ax.fill(label_loc, data[1], color='tab:blue', alpha=0.15)
         plt.plot(label_loc, data[2], label='ACT', marker='*', color='tab:red')
         ax.fill(label_loc, data[2], color='tab:red', alpha=0.10)
-        plt.ylim((0,100))
+        plt.ylim((0, 100))
         plt.title('Normalized Scores on MNIST', size=18)
-        lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, size=12)
-        plt.legend(loc='lower right', bbox_to_anchor=self.bbox, prop={'size':self.lsize})
+        lines, labels = plt.thetagrids(
+            np.degrees(label_loc), labels=categories, size=12)
+        plt.legend(
+            loc='lower right',
+            bbox_to_anchor=self.bbox,
+            prop={
+                'size': self.lsize})
 
         ax = plt.subplot(1, 5, 2, polar=True)
         ax.set_theta_zero_location('E')
@@ -164,10 +194,15 @@ class RobustnessCurve(Curve):
         ax.fill(label_loc, data[4], color='tab:blue', alpha=0.15)
         plt.plot(label_loc, data[5], label='ACT', marker='*', color='tab:red')
         ax.fill(label_loc, data[5], color='tab:red', alpha=0.10)
-        plt.ylim((0,100))
+        plt.ylim((0, 100))
         plt.title('Normalized Scores on Fashion', size=18)
-        lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, size=12)
-        plt.legend(loc='lower right', bbox_to_anchor=self.bbox, prop={'size':self.lsize})
+        lines, labels = plt.thetagrids(
+            np.degrees(label_loc), labels=categories, size=12)
+        plt.legend(
+            loc='lower right',
+            bbox_to_anchor=self.bbox,
+            prop={
+                'size': self.lsize})
 
         ax = plt.subplot(1, 5, 3, polar=True)
         ax.set_theta_zero_location('E')
@@ -178,10 +213,15 @@ class RobustnessCurve(Curve):
         ax.fill(label_loc, data[7], color='tab:blue', alpha=0.15)
         plt.plot(label_loc, data[8], label='ACT', marker='*', color='tab:red')
         ax.fill(label_loc, data[8], color='tab:red', alpha=0.10)
-        plt.ylim((0,100))
+        plt.ylim((0, 100))
         plt.title('Normalized Scores on CUB', size=18)
-        lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, size=12)
-        plt.legend(loc='lower right', bbox_to_anchor=self.bbox, prop={'size':self.lsize})
+        lines, labels = plt.thetagrids(
+            np.degrees(label_loc), labels=categories, size=12)
+        plt.legend(
+            loc='lower right',
+            bbox_to_anchor=self.bbox,
+            prop={
+                'size': self.lsize})
 
         ax = plt.subplot(1, 5, 4, polar=True)
         ax.set_theta_zero_location('E')
@@ -192,10 +232,15 @@ class RobustnessCurve(Curve):
         ax.fill(label_loc, data[10], color='tab:blue', alpha=0.15)
         plt.plot(label_loc, data[11], label='ACT', marker='*', color='tab:red')
         ax.fill(label_loc, data[11], color='tab:red', alpha=0.10)
-        plt.ylim((0,100))
+        plt.ylim((0, 100))
         plt.title('Normalized Scores on CARS', size=18)
-        lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, size=12)
-        plt.legend(loc='lower right', bbox_to_anchor=self.bbox, prop={'size':self.lsize})
+        lines, labels = plt.thetagrids(
+            np.degrees(label_loc), labels=categories, size=12)
+        plt.legend(
+            loc='lower right',
+            bbox_to_anchor=self.bbox,
+            prop={
+                'size': self.lsize})
 
         ax = plt.subplot(1, 5, 5, polar=True)
         ax.set_theta_zero_location('E')
@@ -206,10 +251,15 @@ class RobustnessCurve(Curve):
         ax.fill(label_loc, data[13], color='tab:blue', alpha=0.15)
         plt.plot(label_loc, data[14], label='ACT', marker='*', color='tab:red')
         ax.fill(label_loc, data[14], color='tab:red', alpha=0.10)
-        plt.ylim((0,100))
+        plt.ylim((0, 100))
         plt.title('Normalized Scores on SOP', size=18)
-        lines, labels = plt.thetagrids(np.degrees(label_loc), labels=categories, size=12)
-        plt.legend(loc='lower right', bbox_to_anchor=self.bbox, prop={'size':self.lsize})
+        lines, labels = plt.thetagrids(
+            np.degrees(label_loc), labels=categories, size=12)
+        plt.legend(
+            loc='lower right',
+            bbox_to_anchor=self.bbox,
+            prop={
+                'size': self.lsize})
 
 
 class Mnist4AttackCurve(Curve):
@@ -218,12 +268,16 @@ class Mnist4AttackCurve(Curve):
 
     def slurp(self, path: str) -> tuple:
         with open(path, 'rt') as f:
-            data = [float(x[1].strip().split()[1]) for x in enumerate(f.readlines()) if x[0]%2==1]
-        l = len(data)//4
+            data = [
+                float(
+                    x[1].strip().split()[1]) for x in enumerate(
+                    f.readlines()) if x[0] %
+                2 == 1]
+        l = len(data) // 4
         cap = np.array(data[:l]).clip(None, 49.9)
-        cam = np.array(data[l:2*l])
-        qap = np.array(data[2*l:3*l]).clip(None, 49.9)
-        qam = np.array(data[3*l:4*l])
+        cam = np.array(data[l:2 * l])
+        qap = np.array(data[2 * l:3 * l]).clip(None, 49.9)
+        qam = np.array(data[3 * l:4 * l])
         return (cap, cam, qap, qam)
 
     def __init__(self):
@@ -231,11 +285,11 @@ class Mnist4AttackCurve(Curve):
         dd = self.slurp('mn4atk/fashion-d.txt')
         dp = self.slurp('mn4atk/fashion-p.txt')
 
-        plt.figure(figsize=(4*5, 5), tight_layout=True)
+        plt.figure(figsize=(4 * 5, 5), tight_layout=True)
 
         ax = plt.subplot(1, 4, 1)
         plt.grid(True, linestyle=':')
-        x = ((np.arange(0, 11+1))*7)/255.
+        x = ((np.arange(0, 11 + 1)) * 7) / 255.
         plt.plot(x, dv[0], marker='.', color='tab:gray')
         plt.plot(x, dd[0], marker='v', color='tab:blue')
         plt.plot(x, dp[0], marker='*', color='tab:red')
@@ -246,7 +300,7 @@ class Mnist4AttackCurve(Curve):
 
         ax = plt.subplot(1, 4, 2)
         plt.grid(True, linestyle=':')
-        x = ((np.arange(0, 11+1))*7)/255.
+        x = ((np.arange(0, 11 + 1)) * 7) / 255.
         plt.plot(x, dv[1], marker='.', color='tab:gray')
         plt.plot(x, dd[1], marker='v', color='tab:blue')
         plt.plot(x, dp[1], marker='*', color='tab:red')
@@ -257,7 +311,7 @@ class Mnist4AttackCurve(Curve):
 
         ax = plt.subplot(1, 4, 3)
         plt.grid(True, linestyle=':')
-        x = ((np.arange(0, 11+1))*7)/255.
+        x = ((np.arange(0, 11 + 1)) * 7) / 255.
         plt.plot(x, dv[2], marker='.', color='tab:gray')
         plt.plot(x, dd[2], marker='v', color='tab:blue')
         plt.plot(x, dp[2], marker='*', color='tab:red')
@@ -268,7 +322,7 @@ class Mnist4AttackCurve(Curve):
 
         ax = plt.subplot(1, 4, 4)
         plt.grid(True, linestyle=':')
-        x = ((np.arange(0, 11+1))*7)/255.
+        x = ((np.arange(0, 11 + 1)) * 7) / 255.
         plt.plot(x, dv[3], marker='.', color='tab:gray')
         plt.plot(x, dd[3], marker='v', color='tab:blue')
         plt.plot(x, dp[3], marker='*', color='tab:red')
@@ -276,7 +330,6 @@ class Mnist4AttackCurve(Curve):
         plt.xlabel('$\\varepsilon$', size=self.lsize)
         plt.ylabel('Rank Percentile', size=self.lsize)
         plt.title('SP-QA- Performance on Fashion', size=self.tsize)
-
 
 
 if __name__ == '__main__':

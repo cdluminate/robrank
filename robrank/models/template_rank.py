@@ -168,13 +168,15 @@ class MetricBase(thl.LightningModule):
         elif hasattr(self, 'is_advtrain_est') and self.is_advtrain_est:
             return defenses.est_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_estf') and self.is_advtrain_estf:
-            return defenses.est_training_step(self, batch, batch_idx, pgditer=1)
+            return defenses.est_training_step(
+                self, batch, batch_idx, pgditer=1)
         elif hasattr(self, 'is_advtrain_ses') and self.is_advtrain_ses:
             return defenses.ses_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_pnp') and self.is_advtrain_pnp:
             return defenses.pnp_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_pnpf') and self.is_advtrain_pnpf:
-            return defenses.pnp_training_step(self, batch, batch_idx, pgditer=1)
+            return defenses.pnp_training_step(
+                self, batch, batch_idx, pgditer=1)
         elif hasattr(self, 'is_advtrain_pnp_adapt') and self.is_advtrain_pnp_adapt:
             return defenses.pnp_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_pnpx') and self.is_advtrain_pnpx:

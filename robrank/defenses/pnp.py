@@ -189,7 +189,7 @@ class PositiveNegativePerplexing(object):
                                             emb[:len(emb) // 2]).mean()
             elif self.metric in ('C',):
                 loss = -1 + F.cosine_similarity(emb[len(emb) // 2:],
-                                               emb[:len(emb) // 2]).mean()
+                                                emb[:len(emb) // 2]).mean()
             itermsg = {'loss': loss.item()}
             loss.backward()
             # projected gradient descent
@@ -403,7 +403,7 @@ class PositiveNegativePerplexing(object):
 
 
 def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
-        pgditer: int = None):
+                      pgditer: int = None):
     '''
     Adversarial training with Positive/Negative Perplexing (PNP) Attack.
     Function signature follows pytorch_lightning.LightningModule.training_step,
@@ -462,7 +462,8 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
         elif re.match(r'pcontrast.*', model.loss):
             assert(model.loss == 'pcontrastN')
             with th.no_grad():
-                mask = F.pairwise_distance(output_orig[anc, :], output_orig[neg, :]) < configs.contrastive.margin_euclidean
+                mask = F.pairwise_distance(
+                    output_orig[anc, :], output_orig[neg, :]) < configs.contrastive.margin_euclidean
                 mask = mask.view(-1, 1)
             images_pnp = pnp.pncollapse(images, triplets)
             images_aps = pnp.apsplit(images, triplets)
@@ -686,10 +687,10 @@ def rest_training_step(model, batch, batch_idx):
                      else configs.triplet.margin_cosine)
     anc, pos, neg = triplets
     advrank = AdvRank(model, eps=model.config.advtrain_eps,
-            alpha=model.config.advtrain_alpha,
-            pgditer=model.config.advtrain_pgditer,
-            device=model.device,
-            metric=model.metric, verbose=False)
+                      alpha=model.config.advtrain_alpha,
+                      pgditer=model.config.advtrain_pgditer,
+                      device=model.device,
+                      metric=model.metric, verbose=False)
     model.wantsgrad = True
     model.eval()
     advpn = advrank.embShift(th.stack([

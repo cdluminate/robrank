@@ -152,15 +152,15 @@ class Swipe:
             ))],
     )
     profile_qccurve28 = (
-    *[':'.join(x) for x in it.product(
-        ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
-            f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
-            for i in range(0, 11+1))
+        *[':'.join(x) for x in it.product(
+            ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
+                f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+                for i in range(0, 11 + 1))
         )],
-    *[':'.join(x) for x in it.product(
-        ('SPQA',), ('pm=+', 'pm=-'), ('M=1',), (
-            f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
-            for i in range(0, 11+1))
+        *[':'.join(x) for x in it.product(
+            ('SPQA',), ('pm=+', 'pm=-'), ('M=1',), (
+                f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+                for i in range(0, 11 + 1))
         )],
     )
 
@@ -355,7 +355,7 @@ class Train:
         #        mode='max')
         if ag.trail:
             checkpoint_callback = thl.callbacks.ModelCheckpoint(
-                    save_top_k = -1)
+                save_top_k=-1)
             other_options['checkpoint_callback'] = checkpoint_callback
         trainer = thl.Trainer(
             max_epochs=model.config.maxepoch,

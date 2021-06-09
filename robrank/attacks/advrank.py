@@ -221,7 +221,7 @@ class AdvRank(object):
                 self.dist_orig = dist.clone().detach()
                 self.loc_self = self.dist_orig.argmin(dim=-1).view(-1)
                 self.qcsel = QCSelector('GTM', None, None)(dist, candi,
-                        self.loc_self)
+                                                           self.loc_self)
             output_orig = self.output_orig
             # evaluate the attack
             allLab = candi[1].cpu().numpy().squeeze()
@@ -245,11 +245,11 @@ class AdvRank(object):
                 self.dist_orig = dist.clone().detach()
                 self.loc_self = self.dist_orig.argmin(dim=-1).view(-1)
                 self.qcsel = QCSelector('GTT', None, None)(
-                        dist, candi, self.loc_self)
+                    dist, candi, self.loc_self)
             dist[range(len(self.loc_self)), self.loc_self] = 1e38
             ((_, idm), (_, _), (_, _)) = self.qcsel
             re1 = (dist.argmin(dim=-1).view(-1) == idm).float().mean().item()
-            dk ={}
+            dk = {}
             for k in (4,):
                 topk = dist.topk(k, dim=-1, largest=False)[1]
                 seq = [topk[:, j].view(-1) == idm for j in range(k)]
@@ -580,17 +580,17 @@ class AdvRank(object):
                     output, emm, emu, ems, candi[0])
                 itermsg = {'loss': loss.item()}
                 # Note: greedy qc selection / resample harms performance
-                #with th.no_grad():
+                # with th.no_grad():
                 #    if self.metric in ('C',):
                 #        dist = 1 - output @ candi[0].t()
                 #    elif self.metric in ('E', 'N'):
                 #        dist = th.cdist(output, candi[0])
-                #self.qcsel = QCSelector('GTM', None, None)(dist, candi,
+                # self.qcsel = QCSelector('GTM', None, None)(dist, candi,
                 #        self.dist_orig)
             elif (attack_type == 'GTT'):
                 ((emm, idm), (emu, idum), (ems, _)) = self.qcsel
                 loss = AdvRankLoss('GTT', self.metric)(
-                        output, emm, emu, ems, candi[0])
+                    output, emm, emu, ems, candi[0])
                 itermsg = {'loss': loss.item()}
             elif attack_type == 'TMA':
                 (embrand, _) = self.qcsel

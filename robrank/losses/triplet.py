@@ -50,7 +50,7 @@ def fn_ptriplet_kernel(repA: th.Tensor, repP: th.Tensor, repN: th.Tensor,
 
 
 def fn_ptriplet(repres: th.Tensor, labels: th.Tensor,
-        *, metric: str, minermethod: str, p_switch: float = -1.0, xa: bool = False):
+                *, metric: str, minermethod: str, p_switch: float = -1.0, xa: bool = False):
     '''
     Variant of triplet loss that accetps [cls=1,cls=1,cls=2,cls=2] batch.
     This corresponds to the SPC-2 setting in the ICML20 paper.
@@ -68,7 +68,7 @@ def fn_ptriplet(repres: th.Tensor, labels: th.Tensor,
                           metric=metric, margin=margin, p_switch=p_switch)
     if xa:
         return fn_ptriplet_kernel(repres[anc, :].detach(), repres[pos, :],
-                repres[neg, :], metric=metric, margin=margin)
+                                  repres[neg, :], metric=metric, margin=margin)
     loss = fn_ptriplet_kernel(repres[anc, :], repres[pos, :], repres[neg, :],
                               metric=metric, margin=margin)
     return loss

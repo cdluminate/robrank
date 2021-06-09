@@ -19,8 +19,12 @@ a = th.rand(N, D, requires_grad=True)
 b = th.rand(N, D, requires_grad=True)
 l = (a * b).sum(dim=1).sum()
 l.backward()
+
+
 def _grad_dot(a, b):
     return b, a
+
+
 with th.no_grad():
     ga, gb = _grad_dot(a, b)
     print('dl/da', (a.grad - ga).abs().sum())
@@ -30,8 +34,12 @@ c.rule('Norm')
 a = th.rand(N, D, requires_grad=True)
 l = a.norm(p=2, dim=1).sum()
 l.backward()
+
+
 def _grad_norm(a):
-    return a/a.norm(p=2, dim=1).view(N,1)
+    return a / a.norm(p=2, dim=1).view(N, 1)
+
+
 with th.no_grad():
     ga = _grad_norm(a)
     print('dl/da', (a.grad - ga).abs().sum())
@@ -41,14 +49,18 @@ a = th.rand(N, D, requires_grad=True)
 b = th.rand(N, D, requires_grad=True)
 l = F.cosine_similarity(a, b).sum()
 l.backward()
+
+
 def _grad_cosine(a, b):
-    ga = b/(a.norm(p=2,dim=1)*b.norm(p=2,dim=1)).view(N,1) \
-        - (a*b).sum(dim=1).view(N, 1) \
-        * a/((a.norm(p=2,dim=1)**3)*b.norm(p=2,dim=1)).view(N,1)
-    gb = a/(b.norm(p=2,dim=1)*a.norm(p=2,dim=1)).view(N,1) \
-        - (a*b).sum(dim=1).view(N,1) \
-        * b/((b.norm(p=2,dim=1)**3)*a.norm(p=2,dim=1)).view(N,1)
+    ga = b / (a.norm(p=2, dim=1) * b.norm(p=2, dim=1)).view(N, 1) \
+        - (a * b).sum(dim=1).view(N, 1) \
+        * a / ((a.norm(p=2, dim=1)**3) * b.norm(p=2, dim=1)).view(N, 1)
+    gb = a / (b.norm(p=2, dim=1) * a.norm(p=2, dim=1)).view(N, 1) \
+        - (a * b).sum(dim=1).view(N, 1) \
+        * b / ((b.norm(p=2, dim=1)**3) * a.norm(p=2, dim=1)).view(N, 1)
     return ga, gb
+
+
 with th.no_grad():
     ga, gb = _grad_cosine(a, b)
     print('dl/da', (a.grad - ga).abs().sum())
@@ -59,10 +71,14 @@ a = th.rand(N, D, requires_grad=True)
 b = th.rand(N, D, requires_grad=True)
 l = F.pairwise_distance(a, b).sum()
 l.backward()
+
+
 def _grad_euclidean(a, b):
-    ga = (a-b)/F.pairwise_distance(a,b).view(N,1)
-    gb = (b-a)/F.pairwise_distance(a,b).view(N,1)
+    ga = (a - b) / F.pairwise_distance(a, b).view(N, 1)
+    gb = (b - a) / F.pairwise_distance(a, b).view(N, 1)
     return ga, gb
+
+
 with th.no_grad():
     ga, gb = _grad_euclidean(a, b)
     print('dl/da', (a.grad - ga).abs().sum())
@@ -79,6 +95,7 @@ def _grad_triplet(a, p, n, metric):
         ga2, gn = _grad_euclidean(a, n)
         ga2, gn = -ga2, -gn
     return ga1 + ga2, gp, gn
+
 
 for metric in ('C', 'N', 'E'):
     c.rule(f'Triplet / Metric {metric}')
