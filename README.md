@@ -80,7 +80,9 @@ customize the code and create your own profile for batched evaluation.
 python3 swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
 ```
 
-Currently only single-GPU mode is supported.
+Currently only single-GPU mode is supported. When the batched attack is finished,
+the script `tools/pjswipe.py` can display the content of resulting
+json files and calculate the corresponding ERS.
 
 ## 2. Project Information
 
