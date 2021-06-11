@@ -9,6 +9,10 @@ robustness compared to the ECCV work.
 
 Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 
+Preprint-Title: "Adversarial Attack and Defense in Deep Ranking"  
+Preprint-Authors: Mo Zhou, Le Wang, Zhenxing Niu, Qilin Zhang, Nanning Zheng, Gang Hua  
+Preprint-Link: https://arxiv.org/abs/2106.03614
+
 ## 1. Common Usage of CLI
 
 Python library `RobRank` provides these functionalities: (1) training 
