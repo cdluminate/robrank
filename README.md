@@ -1,6 +1,9 @@
 RobRank: Adversarial Robustness in Deep Ranking
 ===
 
+![badage](https://github.com/cdluminate/robrank/actions/workflows/github-actions-demo.yml/badge.svg)
+[![GitHub license](https://img.shields.io/github/license/cdluminate/robrank)](https://github.com/cdluminate/robrank/blob/main/LICENSE)
+
 RobRank is extended from previous ECCV'2020 work [*"Adversarial Ranking
 Attack and Defense,"*](https://github.com/cdluminate/advrank) with a major
 code refactor. We newly introduce an "Anti-Collapse Triplet" defense method
