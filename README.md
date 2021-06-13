@@ -121,7 +121,19 @@ json files and calculate the corresponding ERS.
 └── tools/*                       Miscellaneous tools for experiments.
 ```
 
-### 2.2. Tested Platform
+### 2.2. Installation and Tested Platform
+
+Manually install the python dependency packages:
+
+```shell
+$ pip install -r requirements.txt
+```
+
+Installing this project:
+
+```shell
+python3 setup.py install
+```
 
 Tested Software:
 
@@ -161,7 +173,7 @@ If you found the paper/code useful/inspiring, please consider citing my work:
 
 Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.](https://github.com/cdluminate/advrank) can be found in the linked page.
 
-**Software Projects:**
+**Reference Software Projects:**
 
 1. https://github.com/Confusezius/Deep-Metric-Learning-Baselines
 2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
