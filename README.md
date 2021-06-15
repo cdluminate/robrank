@@ -43,39 +43,41 @@ classification or ranking (deep metric learning) models, either vanilla
 or defensive; (2) perform adversarial attack against the trained models;
 (3) perform batched adversarial attack. See below for detailed usage.
 
+You can always specify the GPUs to use by `export CUDA_VISIBLE_DEVICES=<GPUs>`.
+
 ### 1.1. Training
 
 Training deep metric learning model or classification model, either normally or adversarially.
 As `pytorch-lightning` is used by this project, the training process will automatically use `DistributedDataParallel` when more than one GPU are available.
 
 ```shell
-CUDA_VISIBLE_DEVICES=<GPUs> python3 bin/train.py -C <dataset>:<model>:<loss>
+python3 bin/train.py -C <dataset>:<model>:<loss>
 ```
 
 where
-* dataset (for all available datasets see robrank/datasets/__init__.py)
+* dataset (for all available datasets see `robrank/datasets/__init__.py`)
   * mnist, fashion, cub, cars, sop (for deep metric learning)
   * mnist, cifar10 (for classification)
-* model (for all available models see robrank/models/__init__.py)
+* model (for all available models see `robrank/models/__init__.py`)
   * rres18: resnet 18 for deep metric learning (DML)
   * rres18d: resnet 18 for DML with EST defense
   * rres18p: resnet 18 for DML with ACT defense
-* loss (for all available losses see robrank/losses/__init__.py)
+* loss (for all available losses see `robrank/losses/__init__.py`)
   * ptripletN: triplet using Normalized Euclidean with SPC-2 batch.
   * ce: cross-entropy for classification
 
 For example:
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:cc2f2:ce
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:rc2f2:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:rc2f2p:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C cub:rres18:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C cub:rres18p:ptripletN
+python3 bin/train.py -C mnist:cc2f2:ce
+python3 bin/train.py -C mnist:rc2f2:ptripletN
+python3 bin/train.py -C mnist:rc2f2p:ptripletN
+python3 bin/train.py -C cub:rres18:ptripletN
+python3 bin/train.py -C cub:rres18p:ptripletN
 ```
 
 Tips:
 1. export `FAISS_CPU=1` to disable NMI score calculation on GPU. This could
-save a little bit of video memory.
+save a little bit of video memory of you encounter CUDA OOM.
 
 ### 1.2. Adversarial Attack
 
