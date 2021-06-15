@@ -49,7 +49,7 @@ Training deep metric learning model or classification model, either normally or 
 As `pytorch-lightning` is used by this project, the training process will automatically use `DistributedDataParallel` when more than one GPU are available.
 
 ```shell
-CUDA_VISIBLE_DEVICES=<GPUs> python3 train.py -C <dataset>:<model>:<loss>
+CUDA_VISIBLE_DEVICES=<GPUs> python3 bin/train.py -C <dataset>:<model>:<loss>
 ```
 
 where
@@ -66,11 +66,11 @@ where
 
 For example:
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:cc2f2:ce
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C mnist:rc2f2p:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cub:rres18:ptripletN
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train.py -C cub:rres18p:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:cc2f2:ce
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:rc2f2:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C mnist:rc2f2p:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C cub:rres18:ptripletN
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 bin/train.py -C cub:rres18p:ptripletN
 ```
 
 Tips:
@@ -79,12 +79,12 @@ save a little bit of video memory.
 
 ### 1.2. Adversarial Attack
 
-Script `advrank.py` is the entrance for conducting adversarial attacks
+Script `bin/advrank.py` is the entrance for conducting adversarial attacks
 against a trained model. For example, to conduct CA (w=1) with several
 manually specified PGD parameters, you can do it as follows:
 
 ```shell
-python3 advrank.py -v -A CA:pm=+:W=1:eps=0.30196:alpha=0.011764:pgditer=32 -C <xxx.ckpt>
+python3 bin/advrank.py -v -A CA:pm=+:W=1:eps=0.30196:alpha=0.011764:pgditer=32 -C <xxx.ckpt>
 ```
 where `xxx.ckpt` is the path to the trained model (saved as a pytorch-lightning checkpoint).
 The arguments specific to adversarial attacks are joined with a colon ":"
@@ -95,7 +95,7 @@ of other types of attacks discussed in the paper.
 
 ### 1.3. Batched Adversarial Attack
 
-Script `swipe.py` is used for conducting a batch of attacks against a specified
+Script `bin/swipe.py` is used for conducting a batch of attacks against a specified
 model (pytorch-lightning checkpoint), automatically. And it will save the
 output in json format as `<model_ckpt>.ckpt.<swipe_profile>.json`.
 Available `swipe_profile` includes `rob28`, `rob224` for ERS score;
@@ -104,7 +104,7 @@ of possible profiles can be found in `robrank/cmdline.py`. You can even
 customize the code and create your own profile for batched evaluation.
 
 ```shell
-python3 swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
+python3 bin/swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
 ```
 
 Currently only single-GPU mode is supported. When the batched attack is finished,
@@ -119,11 +119,9 @@ json files and calculate the corresponding ERS.
 (the following directory tree is manually edited and annotated)
 .
 ├── requirements.txt              Python deps (`pip install -r ...txt`)
-├── advrank.py                    Entrance script for adversarial ranking.
-├── swipe.py                      Entrance script for batched attack.
-├── tfdump.py                     Entrance script for dumping tensorboard db.
-├── train.py                      Entrance script for training models.
-├── validate.py                   Entrance script for model validation.
+├── bin/train.py                  Entrance script for training models.
+├── bin/advrank.py                Entrance script for adversarial ranking.
+├── bin/swipe.py                  Entrance script for batched attack.
 ├── robrank                       RobRank library.
 │   ├── attacks                   Attack Implementations.
 │   │   └── advrank*.py           Adversarial ranking attack (ECCV'2020).
@@ -148,7 +146,6 @@ Tested Software:
 OS: Debian unstable (May 2021), Ubuntu LTS
 Python: 3.8.5 (anaconda)
 PyTorch: 1.7.1, 1.8.1
-Python Dependencies: see requirements.txt
 ```
 
 Mainly Tested Hardware:
@@ -160,8 +157,8 @@ With 8 RTX3090 GPUs, most experiments can be finished within 1 day.
 With older configurations (such as `4* GTX1080Ti`), most experiments can be
 finished within 3 days, including adversarial training.
 
-Memory requirement: `12GB` is required for adversarial training of RN18, Mnas,
-and IBN. In contrast, adversarial training of RN50 requires `24GB`.
+Memory requirement: 12GB video memory is required for adversarial training of
+RN18, Mnas, and IBN. Additionally, adversarial training of RN50 requires 24GB.
 
 ### 2.3. References and Bibtex
 
