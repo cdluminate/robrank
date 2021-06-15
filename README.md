@@ -4,11 +4,23 @@ RobRank: Adversarial Robustness in Deep Ranking
 ![badage](https://github.com/cdluminate/robrank/actions/workflows/github-actions-demo.yml/badge.svg)
 [![GitHub license](https://img.shields.io/github/license/cdluminate/robrank)](https://github.com/cdluminate/robrank/blob/main/LICENSE)
 
-RobRank is extended from previous ECCV'2020 work [*"Adversarial Ranking
-Attack and Defense,"*](https://github.com/cdluminate/advrank) with a major
-code refactor. We newly introduce an "Anti-Collapse Triplet" defense method
-which achieves at least 60% and at most 540% improvement in adversarial
-robustness compared to the ECCV work.
+Deep neural networks are vulnerable to adversarial attacks, and so does deep
+ranking or deep metric learning models. The project *RobRank* aims to study
+the empirical adversarial robustness of deep ranking / metric learning models.
+Our contribution includes (1) the definition and implementation of two new
+adversarial attacks, namely candidate attack and query attack; (2) two
+adversarial defense methods (based on adversarial training) are proposed
+to improve model robustness against a wide range of attacks; (3) a comprehensive
+empirical robustness score for quantitatively assessing adversarial robustness.
+In particular, an "Anti-Collapse Triplet" defense method is newly introduced
+in *RobRank*, which achieves at least 60% and at most 540% improvement in
+adversarial robustness compared to the ECCV work. See the preprint manuscript
+for details.
+
+RobRank codebase is extended from my previous ECCV'2020 work [*"Adversarial
+Ranking Attack and Defense,"*](https://github.com/cdluminate/advrank) with
+a major code refactor. You may find most functionalities of the previous
+codebase in this repository as well.
 
 Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 
@@ -16,6 +28,13 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 **Preprint-Authors:** Mo Zhou, Le Wang, Zhenxing Niu, Qilin Zhang, Nanning Zheng, Gang Hua  
 **Preprint-Link:** https://arxiv.org/abs/2106.03614  
 **Keywords:** Deep {Ranking, Metric Learning}, Adversarial {Attack, Defense, Robustness}  
+
+**Python-Dependency:** `$ pip install -r requirements.txt`  
+**Install:** `python3 setup.py install`  
+
+### News and Updates
+
+...
 
 ## 1. Common Usage of CLI
 
@@ -121,19 +140,7 @@ json files and calculate the corresponding ERS.
 └── tools/*                       Miscellaneous tools for experiments.
 ```
 
-### 2.2. Installation and Tested Platform
-
-Manually install the python dependency packages:
-
-```shell
-$ pip install -r requirements.txt
-```
-
-Installing this project:
-
-```shell
-python3 setup.py install
-```
+### 2.2. Tested Platform
 
 Tested Software:
 
@@ -179,6 +186,8 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 2. https://github.com/Confusezius/Revisiting_Deep_Metric_Learning_PyTorch
 3. https://github.com/idstcv/SoftTriple
 4. https://github.com/KevinMusgrave/pytorch-metric-learning
+5. https://github.com/RobustBench/robustbench
+6. https://github.com/fra31/auto-attack
 
 ### 2.4. Copyright and License
 
