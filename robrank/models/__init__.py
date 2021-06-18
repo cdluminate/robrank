@@ -21,6 +21,7 @@ limitations under the License.
 # moddifier in {, d, e} for vanilla, advrank:defense, experimental defense
 
 # Classification
+from . import cslp
 from . import cc2f2
 from . import clenet
 from . import cres18

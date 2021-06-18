@@ -43,6 +43,16 @@ class __classify_model_224x224(__classify):
 
 
 @dataclass
+class cslp(__classify_model_28x28):
+    maxepoch: int = 10
+    loader_num_workers: int = min(8, mp.cpu_count())
+    batchsize: int = 1000
+    lr: float = 1e-3
+    weight_decay: float = 1e-7
+    validate_every: int = 1
+
+
+@dataclass
 class clenet(__classify_model_28x28):
     maxepoch: int = 10
     loader_num_workers: int = min(8, mp.cpu_count())

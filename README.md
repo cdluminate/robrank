@@ -68,7 +68,7 @@ where
 
 For example:
 ```shell
-python3 bin/train.py -C mnist:cc2f2:ce
+python3 bin/train.py -C mnist:cc2f2:ce --do_test
 python3 bin/train.py -C mnist:rc2f2:ptripletN
 python3 bin/train.py -C mnist:rc2f2p:ptripletN
 python3 bin/train.py -C cub:rres18:ptripletN
