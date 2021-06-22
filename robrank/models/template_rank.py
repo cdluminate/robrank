@@ -226,7 +226,7 @@ class MetricBase(thl.LightningModule):
             elif self.metric in ('E', 'N'):
                 dist = th.cdist(output, self._valvecs)
             # metrics
-            r, r_1, r_2, mAP = [], [], [], []
+            r, r_1, r_2, mAP, mAPR = [], [], [], [], []
             for i in range(output.size(0)):
                 _r, _r1, _r2 = utils.metric_get_rank(dist[i], labels[i],
                                                      self._vallabs, ks=[1, 2])
@@ -238,9 +238,13 @@ class MetricBase(thl.LightningModule):
                         dist[i],
                         labels[i],
                         self._vallabs))
+                mAPR.append(
+                    *utils.metric_get_ap_r(dist[i], labels[i],
+                        self._vallabs, rs=[10]))
             r, r_1, r_2 = np.mean(r), np.mean(r_1), np.mean(r_2)
             mAP = np.mean(mAP)
-        return {'r@M': r, 'r@1': r_1, 'r@2': r_2, 'mAP': mAP}
+            mAPR = np.mean(mAPR)
+        return {'r@M': r, 'r@1': r_1, 'r@2': r_2, 'mAP': mAP, 'mAP@R': mAPR}
 
     def validation_epoch_end(self, outputs: list):
         # only the process of rank 0 has to report this summary.
@@ -278,11 +282,13 @@ class MetricBase(thl.LightningModule):
         self.log('Validation/r@2', summary['r@2'])
         self.log('Validation/mAP', summary['mAP'])
         self.log('Validation/NMI', summary['NMI'])
+        self.log('Validation/mAP@R', summary['mAP@R'])
         c.print(f'\nValidation │ ' +
                 f'r@M= {summary["r@M"]:.1f} ' +
                 f'r@1= {summary["r@1"]:.3f} ' +
                 f'r@2= {summary["r@2"]:.3f} ' +
                 f'mAP= {summary["mAP"]:.3f} ' +
+                f'mAP@R = {summary["mAP@R"]:.3f} ' +
                 f'NMI= {summary["NMI"]:.3f}')
 
 ###############################################################################

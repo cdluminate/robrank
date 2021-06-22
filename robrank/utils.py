@@ -125,6 +125,11 @@ def metric_get_rank(dist: th.Tensor, label: th.Tensor,
     '''
     Flexibly get the rank of the topmost item in the same class
     dist = [dist(anchor,x) for x in validation_set]
+
+    dist (1 x len(vallabels)): pairwise distance vector between a single query
+        to the validation set.
+    label: int label for the query
+    vallabels: label array for the validation set
     '''
     assert(dist.nelement() == vallabels.nelement())
     # [important] argsort(...)[:,1] for skipping the diagonal (R@1=1.0)
@@ -134,10 +139,29 @@ def metric_get_rank(dist: th.Tensor, label: th.Tensor,
     return (rank,) + tuple(rank < k for k in ks)
 
 
+def test_metric_get_rank():
+    N = 32
+    dist = th.arange(N) / N
+    label = 1
+    labels = th.zeros(N)
+    labels[[0,1]] = 1
+    recall = metric_get_rank(dist, label, labels, [1,2])
+    assert(recall == (0, True, True))
+    labels = th.zeros(N)
+    labels[[0, 2]] = 1
+    recall = metric_get_rank(dist, label, labels, [1,2])
+    assert(recall == (1, False, True))
+
+
 def metric_get_ap(dist: th.Tensor, label: th.Tensor,
                   vallabels: th.Tensor) -> float:
     '''
     Get the overall average precision
+
+    dist (1 x len(vallabels)): pairwise distance vector between a single query
+        to the validation set.
+    label: int label for the query
+    vallabels: label array for the validation set
     '''
     assert(dist.nelement() == vallabels.nelement())
     # we skip the smallest value as it's exectly for the anchor itself
@@ -146,6 +170,57 @@ def metric_get_ap(dist: th.Tensor, label: th.Tensor,
     ap = ((th.arange(len(argwhere1)).float() + 1).to(argwhere1.device) /
           argwhere1).sum().item() / len(argwhere1)
     return ap
+
+
+def metric_get_ap_r(dist: th.Tensor, label: th.Tensor,
+                    vallabels: th.Tensor, rs: list) -> float:
+    '''
+    computes the mAP@R metric following
+    "A metric learning reality check", eccv 2020
+
+    dist (1 x len(vallabels)): pairwise distance vector between a single query
+        to the validation set.
+    label: int label for the query
+    vallabels: label array for the validation set
+    '''
+    assert(dist.nelement() == vallabels.nelement())
+    # we skip the smallest value as it's exactly for the anchor itself
+    argsort = dist.argsort(descending=False)[1:].cpu()
+    mask = (vallabels[argsort] == label).cpu()
+    cmask = mask.cumsum(dim=0)
+    mapr = []
+    for r in rs:
+        tmp = (cmask[:r] / (th.arange(r) + 1))[mask[:r]].sum() / r
+        mapr.append(tmp.item())
+    return tuple(mapr)
+
+
+def test_metric_get_ap_r():
+    def et1e_4(a, b):
+        assert(abs(a - b) < 1e-4)
+    N = 101
+    dist = th.arange(N) / N
+    label = 1
+    #
+    labels = th.zeros(N)
+    labels[[0,1]] = 1
+    mapr = metric_get_ap_r(dist, label, labels, [10])
+    et1e_4(mapr[0], 0.1)
+    #
+    labels = th.zeros(N)
+    labels[[0,1,10]] = 1
+    mapr = metric_get_ap_r(dist, label, labels, [10])
+    et1e_4(mapr[0], 0.12)
+    #
+    labels = th.zeros(N)
+    labels[[0,1,2]] = 1
+    mapr = metric_get_ap_r(dist, label, labels, [10])
+    et1e_4(mapr[0], 0.20)
+    #
+    labels = th.zeros(N)
+    labels[th.arange(11)] = 1
+    mapr = metric_get_ap_r(dist, label, labels, [10])
+    et1e_4(mapr[0], 1.00)
 
 
 def rjson(j: object) -> str:
