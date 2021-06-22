@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-
+import os
 import re
 import json
 from tqdm import tqdm
 import numpy as np
+import torch as th
+import torchvision as V
 from .advrank import AdvRank
 from ..utils import rjson
 import rich
@@ -29,13 +31,21 @@ _LEGAL_ATTAKS_ = ('ES', 'QA', 'CA', 'SPQA', 'GTM', 'GTT', 'TMA', 'LTM')
 class AdvRankLauncher(object):
     '''
     Entrace Class for adversarial ranking attack [ArXiv:2002.11293]
+
+    attack: str - describing the attack type
+    device: str - torch device description
+    dumpaxd: str - path to the directory for dumped adversarial examples
+    verbose: bool - print additional information
     '''
 
     def __init__(self, attack: str, device: str = 'cpu',
+                 dumpaxd: str = '',
                  verbose: bool = False):
         self.device = device
         self.verbose = verbose
         self.kw = {}
+        self.dumpaxd: str = dumpaxd
+        self.dumpax_counter: int = 0
         # parse the attack
         self.kw['device'] = device
         self.kw['verbose'] = verbose
@@ -91,6 +101,26 @@ class AdvRankLauncher(object):
             xr, r, sumorig, sumadv = advrank(images, labels, candi)
             Sumorig.append(sumorig)
             Sumadv.append(sumadv)
+            if self.dumpaxd:
+                if not os.path.exists(self.dumpaxd):
+                    os.mkdir(self.dumpaxd)
+                #oxpath = os.path.join(self.dumpaxd, f'ox-{self.dumpax_counter:07d}.pth')
+                #axpath = os.path.join(self.dumpaxd, f'ax-{self.dumpax_counter:07d}.pth')
+                #th.save(xr, axpath)
+
+                if len(xr.shape) == 4:
+                    for Ni in range(xr.size(0)):
+                        oxpath = os.path.join(self.dumpaxd,
+                                f'ox-{self.dumpax_counter:07d}.jpg')
+                        axpath = os.path.join(self.dumpaxd,
+                                f'ax-{self.dumpax_counter:07d}.jpg')
+                        V.utils.save_image(images[Ni, :, :, :].squeeze().cpu(),
+                                oxpath)
+                        V.utils.save_image(xr[Ni, :, :, :].squeeze().cpu(),
+                                axpath)
+                        self.dumpax_counter += 1
+                else:
+                    raise NotImplementedError
 
         # let's summarize!
         c.print('[yellow]=== Summary ========================================')

@@ -241,6 +241,8 @@ class AdvRank:
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag.add_argument('-b', '--batchsize', type=int, default=-1,
                         help='override batchsize')
+        ag.add_argument('-X', '--dumpaxd', type=str, default='',
+                        help='path to dump the adversarial examples')
         ag = ag.parse_args(argv)
         ag.dataset, ag.model, ag.loss = re.match(
             r'.*logs_(\w+)-(\w+)-(\w+)/.*\.ckpt', ag.checkpoint).groups()
@@ -257,7 +259,8 @@ class AdvRank:
             model.config.valbatchsize = ag.batchsize
 
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
-        atker = rr.attacks.AdvRankLauncher(ag.attack, ag.device, ag.verbose)
+        atker = rr.attacks.AdvRankLauncher(
+                ag.attack, ag.device, ag.dumpaxd, ag.verbose)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')
