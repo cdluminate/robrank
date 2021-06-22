@@ -138,6 +138,7 @@ class rres18(__ranking_model_224x224_icml):
     embedding_dim: int = 512
     freeze_bn: bool = True
     valbatchsize: int = 112
+    optimizer: str = 'Adam'
 
     def __init__(self, dataset, loss):
         super().__init__(dataset, loss)
