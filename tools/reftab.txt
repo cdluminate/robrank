@@ -1,0 +1,33 @@
+The reference experiments are conducted with four RTX3090 GPUs.
+We report the best performance instead of the last-epoch performance.
+
+===============================================================================
+ Fashion-MNIST Ranking 28x28
+===============================================================================
+
+rc2f2:pcontrastN   │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
+rc2f2:pdcontrastN  │ r@M= 3.7 r@1= 0.880 r@2= 0.925 mAP= 0.757 mAP@R = 0.829 NMI= 0.784
+rc2f2:ptripletN    │ r@M= 2.9 r@1= 0.876 r@2= 0.929 mAP= 0.844 mAP@R = 0.831 NMI= 0.766
+rc2f2:pmtripletN  *│ r@M= 6.0 r@1= 0.904 r@2= 0.937 mAP= 0.886 mAP@R = 0.877 NMI= 0.782
+rc2f2:pstripletN  *│ r@M= 3.3 r@1= 0.903 r@2= 0.942 mAP= 0.883 mAP@R = 0.869 NMI= 0.789
+rc2f2:phtripletN   │ r@M= 4.1 r@1= 0.878 r@2= 0.926 mAP= 0.797 mAP@R = 0.836 NMI= 0.737
+rc2f2:pdtripletN   │ r@M= 3.5 r@1= 0.874 r@2= 0.925 mAP= 0.800 mAP@R = 0.830 NMI= 0.736
+rc2f2:pDtripletN   │ r@M= 4.8 r@1= 0.901 r@2= 0.937 mAP= 0.869 mAP@R = 0.872 NMI= 0.780
+rc2f2:pquadN       │ r@M= 2.9 r@1= 0.886 r@2= 0.935 mAP= 0.860 mAP@R = 0.847 NMI= 0.782
+rc2f2:pdquadN     *│ r@M= 4.9 r@1= 0.907 r@2= 0.938 mAP= 0.889 mAP@R = 0.882 NMI= 0.819
+rc2f2:prhomN       │ r@M= 2.8 r@1= 0.880 r@2= 0.930 mAP= 0.849 mAP@R = 0.837 NMI= 0.798
+rc2f2:pdrhomN      │ r@M= 3.4 r@1= 0.865 r@2= 0.921 mAP= 0.752 mAP@R = 0.810 NMI= 0.746
+rc2f2:pmsN         │ r@M= 5.2 r@1= 0.892 r@2= 0.932 mAP= 0.856 mAP@R = 0.860 NMI= 0.802
+rc2f2:pmarginN     │ r@M= 3.4 r@1= 0.884 r@2= 0.932 mAP= 0.872 mAP@R = 0.855 NMI= 0.783
+rc2f2:pdmarginN    │ r@M= 1.1 r@1= 0.860 r@2= 0.917 mAP= 0.694 mAP@R = 0.788 NMI= 0.730
+rc2f2:pangularN    │ r@M= 4.9 r@1= 0.898 r@2= 0.934 mAP= 0.873 mAP@R = 0.869 NMI= 0.803
+rc2f2:pncaN        │ r@M= 5.2 r@1= 0.895 r@2= 0.935 mAP= 0.886 mAP@R = 0.865 NMI= 0.831
+rc2f2:psnrN        │ r@M= 2.6 r@1= 0.870 r@2= 0.925 mAP= 0.843 mAP@R = 0.828 NMI= 0.772
+rc2f2:pgliftE     *│ r@M= 2.9 r@1= 0.902 r@2= 0.942 mAP= 0.873 mAP@R = 0.870 NMI= 0.815
+rc2f2:pnpairE      │ r@M= 1.9 r@1= 0.895 r@2= 0.937 mAP= 0.847 mAP@R = 0.859 NMI= 0.798
+rc2f2:pmsC         │ r@M= 5.2 r@1= 0.892 r@2= 0.934 mAP= 0.855 mAP@R = 0.854 NMI= 0.810
+
+===============================================================================
+ CUB-200-2011 Ranking 224x224
+===============================================================================
+
