@@ -18,7 +18,6 @@ limitations under the License.
 import torch as th
 import torchvision as vision
 from torch.utils.data import DataLoader
-from torch.optim import Adam
 import pytorch_lightning as thl
 from pytorch_lightning.utilities.enums import DistributedType
 import os
@@ -151,7 +150,8 @@ class MetricBase(thl.LightningModule):
             raise NotImplementedError
 
     def configure_optimizers(self):
-        optim = Adam(self.backbone.parameters(),
+        optim = getattr(th.optim, getattr(self.config, 'optimizer', 'Adam'))
+        optim = optim(self.backbone.parameters(),
                      lr=self.config.lr, weight_decay=self.config.weight_decay)
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
