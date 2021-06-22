@@ -187,6 +187,7 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 4. https://github.com/KevinMusgrave/pytorch-metric-learning
 5. https://github.com/RobustBench/robustbench
 6. https://github.com/fra31/auto-attack
+7. https://github.com/KevinMusgrave/powerful-benchmarker
 
 ### 2.4. Copyright and License
 
