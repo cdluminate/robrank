@@ -6,39 +6,73 @@ Performance may vary with different model parameter initializations.
  Fashion-MNIST Ranking 28x28 (fashion:.*)
 ===============================================================================
 
-rc2f2:pcontrastN   │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
-rc2f2:pdcontrastN  │ r@M= 3.7 r@1= 0.880 r@2= 0.925 mAP= 0.757 mAP@R = 0.829 NMI= 0.784
-rc2f2:ptripletN    │ r@M= 2.9 r@1= 0.876 r@2= 0.929 mAP= 0.844 mAP@R = 0.831 NMI= 0.766
-rc2f2:ptripletE    │ r@M= 2.4 r@1= 0.874 r@2= 0.927 mAP= 0.835 mAP@R = 0.830 NMI= 0.814
-rc2f2:ptripletC    │ r@M= 3.2 r@1= 0.873 r@2= 0.928 mAP= 0.850 mAP@R = 0.833 NMI= 0.778
-rc2f2:pmtripletN  *│ r@M= 6.0 r@1= 0.904 r@2= 0.937 mAP= 0.886 mAP@R = 0.877 NMI= 0.782
-rc2f2:pstripletN  *│ r@M= 3.3 r@1= 0.903 r@2= 0.942 mAP= 0.883 mAP@R = 0.869 NMI= 0.789
-rc2f2:phtripletN   │ r@M= 4.1 r@1= 0.878 r@2= 0.926 mAP= 0.797 mAP@R = 0.836 NMI= 0.737
-rc2f2:pdtripletN   │ r@M= 3.5 r@1= 0.874 r@2= 0.925 mAP= 0.800 mAP@R = 0.830 NMI= 0.736
-rc2f2:pDtripletN   │ r@M= 4.8 r@1= 0.901 r@2= 0.937 mAP= 0.869 mAP@R = 0.872 NMI= 0.780
-rc2f2:pquadN       │ r@M= 2.9 r@1= 0.886 r@2= 0.935 mAP= 0.860 mAP@R = 0.847 NMI= 0.782
-rc2f2:pdquadN     *│ r@M= 4.9 r@1= 0.907 r@2= 0.938 mAP= 0.889 mAP@R = 0.882 NMI= 0.819
-rc2f2:prhomN       │ r@M= 2.8 r@1= 0.880 r@2= 0.930 mAP= 0.849 mAP@R = 0.837 NMI= 0.798
-rc2f2:pdrhomN      │ r@M= 3.4 r@1= 0.865 r@2= 0.921 mAP= 0.752 mAP@R = 0.810 NMI= 0.746
-rc2f2:pmsN         │ r@M= 5.2 r@1= 0.892 r@2= 0.932 mAP= 0.856 mAP@R = 0.860 NMI= 0.802
-rc2f2:pmarginN     │ r@M= 3.4 r@1= 0.884 r@2= 0.932 mAP= 0.872 mAP@R = 0.855 NMI= 0.783
-rc2f2:pdmarginN    │ r@M= 1.1 r@1= 0.860 r@2= 0.917 mAP= 0.694 mAP@R = 0.788 NMI= 0.730
-rc2f2:pangularN    │ r@M= 4.9 r@1= 0.898 r@2= 0.934 mAP= 0.873 mAP@R = 0.869 NMI= 0.803
-rc2f2:pncaN        │ r@M= 5.2 r@1= 0.895 r@2= 0.935 mAP= 0.886 mAP@R = 0.865 NMI= 0.831
-rc2f2:psnrN        │ r@M= 2.6 r@1= 0.870 r@2= 0.925 mAP= 0.843 mAP@R = 0.828 NMI= 0.772
-rc2f2:pgliftE     *│ r@M= 2.9 r@1= 0.902 r@2= 0.942 mAP= 0.873 mAP@R = 0.870 NMI= 0.815
-rc2f2:pnpairE      │ r@M= 1.9 r@1= 0.895 r@2= 0.937 mAP= 0.847 mAP@R = 0.859 NMI= 0.798
-rc2f2:pmsC         │ r@M= 5.2 r@1= 0.892 r@2= 0.934 mAP= 0.855 mAP@R = 0.854 NMI= 0.810
+! MNIST is too easy. Let's skip it.
 
-rc2f2d:ptripletN   │ r@M= 2.2 r@1= 0.798 r@2= 0.882 mAP= 0.605 mAP@R = 0.722 NMI= 0.598
-rc2f2d:ptripletE   │ r@M= 2.1 r@1= 0.821 r@2= 0.892 mAP= 0.639 mAP@R = 0.746 NMI= 0.641
-rc2f2d:ptripletC   │ r@M= 3.7 r@1= 0.758 r@2= 0.854 mAP= 0.613 mAP@R = 0.660 NMI= 0.630
+rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
+rc2f2:pdcontrastN    │ r@M= 3.7 r@1= 0.880 r@2= 0.925 mAP= 0.757 mAP@R = 0.829 NMI= 0.784
+rc2f2:ptripletN      │ r@M= 2.9 r@1= 0.876 r@2= 0.929 mAP= 0.844 mAP@R = 0.831 NMI= 0.766
+rc2f2:ptripletE      │ r@M= 2.4 r@1= 0.874 r@2= 0.927 mAP= 0.835 mAP@R = 0.830 NMI= 0.814
+rc2f2:ptripletC      │ r@M= 3.2 r@1= 0.873 r@2= 0.928 mAP= 0.850 mAP@R = 0.833 NMI= 0.778
+rc2f2:pmtripletN    *│ r@M= 6.0 r@1= 0.904 r@2= 0.937 mAP= 0.886 mAP@R = 0.877 NMI= 0.782
+rc2f2:pstripletN    *│ r@M= 3.3 r@1= 0.903 r@2= 0.942 mAP= 0.883 mAP@R = 0.869 NMI= 0.789
+rc2f2:phtripletN     │ r@M= 4.1 r@1= 0.878 r@2= 0.926 mAP= 0.797 mAP@R = 0.836 NMI= 0.737
+rc2f2:pdtripletN     │ r@M= 3.5 r@1= 0.874 r@2= 0.925 mAP= 0.800 mAP@R = 0.830 NMI= 0.736
+rc2f2:pDtripletN     │ r@M= 4.8 r@1= 0.901 r@2= 0.937 mAP= 0.869 mAP@R = 0.872 NMI= 0.780
+rc2f2:pquadN         │ r@M= 2.9 r@1= 0.886 r@2= 0.935 mAP= 0.860 mAP@R = 0.847 NMI= 0.782
+rc2f2:pdquadN       *│ r@M= 4.9 r@1= 0.907 r@2= 0.938 mAP= 0.889 mAP@R = 0.882 NMI= 0.819
+rc2f2:prhomN         │ r@M= 2.8 r@1= 0.880 r@2= 0.930 mAP= 0.849 mAP@R = 0.837 NMI= 0.798
+rc2f2:pdrhomN        │ r@M= 3.4 r@1= 0.865 r@2= 0.921 mAP= 0.752 mAP@R = 0.810 NMI= 0.746
+rc2f2:pmsN           │ r@M= 5.2 r@1= 0.892 r@2= 0.932 mAP= 0.856 mAP@R = 0.860 NMI= 0.802
+rc2f2:pmarginN       │ r@M= 3.4 r@1= 0.884 r@2= 0.932 mAP= 0.872 mAP@R = 0.855 NMI= 0.783
+rc2f2:pdmarginN      │ r@M= 1.1 r@1= 0.860 r@2= 0.917 mAP= 0.694 mAP@R = 0.788 NMI= 0.730
+rc2f2:pangularN      │ r@M= 4.9 r@1= 0.898 r@2= 0.934 mAP= 0.873 mAP@R = 0.869 NMI= 0.803
+rc2f2:pncaN          │ r@M= 5.2 r@1= 0.895 r@2= 0.935 mAP= 0.886 mAP@R = 0.865 NMI= 0.831
+rc2f2:psnrN          │ r@M= 2.6 r@1= 0.870 r@2= 0.925 mAP= 0.843 mAP@R = 0.828 NMI= 0.772
+rc2f2:pgliftE       *│ r@M= 2.9 r@1= 0.902 r@2= 0.942 mAP= 0.873 mAP@R = 0.870 NMI= 0.815
+rc2f2:pnpairE        │ r@M= 1.9 r@1= 0.895 r@2= 0.937 mAP= 0.847 mAP@R = 0.859 NMI= 0.798
+rc2f2:pmsC           │ r@M= 5.2 r@1= 0.892 r@2= 0.934 mAP= 0.855 mAP@R = 0.854 NMI= 0.810
 
-rc2f2p:ptripletN   │ r@M= 3.7 r@1= 0.778 r@2= 0.865 mAP= 0.676 mAP@R = 0.693 NMI= 0.663
-rc2f2p:ptripletE   │ r@M= 2.8 r@1= 0.786 r@2= 0.867 mAP= 0.643 mAP@R = 0.698 NMI= 0.646
-rc2f2p:ptripletC   │ r@M= 3.6 r@1= 0.781 r@2= 0.868 mAP= 0.679 mAP@R = 0.696 NMI= 0.668
+rc2f2d:ptripletN     │ r@M= 2.3 r@1= 0.766 r@2= 0.860 mAP= 0.592 mAP@R = 0.682 NMI= 0.610
+rc2f2d:ptripletE     │ r@M= 2.1 r@1= 0.821 r@2= 0.892 mAP= 0.639 mAP@R = 0.746 NMI= 0.641
+rc2f2d:ptripletC     │ r@M= 3.7 r@1= 0.758 r@2= 0.854 mAP= 0.613 mAP@R = 0.660 NMI= 0.630
+
+rc2f2p:ptripletN     │ r@M= 4.1 r@1= 0.787 r@2= 0.871 mAP= 0.688 mAP@R = 0.699 NMI= 0.672
+rc2f2p:ptripletE     │ r@M= 2.8 r@1= 0.786 r@2= 0.867 mAP= 0.643 mAP@R = 0.698 NMI= 0.646
+rc2f2p:ptripletC     │ r@M= 3.6 r@1= 0.781 r@2= 0.868 mAP= 0.679 mAP@R = 0.696 NMI= 0.668
 
 ===============================================================================
- CUB-200-2011 Ranking 224x224
+ CUB-200-2011 Ranking 224x224 (cub:.*)
 ===============================================================================
 
+! We use MnasNet-1.0 because it is more computationally efficient than ResNet18.
+
+rmnas10:pcontrastN   │ r@M= 5.0 r@1= 0.637 r@2= 0.747 mAP= 0.339 mAP@R = 0.449 NMI= 0.667
+rmnas10:pdcontrastN *│ r@M= 5.1 r@1= 0.659 r@2= 0.762 mAP= 0.343 mAP@R = 0.461 NMI= 0.682
+rmnas10:ptripletN    │ r@M= 5.6 r@1= 0.599 r@2= 0.715 mAP= 0.303 mAP@R = 0.405 NMI= 0.634
+rmnas10:pmtripletN   │ r@M= 6.6 r@1= 0.625 r@2= 0.736 mAP= 0.332 mAP@R = 0.435 NMI= 0.656
+rmnas10:pstripletN   │ r@M= 4.4 r@1= 0.641 r@2= 0.751 mAP= 0.331 mAP@R = 0.440 NMI= 0.685
+rmnas10:pdtripletN  *│ r@M= 4.8 r@1= 0.655 r@2= 0.759 mAP= 0.354 mAP@R = 0.469 NMI= 0.693
+rmnas10:pDtripletN  *│ r@M= 5.3 r@1= 0.659 r@2= 0.767 mAP= 0.354 mAP@R = 0.471 NMI= 0.697
+rmnas10:pquadN       │ r@M= 5.4 r@1= 0.606 r@2= 0.725 mAP= 0.311 mAP@R = 0.411 NMI= 0.643
+rmnas10:pdquadN     *│ r@M= 4.8 r@1= 0.650 r@2= 0.759 mAP= 0.351 mAP@R = 0.463 NMI= 0.691
+rmnas10:pmsN        *│ r@M= 4.9 r@1= 0.653 r@2= 0.755 mAP= 0.345 mAP@R = 0.460 NMI= 0.688
+rmnas10:pmarginN     │ r@M= 5.2 r@1= 0.638 r@2= 0.748 mAP= 0.343 mAP@R = 0.453 NMI= 0.668
+rmnas10:pdmarginN   *│ r@M= 5.3 r@1= 0.656 r@2= 0.760 mAP= 0.340 mAP@R = 0.460 NMI= 0.679
+rmnas10:pangularN    │ r@M= 6.8 r@1= 0.623 r@2= 0.728 mAP= 0.324 mAP@R = 0.425 NMI= 0.657
+rmnas10:pncaN          Collapse.
+rmnas10:psnrN        │ r@M= 6.3 r@1= 0.622 r@2= 0.737 mAP= 0.321 mAP@R = 0.420 NMI= 0.665
+rmnas10:pgliftE      │ r@M= 4.9 r@1= 0.629 r@2= 0.741 mAP= 0.328 mAP@R = 0.430 NMI= 0.674
+rmnas10:pnpairE      │ r@M= 4.2 r@1= 0.635 r@2= 0.747 mAP= 0.327 mAP@R = 0.435 NMI= 0.688
+rmnas10:pmsC         │ r@M= 5.1 r@1= 0.647 r@2= 0.758 mAP= 0.347 mAP@R = 0.462 NMI= 0.680
+
+rmnas10d:ptripletN
+rmnas10d:ptripletE
+rmnas10d:ptripletC
+
+rmnas10p:ptripletN
+rmnas10p:ptripletE
+rmnas10p:ptripletC
+
+===============================================================================
+ Stanford Online Product Ranking 224x224 (sop:.*)
+===============================================================================
