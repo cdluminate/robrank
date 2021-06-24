@@ -22,6 +22,7 @@ import os
 from .. import configs
 from collections import defaultdict
 import random
+import pytest
 
 
 def getDataset(kind: str = 'classification'):
@@ -137,3 +138,10 @@ def _get_triplet_dataset():
     train = _MNIST_TRIPLET(configs.mnist.path, train=True)
     test = _MNIST_TRIPLET(configs.mnist.path, train=False)
     return (train, test)
+
+
+@pytest.mark.skipif(not os.path.exists(configs.mnist.path),
+        reason='test data is not available')
+@pytest.mark.parametrize('kind', ('classification', 'SPC-2', 'triplet'))
+def test_mnist_getdataset(kind: str):
+    x = getDataset(kind=kind)
