@@ -22,6 +22,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 import torchvision as V
 from .. import configs
+import pytest
 
 
 def getDataset(kind: str = 'classification'):
@@ -102,3 +103,12 @@ def get_transform(kind: str = 'train'):
             V.transforms.ToTensor(),
         ])
     return transform
+
+
+@pytest.mark.skipif(not os.path.exists(configs.cifar10.path),
+        reason='test data is not available')
+@pytest.mark.parametrize('kind', ('classification',))
+def test_cifar10_getdataset(kind: str):
+    x = getDataset(kind=kind)
+    if kind == 'classification':
+        assert(all([len(x[0]) == 50000, len(x[2]) == 10000]))

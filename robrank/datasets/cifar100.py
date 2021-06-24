@@ -23,6 +23,7 @@ from torch.utils.data import Dataset
 import torchvision as V
 from .. import configs
 from .cifar10 import unpickle
+import pytest
 
 
 def getDataset(kind: str = 'classification'):
@@ -33,8 +34,8 @@ def getDataset(kind: str = 'classification'):
 
 
 def __get_classification_dataset():
-    train = Cifar10Dataset(configs.cifar10.path, 'train')
-    test = Cifar10Dataset(configs.cifar10.path, 'test')
+    train = Cifar100Dataset(configs.cifar100.path, 'train')
+    test = Cifar100Dataset(configs.cifar100.path, 'test')
     return (train, None, test)
 
 
@@ -91,3 +92,12 @@ def get_transform(kind: str = 'train'):
             V.transforms.ToTensor(),
         ])
     return transform
+
+
+@pytest.mark.skipif(not os.path.exists(configs.cifar100.path),
+        reason='test data is not available')
+@pytest.mark.parametrize('kind', ('classification',))
+def test_cifar100_getdataset(kind: str):
+    x = getDataset(kind=kind)
+    if kind == 'classification':
+        assert(all([len(x[0]) == 50000, len(x[2]) == 10000]))

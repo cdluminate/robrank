@@ -145,3 +145,7 @@ def _get_triplet_dataset():
 @pytest.mark.parametrize('kind', ('classification', 'SPC-2', 'triplet'))
 def test_mnist_getdataset(kind: str):
     x = getDataset(kind=kind)
+    if kind == 'classification':
+        assert(all([len(x[0]) == 55000, len(x[1]) == 5000, len(x[2]) == 10000]))
+    else:
+        assert(all([len(x[0]) == 60000, len(x[1]) == 10000]))
