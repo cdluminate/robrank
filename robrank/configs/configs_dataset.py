@@ -41,6 +41,12 @@ class cifar10:
 
 
 @dataclass
+class cifar100:
+    path: str = os.path.expanduser('~/.torch/cifar-100-python')
+    num_class: int = 100
+
+
+@dataclass
 class sop:
     path: str = os.path.expanduser('/dev/shm/Stanford_Online_Products/') if \
         os.path.exists(os.path.expanduser('/dev/shm/Stanford_Online_Products/')) \

@@ -22,6 +22,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 import torchvision as V
 from .. import configs
+from .cifar10 import unpickle
 import pytest
 
 
@@ -33,45 +34,33 @@ def getDataset(kind: str = 'classification'):
 
 
 def __get_classification_dataset():
-    train = Cifar10Dataset(configs.cifar10.path, 'train')
-    test = Cifar10Dataset(configs.cifar10.path, 'test')
+    train = Cifar100Dataset(configs.cifar100.path, 'train')
+    test = Cifar100Dataset(configs.cifar100.path, 'test')
     return (train, None, test)
 
 
-# https://www.cs.toronto.edu/~kriz/cifar.html
-def unpickle(file):
-    with open(file, 'rb') as fo:
-        dic = pickle.load(fo, encoding='latin1')
-    return dic
-
-
-class Cifar10Dataset(Dataset):
+class Cifar100Dataset(Dataset):
     '''
-    the cifar 10 dataset
+    the cifar 100 dataset
     '''
 
     def __init__(self, path: str, kind='train'):
         self.path = path
         self.transform = get_transform(kind)
         #
-        files_train = [f'data_batch_{x}' for x in range(1, 5 + 1)]
-        files_train = [os.path.join(path, x) for x in files_train]
-        file_test = os.path.join(path, 'test_batch')
-        file_meta = os.path.join(path, 'batches.meta')
+        file_train = os.path.join(path, 'train')
+        file_test = os.path.join(path, 'test')
+        file_meta = os.path.join(path, 'meta')
         #
-        images, labels = [], []
         self.meta = unpickle(file_meta)
         if kind == 'train':
-            for i in files_train:
-                data = unpickle(i)
-                images.append(data['data'])
-                labels.extend(data['labels'])
-            images = np.vstack(images).reshape(-1, 3, 32, 32)
-            labels = np.array(labels)
+            data = unpickle(file_train)
+            images = np.array(data['data']).reshape(-1, 3, 32, 32)
+            labels = np.array(data['fine_labels'])
         elif kind == 'test':
             data = unpickle(file_test)
             images = np.array(data['data']).reshape(-1, 3, 32, 32)
-            labels = np.array(data['labels'])
+            labels = np.array(data['fine_labels'])
         else:
             raise ValueError('unknown kind')
         self.images = images.transpose((0, 2, 3, 1))
@@ -105,10 +94,10 @@ def get_transform(kind: str = 'train'):
     return transform
 
 
-@pytest.mark.skipif(not os.path.exists(configs.cifar10.path),
+@pytest.mark.skipif(not os.path.exists(configs.cifar100.path),
         reason='test data is not available')
 @pytest.mark.parametrize('kind', ('classification',))
-def test_cifar10_getdataset(kind: str):
+def test_cifar100_getdataset(kind: str):
     x = getDataset(kind=kind)
     if kind == 'classification':
         assert(all([len(x[0]) == 50000, len(x[2]) == 10000]))
