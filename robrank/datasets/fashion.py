@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
+import os
 import torch as th
 import torchvision as vision
 from torchvision import transforms
 from .. import configs
 from .mnist import _MNIST_TRIPLET, MNISTPairDataset
+import pytest
 
 
 def getDataset(kind: str = 'classification'):
@@ -59,3 +61,10 @@ def __get_spc2_dataset():
     test = MNISTPairDataset(configs.fashion.path,
                             train=False, name='FashionMNIST')
     return (train, test)
+
+
+@pytest.mark.skipif(not os.path.exists(configs.fashion.path),
+        reason='test data is not available')
+@pytest.mark.parametrize('kind', ('classification', 'SPC-2', 'triplet'))
+def test_fashion_getdataset(kind: str):
+    x = getDataset(kind=kind)
