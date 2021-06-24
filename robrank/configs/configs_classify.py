@@ -34,7 +34,7 @@ class __classify_model_28x28(__classify):
 
 @dataclass
 class __classify_model_32x32(__classify):
-    allowed_datasets: tuple = ('cifar10',)
+    allowed_datasets: tuple = ('cifar10', 'cifar100')
 
 
 @dataclass
