@@ -224,9 +224,47 @@ class Swipe:
             f.write(code)
 
 
+class AdvClass:
+    '''
+    Conduct adversarial attack against deep classifier
+    '''
+    def __init__(self, argv):
+        ag = argparse.ArgumentParser()
+        ag.add_argument('-C', '--checkpoint', type=str, required=True)
+        ag.add_argument('-A', '--attack', type=str, required=True)
+        ag.add_argument('-D', '--device', type=str, default='cuda'
+                if th.cuda.is_available() else 'cpu')
+        ag.add_argument('-v', '--verbose', action='store_true')
+        ag.add_argument('-m', '--maxiter', type=int, default=None)
+        ag = ag.parse_args(argv)
+        ag.dataset, ag.model, ag.loss = re.match(
+            r'.*logs_(\w+)-(\w+)-(\w+)/.*\.ckpt', ag.checkpoint).groups()
+        c.print(rich.panel.Panel(' '.join(argv), title='RobRank::AdvClass',
+                                 style='bold magenta'))
+        c.print(vars(ag))
+
+        c.print('[white on magenta]>_< Restoring Model from Checkpoint ...')
+        model = getattr(rr.models, ag.model).Model.load_from_checkpoint(
+            checkpoint_path=ag.checkpoint,
+            dataset=ag.dataset, loss=ag.loss)
+        model = model.to(ag.device)
+
+        c.print('[white on magenta]>_< Initializing Attack Launcher ...')
+        atker = rr.attacks.AdvClassLauncher(
+                ag.attack, ag.device, ag.verbose)
+        print(atker)
+
+        c.print('[white on magenta]>_< Getting Validation Loader ...')
+        model.setup()
+        #val_dataloader = model.val_dataloader()
+        val_dataloader = model.test_dataloader()
+        sorig, sadv = atker(model, val_dataloader, maxiter=ag.maxiter)
+        self.stats = (sorig, sadv)
+
+
 class AdvRank:
     '''
-    Conduct adversarial ranking attack
+    Conduct adversarial attack against ranking (deep metric learning)
     '''
 
     def __init__(self, argv):
