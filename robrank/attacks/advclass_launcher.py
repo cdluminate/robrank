@@ -35,7 +35,7 @@ class AdvClassLauncher(object):
         self.kw['device'] = device
         self.kw['verbose'] = verbose
         attack_type, atk_arg = re.match(r'(\w+?):(.*)', attack).groups()
-        self.attack_type = attack_type
+        self.kw['attack_type'] = attack_type
         self.kw.update(dict(re.findall(r'(\w+)=([\-\+\.\w]+)', atk_arg)))
         # sanity check
         assert(attack_type in _LEGAL_ATTACKS_)
@@ -58,41 +58,8 @@ class AdvClassLauncher(object):
                 break
             images = images.to(self.device)
             labels = labels.to(self.device)
-
-            # evaluate original examples
-            with th.no_grad():
-                output_orig = model.forward(images)
-                accuracy_orig = output_orig.max(1)[1].eq(
-                    labels).float().mean().item()
-            sorig = (accuracy_orig,)
-            if self.verbose:
-                print('* Orig:', images.shape, labels.shape, sorig)
-
-            # generate adversarial example
-            if self.attack_type == 'PGD':
-                xr, r = projGradDescent(model, images, labels, **self.kw)
-
-            # evaluate adversarial example
-            with th.no_grad():
-                output_adv = model.forward(xr)
-                accuracy_adv = output_adv.max(1)[1].eq(
-                    labels).float().mean().item()
-            sadv = (accuracy_adv,)
-            if self.verbose:
-                print('* Advr:', sadv)
-
-            # append summary
+            xr, r, sorig, sadv = projGradDescent(model, images, labels,
+                    **self.kw)
             Sorig.append(sorig)
             Sadv.append(sadv)
-
-        # aggregate the summary
-        Sorig = [np.mean([x[0] for x in Sorig])]
-        Sadv = [np.mean([x[0] for x in Sadv])]
-
-        # report the resutls
-        c.rule('Summary for Original Examples')
-        c.print(Sorig)
-        c.rule('Summary for Adversarial Examples')
-        c.print(Sadv)
-
         return Sorig, Sadv

@@ -73,18 +73,10 @@ def projGradDescent(model: th.nn.Module, images: th.Tensor, labels: th.Tensor,
             else:
                 images = images + (eps / IMstd[:, None, None]).to(device) * 2 * (
                     0.5 - th.rand([1, *images.shape[1:]], device=device))
-            images = th.max(
-                images,
-                renorm(
-                    th.zeros(
-                        images.shape,
-                        device=device)))
-            images = th.min(
-                images,
-                renorm(
-                    th.ones(
-                        images.shape,
-                        device=device)))
+            images = th.max(images,
+                            renorm(th.zeros(images.shape, device=device)))
+            images = th.min(images,
+                            renorm(th.ones(images.shape, device=device)))
             images = images.clone().detach()
             images.requires_grad = True
         else:
@@ -147,18 +139,10 @@ def projGradDescent(model: th.nn.Module, images: th.Tensor, labels: th.Tensor,
         if images_orig.min() >= 0. and images_orig.max() <= 1.:
             images = th.clamp(images, min=0., max=1.)
         elif images_orig.min() < 0.:
-            images = th.max(
-                images,
-                renorm(
-                    th.zeros(
-                        images.shape,
-                        device=device)))
-            images = th.min(
-                images,
-                renorm(
-                    th.ones(
-                        images.shape,
-                        device=device)))
+            images = th.max(images,
+                            renorm(th.zeros(images.shape, device=device)))
+            images = th.min(images,
+                            renorm(th.ones(images.shape, device=device)))
         else:
             raise Exception
         # detach from computation graph and prepare for the next round

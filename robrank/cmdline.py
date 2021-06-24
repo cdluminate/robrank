@@ -259,14 +259,12 @@ class AdvClass:
         model = model.to(ag.device)
 
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
-        atker = rr.attacks.AdvClassLauncher(
-            ag.attack, ag.device, ag.verbose)
+        atker = rr.attacks.AdvClassLauncher(ag.attack, ag.device, ag.verbose)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')
         model.setup()
-        #val_dataloader = model.val_dataloader()
-        val_dataloader = model.test_dataloader()
+        val_dataloader = model.val_dataloader()
         sorig, sadv = atker(model, val_dataloader, maxiter=ag.maxiter)
         self.stats = (sorig, sadv)
 
@@ -274,7 +272,6 @@ class AdvClass:
 class AdvRank:
     '''
     Conduct adversarial attack against ranking (deep metric learning)
-
     invoke script bin/advrank.py to use this cmdline functionality.
     '''
 
