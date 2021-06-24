@@ -92,13 +92,15 @@ class ClassifierTemplate(object):
         return test_loader
 
     def configure_optimizers(self):
-        if self.BACKBONE == 'cres18' and self.dataset == 'cifar10':
+        if self.dataset in ('cifar10', 'cifar100'):
             optim = SGD(self.parameters(),
                         lr=self.config.lr, momentum=self.config.momentum,
                         weight_decay=configs.cres18.weight_decay)
-        else:
+        elif self.dataset in ('mnist', 'fashion'):
             optim = Adam(self.parameters(),
                          lr=self.config.lr, weight_decay=self.config.weight_decay)
+        else:
+            raise NotImplementedError
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
                                                           milestones=configs.cres18.milestones, gamma=0.1)
@@ -106,12 +108,14 @@ class ClassifierTemplate(object):
         return optim
 
     def forward(self, x):
-        if 'cifar10' == self.dataset:
+        if self.dataset in ('cifar10', 'cifar100'):
             with th.no_grad():
                 x = utils.renorm(x)
             x = self.backbone(x)
-        else:
+        elif self.dataset in ('fashion', 'mnist'):
             x = self.backbone(x)
+        else:
+            raise NotImplementedError
         return x
 
     def training_step(self, batch, batch_idx):

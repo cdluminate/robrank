@@ -74,6 +74,9 @@ class cc2f2(__classify_model_28x28):
 
 @dataclass
 class cres18(__classify_model_32x32):
+    '''
+    The default configuration is used for CIFAR10.
+    '''
     maxepoch: int = 200  # [lock] resnet
     validate_every: int = 1
     loader_num_workers: int = min(8, mp.cpu_count())
@@ -83,3 +86,9 @@ class cres18(__classify_model_32x32):
     milestones: tuple = (100, 150)  # [lock] resnet
     weight_decay: float = 2e-4  # [lock] resnet
     validate_every: int = 1
+
+    def __init__(self, dataset, loss):
+        super().__init__(dataset, loss)
+        if dataset == 'cifar100':
+            self.maxepoch = 300
+            self.milestones = (100, 200)
