@@ -56,13 +56,13 @@ class ClassifierTemplate(object):
 
     def setup(self, stage=None):
         train, val, test = getattr(datasets, self.dataset).getDataset()
-        if 'cifar10' == self.dataset:
-            self.data_train = train
-            self.data_val = test
-        elif any(x == self.dataset for x in ('mnist', 'fashion')):
+        if any(x == self.dataset for x in ('mnist', 'fashion')):
             self.data_train = train
             self.data_val = val
             self.data_test = test
+        elif self.dataset in ('cifar10', 'cifar100'):
+            self.data_train = train
+            self.data_val = test
         else:
             raise NotImplementedError
 
