@@ -29,6 +29,7 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 **Preprint-Link:** https://arxiv.org/abs/2106.03614  
 **Keywords:** Deep {Ranking, Metric Learning}, Adversarial {Attack, Defense, Robustness}  
 
+**Project Status:** Actively maintained.  
 **Python-Dependency:** `$ pip install -r requirements.txt`  
 **Install:** `python3 setup.py install`  
 
