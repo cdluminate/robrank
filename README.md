@@ -30,12 +30,24 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 **Keywords:** Deep {Ranking, Metric Learning}, Adversarial {Attack, Defense, Robustness}  
 
 **Project Status:** Actively maintained.  
-**Python-Dependency:** `$ pip install -r requirements.txt`  
-**Install:** `python3 setup.py install`  
+**Install-RobRank-Python-Dependency:** `$ pip install -r requirements.txt`  
+**Install-RobRank:** `$ python3 setup.py install` (this is optional)  
 
-### News and Updates
+**News and Updates**
 
 ...
+
+## Tables for Robustness Comparison
+
+In the following tables, "N/A" denotes "no defense equipped"; EST is the
+defense proposed in the ECCV'2020 paper; ACT is the new defense in the preprint
+paper.
+
+| Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
+| ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
+| MNIST | C2F2 | Triplet | N/A | 99.0 | 99.4 | 98.7 | 84.7 | 13.3 |
+| MNIST | C2F2 | Triplet | EST | 98.3 | 99.0 | 91.3 | 80.7 | 40.5 |
+| MNIST | C2F2 | Triplet | ACT | 98.6 | 99.1 | 98.1 | 86.4 | 78.6 |
 
 ## 1. Common Usage of CLI
 
@@ -163,7 +175,20 @@ finished within 3 days, including adversarial training.
 Memory requirement: 12GB video memory is required for adversarial training of
 RN18, Mnas, and IBN. Additionally, adversarial training of RN50 requires 24GB.
 
-### 2.3. References and Bibtex
+### 2.3. Dataset Preparation
+
+The default data path setting for any dataset can be found in
+[`robrank/configs/configs_dataset.py`](robrank/configs/configs_dataset.py).
+
+MNIST and Fashion-MNIST are downloaded using torchvision. The helper script
+`bin/download.py` can download and extract the two datasets for you.
+[CUB-200-2011](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html),
+[Cars-196](http://ai.stanford.edu/~jkrause/cars/car_dataset.html), and
+[Stanford Online Products](https://cvgl.stanford.edu/projects/lifted_struct/)
+can be downloaded from their correspoding websites (and then manually
+extracted). 
+
+### 2.4. References and Bibtex
 
 If you found the paper/code useful/inspiring, please consider citing my work:
 
@@ -190,7 +215,7 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 6. https://github.com/fra31/auto-attack
 7. https://github.com/KevinMusgrave/powerful-benchmarker
 
-### 2.4. Copyright and License
+### Copyright and License
 
 ```
 Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
