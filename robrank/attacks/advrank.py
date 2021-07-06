@@ -602,7 +602,7 @@ class AdvRank(object):
                 mask_diff = (candi[1].view(1, -1) != labels.view(-1, 1))
                 if self.metric in ('E', 'N'):
                     dist = th.cdist(output, candi[0])
-                elif self.metrci == 'C':
+                elif self.metric == 'C':
                     dist = 1 - output @ candi[0].t()
                 maxdan = th.stack([dist[i, mask_diff[i]].max()
                                    for i in range(dist.size(0))])
