@@ -332,7 +332,7 @@ class AdvRankLoss(object):
         https://arxiv.org/pdf/1908.09163.pdf
         '''
         assert(qs.shape[0] == embrand.shape[0])
-        assert(self.metric in ('C', 'N'))
+        #assert(self.metric in ('C', 'N'))
         loss = (1 - F.cosine_similarity(qs, embrand)).mean()
         return loss
 
@@ -467,7 +467,7 @@ def test_arl_gtt(metric: str):
     loss.backward()
 
 
-@pytest.mark.parametrize('metric', 'NC')
+@pytest.mark.parametrize('metric', 'NEC')
 def test_arl_tma(metric: str):
     qs = th.rand(10, 8, requires_grad=True)
     embrand = th.rand(10, 8)
