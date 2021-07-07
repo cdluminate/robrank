@@ -66,9 +66,9 @@ class _MNIST_TRIPLET(th.utils.data.Dataset):
         with gzip.open(images_path, 'rb') as imgpath:
             images = np.frombuffer(
                 imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
-        self.labels = th.from_numpy(labels)
+        self.labels = th.from_numpy(np.copy(labels))
         self.labelset = set(list(labels))
-        self.images = th.from_numpy(images).view(-1, 1, 28, 28) / 255.0
+        self.images = th.from_numpy(np.copy(images)).view(-1, 1, 28, 28) / 255.0
         self.cls2idx = defaultdict(list)
         for (i, lb) in enumerate(self.labels):
             self.cls2idx[lb.item()].append(i)
