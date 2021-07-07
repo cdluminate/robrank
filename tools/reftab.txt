@@ -2,14 +2,16 @@ The reference experiments are conducted with four RTX3090 GPUs.
 We report the best performance instead of the last-epoch performance.
 Performance may vary with different model parameter initializations.
 
-robXXX: CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
+robXXX columns: CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
 
 ===============================================================================
  Fashion-MNIST Ranking 28x28 (fashion:.*)
 ===============================================================================
 
 ! MNIST is too easy. Let's skip it.
-! ACT is quite strong in Euclidean embedding space.
+! ACT is quite strong in Euclidean embedding space. (Metric N and E)
+! ACT is derived from the gradients based on Euclidean distance -- it is not
+  surprising that ACT only performs comparably with EST with cosine distance.
 
 rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
 rc2f2:pdcontrastN    │ r@M= 3.7 r@1= 0.880 r@2= 0.925 mAP= 0.757 mAP@R = 0.829 NMI= 0.784
