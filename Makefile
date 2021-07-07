@@ -61,16 +61,3 @@ runtest:
 legion:
 	#rsync -rvlz . 169.254.169.219:~/Git/2021-robrank/ $(RSYNC_FLAGS)
 	rsync -rvlz . 192.168.1.106:$(RSYNC_DEST) $(RSYNC_FLAGS)
-
-train-attack-defense-mnist-rc2f1-ptripletN:
-	python3 train.py -C mnist:rc2f2:ptripletN
-	python3 swipe.py -p pami28 -c logs_mnist-rc2f2-ptripletN
-	python3 tools/pjswipe.py logs_mnist-rc2f2-ptripletN
-	python3 train.py -C mnist:rc2f2d:ptripletN
-	python3 swipe.py -p pami28 -c logs_mnist-rc2f2d-ptripletN
-	python3 tools/pjswipe.py logs_mnist-rc2f2d-ptripletN
-
-train-attack-defense-cub-rres18-ptripletN:
-	python3 train.py -C cub:rres18:ptripletN
-	python3 swipe.py -p pami224 -c logs_cub-rres18-ptripletN
-	python3 advrank.py -D cuda -A SPQA:pm=-:M=1:eps=0.03137:alpha=0.011764:pgditer=32 -C $(ckpt_cub_rres18_ptripletN) --maxepoch 10
