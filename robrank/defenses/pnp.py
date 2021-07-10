@@ -96,6 +96,7 @@ class PositiveNegativePerplexing(object):
         # return the adversarial example
         if self.verbose:
             print(images.shape)
+        # images: concatenation of adversarial positive and negative
         return images
 
     def pnanchor(self, images: th.Tensor, triplets: tuple,
@@ -413,7 +414,8 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
     Collapsing positive and negative -- Anti-Collapse (ACO) defense.
     force the model to learning robust feature and prevent the
     adversary from exploiting the non-robust feature and collapsing
-    the positive/negative samples again.
+    the positive/negative samples again. This is exactly the ACT defense
+    discussed in https://arxiv.org/abs/2106.03614
 
     This defense is not agnostic to backbone architecure and metric learning
     loss. But it is recommended to use it in conjunction with triplet loss.
@@ -436,8 +438,8 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    output_orig = model.forward(images)
     with th.no_grad():
+        output_orig = model.forward(images)
         model.train()
         loss_orig = model.lossfunc(output_orig, labels)
     # generate adversarial examples
@@ -490,13 +492,15 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
     # Adversarial Training
     model.train()
     pnemb = model.forward(images_pnp)
+    aemb = model.forward(images[anc, :, :, :])
     if model.lossfunc._metric in ('C', 'N'):
         pnemb = F.normalize(pnemb)
+        aemb = F.normalize(aemb)
     model.wantsgrad = False
     # compute adversarial loss
     model.train()
-    loss = model.lossfunc.raw(output_orig[anc, :],
-                              pnemb[:len(pnemb) // 2], pnemb[len(pnemb) // 2:]).mean()
+    loss = model.lossfunc.raw(aemb, pnemb[:len(pnemb) // 2],
+                              pnemb[len(pnemb) // 2:]).mean()
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
