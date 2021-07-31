@@ -12,9 +12,9 @@ adversarial attacks, namely candidate attack and query attack; (2) two
 adversarial defense methods (based on adversarial training) are proposed
 to improve model robustness against a wide range of attacks; (3) a comprehensive
 empirical robustness score for quantitatively assessing adversarial robustness.
-In particular, an "Anti-Collapse Triplet" defense method is newly introduced
-in *RobRank*, which achieves at least 60% and at most 540% improvement in
-adversarial robustness compared to the ECCV work. See the preprint manuscript
+In particular, an **"Anti-Collapse Triplet" defense** method is newly introduced
+in *RobRank*, which **achieves at least 60% and at most 540% improvement in
+adversarial robustness** compared to the ECCV work. See the preprint manuscript
 for details.
 
 RobRank codebase is extended from my previous ECCV'2020 work [*"Adversarial
