@@ -221,6 +221,9 @@ The rest datasets, namely
 can be downloaded from their correspoding websites (and then manually
 extracted). 
 
+After you downloaded [`Stanford_Online_Products.zip`](ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip),
+just do `$ cd ~/.torch` and `$ unzip <path>/Stanford_Online_Products.zip`.
+
 ### 2.4. References and Bibtex
 
 If you found the paper/code useful/inspiring, please consider citing my work:
