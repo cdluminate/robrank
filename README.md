@@ -207,6 +207,14 @@ The default data path setting for any dataset can be found in
 
 MNIST and Fashion-MNIST are downloaded using torchvision. The helper script
 `bin/download.py` can download and extract the two datasets for you.
+Just do as follows in your terminal from the root directory of this project:
+```shell
+$ export PYTHONPATH=.
+$ pyhton3 bin/download.py
+```
+Then the MNIST and Fashion-MNIST datasets are ready to use. Try to train a model.
+
+The rest datasets, namely
 [CUB-200-2011](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html),
 [Cars-196](http://ai.stanford.edu/~jkrause/cars/car_dataset.html), and
 [Stanford Online Products](https://cvgl.stanford.edu/projects/lifted_struct/)
