@@ -205,7 +205,7 @@ RN18, Mnas, and IBN. Additionally, adversarial training of RN50 requires 24GB.
 The default data path setting for any dataset can be found in
 [`robrank/configs/configs_dataset.py`](robrank/configs/configs_dataset.py).
 
-MNIST and Fashion-MNIST are downloaded using torchvision. The helper script
+**MNIST** and **Fashion-MNIST** are downloaded using torchvision. The helper script
 `bin/download.py` can download and extract the two datasets for you.
 Just do as follows in your terminal from the root directory of this project:
 ```shell
@@ -221,8 +221,14 @@ The rest datasets, namely
 can be downloaded from their correspoding websites (and then manually
 extracted). 
 
-After you downloaded [`Stanford_Online_Products.zip`](ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip),
-just do `$ cd ~/.torch` and `$ unzip <path>/Stanford_Online_Products.zip`.
+**CUB:** The tarball can be downloaded from `http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz`. Then change your working directory to `~/.torch` and `tar xvf <path>/CUB_200_2011.tgz -C .`. Now we are all set.
+
+**SOP:** After you downloaded `Stanford_Online_Products.zip` from `ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip`,
+just do `$ cd ~/.torch` and `$ unzip <path>/Stanford_Online_Products.zip`. Now SOP is ready to use.
+
+The dataset loader is able to smartly read the dataset from `/dev/shm` to
+overcome IO bottleneck (especially from HDDs) if a copy of dataset if available
+there. For instance, `rsync -av ~/.torch/Stanford_Online_Products /dev/shm`.
 
 ### 2.4. References and Bibtex
 
