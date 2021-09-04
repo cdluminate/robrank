@@ -1,5 +1,6 @@
 '''
 Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
+        
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,6 +59,11 @@ c = rich.get_console()
 
 
 class MetricBase(thl.LightningModule):
+    '''
+    This is a standard PyTorch-Lightning Module. See
+    https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html
+    for the corresponding API documentation.
+    '''
 
     _valvecs = None
     _vallabs = None
@@ -70,6 +76,11 @@ class MetricBase(thl.LightningModule):
         pass
 
     def _recompute_valvecs(self):
+        '''
+        Compute embedding vectors for the whole validation dataset,
+        in order to do image retrieval and evaluate the Recall@K scores,
+        etc.
+        '''
         with th.no_grad():
             c.print('[yellow]\nComputing Val Set Repres ...', end=' ')
             valvecs, vallabs = [], []
@@ -100,12 +111,19 @@ class MetricBase(thl.LightningModule):
         return (valvecs, vallabs)
 
     def setup(self, stage=None):
+        '''
+        Initialize datasets (incl. training and validation), and register them
+        as attributes of the current model object.
+        '''
         train, test = getattr(
             datasets, self.dataset).getDataset(self.datasetspec)
         self.data_train = train
         self.data_val = test
 
     def train_dataloader(self):
+        '''
+        [after self.setup] create training dataset loader from training dataset.
+        '''
         train_loader = DataLoader(self.data_train,
                                   batch_size=self.config.batchsize,
                                   shuffle=True,
@@ -114,6 +132,9 @@ class MetricBase(thl.LightningModule):
         return train_loader
 
     def val_dataloader(self):
+        '''
+        [after self.setup] create validation dataset loader
+        '''
         val_loader = DataLoader(self.data_val,
                                 batch_size=self.config.valbatchsize,
                                 pin_memory=True,
@@ -121,6 +142,11 @@ class MetricBase(thl.LightningModule):
         return val_loader
 
     def forward(self, x):
+        '''
+        The generic forward pass function. This forward pass function will
+        be used by all different architectures, including resnet and c2f2.
+        So handling inputs in different shapes is necessary.
+        '''
         if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
             x = x.view(-1, 3, 224, 224)
             # this is used for adversarial attack / adversarial training
@@ -150,6 +176,10 @@ class MetricBase(thl.LightningModule):
             raise NotImplementedError
 
     def configure_optimizers(self):
+        '''
+        configuring optimizers. This is also a generic function used by
+        all child classes (networks in different architectures)
+        '''
         optim = getattr(th.optim, getattr(self.config, 'optimizer', 'Adam'))
         optim = optim(self.backbone.parameters(),
                      lr=self.config.lr, weight_decay=self.config.weight_decay)
@@ -163,7 +193,18 @@ class MetricBase(thl.LightningModule):
         return optim
 
     def training_step(self, batch, batch_idx, optimizer_idx=None):
+        '''
+        Generic training step function shared between network models in
+        different architectures. Be careful if you want to override this
+        in any child class.
+
+        Manual optimization process may make this function look a little
+        bit of complicated:
+        https://pytorch-lightning.readthedocs.io/en/stable/common/optimizers.html#manual-optimization
+        '''
         if hasattr(self, 'is_advtrain') and self.is_advtrain:
+            # not recommended to use the ambiguous attribute.
+            # will be deprecated in the future.
             return defenses.est_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_est') and self.is_advtrain_est:
             return defenses.est_training_step(self, batch, batch_idx)
@@ -195,6 +236,8 @@ class MetricBase(thl.LightningModule):
             return defenses.acap_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_rest') and self.is_advtrain_rest:
             return defenses.rest_training_step(self, batch, batch_idx)
+        else:
+            pass
         # else: normal training.
         images, labels = (batch[0].to(self.device), batch[1].to(self.device))
         if any(x in self.dataset for x in ('sop', 'cub', 'cars')):
@@ -212,6 +255,13 @@ class MetricBase(thl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        '''
+        Generic validation step for all ranking / dml models.
+        This will be ran in data parallel mode if we have multiple GPUs.
+        Before validation a batch, we have to first recalculate
+        the embedding vectors for the whole validation dataset.
+        See self._recompute_valvecs(...).
+        '''
         #print('[', th.distributed.get_rank(), ']', batch_idx, '\n')
         if self._valvecs is None:
             self._recompute_valvecs()
@@ -247,6 +297,10 @@ class MetricBase(thl.LightningModule):
         return {'r@M': r, 'r@1': r_1, 'r@2': r_2, 'mAP': mAP, 'mAP@R': mAPR}
 
     def validation_epoch_end(self, outputs: list):
+        '''
+        Aggregate and summarize the validation results from multiple GPUs
+        and multiple validation iterations.
+        '''
         # only the process of rank 0 has to report this summary.
         # TODO: figure out why this part results in deadlock / gets stuck
         # if str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
