@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+###############################################################################
+# setup.py
+# You can optionally install this project to your local site-packages directory
+###############################################################################
 import setuptools
 
 setuptools.setup(

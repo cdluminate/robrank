@@ -13,6 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+###############################################################################
+# cmdline.py
+# Defines the command line interfaces for the robrank project
+# These are the entrance functions if you use python scripts under the
+# bin/ or tools/ directories.
+###############################################################################
 
 import argparse
 import os
