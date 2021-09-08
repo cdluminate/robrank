@@ -242,6 +242,9 @@ class MetricBase(thl.LightningModule):
             return defenses.amd_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_ramd') and self.is_advtrain_ramd:
             return defenses.ramd_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_amdsemi') and \
+                self.is_advtrain_amdsemi:
+            return defenses.amdsemi_training_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.

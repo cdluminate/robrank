@@ -118,6 +118,63 @@ class MadryInnerMax(object):
             print(images.shape)
         return th.cat([imanc, images])
 
+    def advtstop(self, images: th.Tensor, triplets: tuple):
+        # prepare
+        anc, pos, neg = triplets
+        imanc = images[anc, :, :, :].clone().detach().to(self.device)
+        impos = images[pos, :, :, :].clone().detach().to(self.device)
+        imneg = images[neg, :, :, :].clone().detach().to(self.device)
+        images_orig = th.cat([imanc, impos, imneg]).clone().detach()
+        images = th.cat([imanc, impos, imneg])
+        images.requires_grad = True
+        # start PGD
+        self.model.eval()
+        for iteration in range(self.pgditer):
+            # optimizer
+            optm = th.optim.SGD(self.model.parameters(), lr=0.)
+            optx = th.optim.SGD([images], lr=1.)
+            optm.zero_grad()
+            optx.zero_grad()
+            # forward data to be perturbed
+            emb = self.model.forward(images)
+            if self.metric in ('C', 'N'):
+                emb = F.normalize(emb)
+            ea = emb[:len(emb) // 3]
+            ep = emb[len(emb) // 3:2 * len(emb) // 3]
+            en = emb[2 * len(emb) // 3:]
+            # compute the loss function
+            if self.metric in ('E', 'N'):
+                # [ non-stopping version ]
+                #loss = (F.pairwise_distance(ea, en) -
+                #        F.pairwise_distance(ea, ep)).mean()
+                # [ stopping version ]
+                loss = (F.pairwise_distance(ea, en) -
+                        F.pairwise_distance(ea, ep)).clamp(min=0.).mean()
+            elif self.metric in ('C',):
+                # [ non-stopping version ]
+                #loss = ((1 - F.cosine_similarity(ea, en)) -
+                #        (1 - F.cosine_similarity(ea, ep))).mean()
+                # [ stopping version ]
+                loss = ((1 - F.cosine_similarity(ea, en)) -
+                        (1 - F.cosine_similarity(ea, ep))).clamp(min=0.).mean()
+            itermsg = {'loss': loss.item()}
+            loss.backward()
+            # projected gradient descent
+            if self.pgditer > 1:
+                images.grad.data.copy_(self.alpha * th.sign(images.grad))
+            elif self.pgditer == 1:
+                images.grad.data.copy_(self.eps * th.sign(images.grad))
+            optx.step()
+            images = th.min(images, images_orig + self.eps)
+            images = th.max(images, images_orig - self.eps)
+            images = th.clamp(images, min=0., max=1.)
+            images = images.clone().detach()
+            images.requires_grad = True
+            # report for the current iteration
+            if self.verbose:
+                print(images.shape)
+        return images
+
 
 def amd_training_step(model: th.nn.Module, batch, batch_idx):
     '''
@@ -223,3 +280,57 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
     return loss
+
+
+def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
+    '''
+    adaptation of madry defense to triplet loss.
+    we purturb (a, p, n).
+    '''
+    # prepare data batch in a proper shape
+    images = batch[0].to(model.device)
+    labels = batch[1].view(-1).to(model.device)
+    if model.dataset in ('sop', 'cub', 'cars'):
+        images = images.view(-1, 3, 224, 224)
+    elif model.dataset in ('mnist', 'fashion'):
+        images = images.view(-1, 1, 28, 28)
+    else:
+        raise ValueError(f'possibly illegal dataset {model.dataset}?')
+    # evaluate original benign sample
+    model.eval()
+    with th.no_grad():
+        output_orig = model.forward(images)
+        model.train()
+        loss_orig = model.lossfunc(output_orig, labels)
+    # generate adversarial examples
+    triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
+                     metric=model.lossfunc._metric,
+                     margin=configs.triplet.margin_euclidean
+                     if model.lossfunc._metric in ('E', 'N')
+                     else configs.triplet.margin_cosine)
+    anc, pos, neg = triplets
+    model.eval()
+    amd = MadryInnerMax(model, eps=model.config.advtrain_eps,
+                        alpha=model.config.advtrain_alpha,
+                        pgditer=model.config.advtrain_pgditer,
+                        device=model.device, metric=model.metric,
+                        verbose=False)
+    model.eval()
+    model.wantsgrad = True
+    images_amd = amd.advtstop(images, triplets)
+    model.train()
+    pnemb = model.forward(images_amd)
+    if model.lossfunc._metric in ('C', 'N'):
+        pnemb = F.normalize(pnemb)
+    model.wantsgrad = False
+    # compute adversarial loss
+    model.train()
+    loss = model.lossfunc.raw(
+        pnemb[:len(pnemb) // 3],
+        pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
+        pnemb[2 * len(pnemb) // 3:]).mean()
+    # logging
+    model.log('Train/loss_orig', loss_orig.item())
+    model.log('Train/loss_adv', loss.item())
+    return loss
+
