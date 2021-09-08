@@ -6,12 +6,12 @@ pm=$1
 shift
 if (echo $1 | grep -s -o _cub-) \
         || (echo $1 | grep -s -o _cars-); then
-        python3 advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_224} -C $@
+        python3 bin/advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_224} -C $@
 elif (echo $1 | grep -s -o _sop-); then
-        python3 advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_224} -C $@
+        python3 bin/advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_224} -C $@
 elif (echo $1 | grep -s -o _mnist-) \
         || (echo $1 | grep -s -o _fashion-); then
-        python3 advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_28} -C $@
+        python3 bin/advrank.py -v -A CA:pm=${pm}:W=1:${PGD_PARAM_28} -C $@
 else
         echo "??? Usage: $0 <+/-> <model.ckpt> [args...]"
 fi
