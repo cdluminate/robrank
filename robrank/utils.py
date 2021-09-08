@@ -148,12 +148,12 @@ def test_metric_get_rank():
     dist = th.arange(N) / N
     label = 1
     labels = th.zeros(N)
-    labels[[0,1]] = 1
-    recall = metric_get_rank(dist, label, labels, [1,2])
+    labels[[0, 1]] = 1
+    recall = metric_get_rank(dist, label, labels, [1, 2])
     assert(recall == (0, True, True))
     labels = th.zeros(N)
     labels[[0, 2]] = 1
-    recall = metric_get_rank(dist, label, labels, [1,2])
+    recall = metric_get_rank(dist, label, labels, [1, 2])
     assert(recall == (1, False, True))
 
 
@@ -207,17 +207,17 @@ def test_metric_get_ap_r():
     label = 1
     #
     labels = th.zeros(N)
-    labels[[0,1]] = 1
+    labels[[0, 1]] = 1
     mapr = metric_get_ap_r(dist, label, labels, [10])
     et1e_4(mapr[0], 0.1)
     #
     labels = th.zeros(N)
-    labels[[0,1,10]] = 1
+    labels[[0, 1, 10]] = 1
     mapr = metric_get_ap_r(dist, label, labels, [10])
     et1e_4(mapr[0], 0.12)
     #
     labels = th.zeros(N)
-    labels[[0,1,2]] = 1
+    labels[[0, 1, 2]] = 1
     mapr = metric_get_ap_r(dist, label, labels, [10])
     et1e_4(mapr[0], 0.20)
     #

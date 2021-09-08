@@ -234,12 +234,13 @@ class AdvClass:
     '''
     Conduct adversarial attack against deep classifier
     '''
+
     def __init__(self, argv):
         ag = argparse.ArgumentParser()
         ag.add_argument('-C', '--checkpoint', type=str, required=True)
         ag.add_argument('-A', '--attack', type=str, required=True)
         ag.add_argument('-D', '--device', type=str, default='cuda'
-                if th.cuda.is_available() else 'cpu')
+                        if th.cuda.is_available() else 'cpu')
         ag.add_argument('-v', '--verbose', action='store_true')
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag = ag.parse_args(argv)
@@ -257,7 +258,7 @@ class AdvClass:
 
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
         atker = rr.attacks.AdvClassLauncher(
-                ag.attack, ag.device, ag.verbose)
+            ag.attack, ag.device, ag.verbose)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')
@@ -304,7 +305,7 @@ class AdvRank:
 
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
         atker = rr.attacks.AdvRankLauncher(
-                ag.attack, ag.device, ag.dumpaxd, ag.verbose)
+            ag.attack, ag.device, ag.dumpaxd, ag.verbose)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')

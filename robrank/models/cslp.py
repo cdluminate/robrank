@@ -27,10 +27,10 @@ class SLP(th.nn.Module):
 
     def __init__(self, output_size: int = 10):
         super(SLP, self).__init__()
-        self.fc1 = th.nn.Linear(28*28, output_size)
+        self.fc1 = th.nn.Linear(28 * 28, output_size)
 
     def forward(self, x):
-        x = x.view(-1, 28*28)
+        x = x.view(-1, 28 * 28)
         x = self.fc1(x)
         return x
 

@@ -56,7 +56,7 @@ class MadryInnerMax(object):
         perturb (Anchor, Positive, Negative) for achieving the inner max.
         '''
         pnp = PositiveNegativePerplexing(self.model, self.eps, self.alpha,
-                self.pgditer, self.device, self.metric, self.verbose)
+                                         self.pgditer, self.device, self.metric, self.verbose)
         return pnp.minmaxtriplet(images, triplets)
 
     def ptbpn(self, images: th.Tensor, triplets: tuple):
@@ -84,8 +84,8 @@ class MadryInnerMax(object):
             emb = self.model.forward(images)
             if self.metric in ('C', 'N'):
                 emb = F.normalize(emb)
-            ep = emb[:len(emb)//2]
-            en = emb[len(emb)//2:]
+            ep = emb[:len(emb) // 2]
+            en = emb[len(emb) // 2:]
             # maxinize the triplet
             if self.metric in ('E', 'N'):
                 loss = (F.pairwise_distance(ea, en) -
@@ -194,17 +194,17 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
         loss_orig = model.lossfunc(output_orig, labels)
     # generate adversarial examples
     triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
-            metric=model.lossfunc._metric,
-            margin=configs.triplet.margin_euclidean
-            if model.lossfunc._metric in ('E', 'N')
-            else configs.triplet.margin_cosine)
+                     metric=model.lossfunc._metric,
+                     margin=configs.triplet.margin_euclidean
+                     if model.lossfunc._metric in ('E', 'N')
+                     else configs.triplet.margin_cosine)
     anc, pos, neg = triplets
     model.eval()
     amd = MadryInnerMax(model, eps=model.config.advtrain_eps,
-            alpha=model.config.advtrain_alpha,
-            pgditer=model.config.advtrain_pgditer,
-            device=model.device, metric=model.metric,
-            verbose=False)
+                        alpha=model.config.advtrain_alpha,
+                        pgditer=model.config.advtrain_pgditer,
+                        device=model.device, metric=model.metric,
+                        verbose=False)
     model.eval()
     model.wantsgrad = True
     images_amd = amd.ptbpn(images, triplets)
@@ -216,9 +216,9 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
     # compute adversarial loss
     model.train()
     loss = model.lossfunc.raw(
-            apnemb[:len(apnemb)//3],
-            apnemb[len(apnemb)//3:2*len(apnemb)//3],
-            apnemb[2*len(apnemb)//3:]).mean()
+        apnemb[:len(apnemb) // 3],
+        apnemb[len(apnemb) // 3:2 * len(apnemb) // 3],
+        apnemb[2 * len(apnemb) // 3:]).mean()
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())

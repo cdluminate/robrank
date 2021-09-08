@@ -20,13 +20,14 @@ c = rich.get_console()
 
 _LEGAL_ATTACKS_ = ('PGD', )
 
+
 class AdvClassLauncher(object):
     '''
     Entrance class for classification attack
     '''
 
     def __init__(self, attack: str, device: str = 'cpu',
-            verbose: bool = False):
+                 verbose: bool = False):
         self.device = device
         self.verbose = verbose
         self.kw = {}
@@ -61,7 +62,8 @@ class AdvClassLauncher(object):
             # evaluate original examples
             with th.no_grad():
                 output_orig = model.forward(images)
-                accuracy_orig = output_orig.max(1)[1].eq(labels).float().mean().item()
+                accuracy_orig = output_orig.max(1)[1].eq(
+                    labels).float().mean().item()
             sorig = (accuracy_orig,)
             if self.verbose:
                 print('* Orig:', images.shape, labels.shape, sorig)
@@ -73,7 +75,8 @@ class AdvClassLauncher(object):
             # evaluate adversarial example
             with th.no_grad():
                 output_adv = model.forward(xr)
-                accuracy_adv = output_adv.max(1)[1].eq(labels).float().mean().item()
+                accuracy_adv = output_adv.max(1)[1].eq(
+                    labels).float().mean().item()
             sadv = (accuracy_adv,)
             if self.verbose:
                 print('* Advr:', sadv)

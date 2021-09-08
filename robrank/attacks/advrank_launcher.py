@@ -111,13 +111,13 @@ class AdvRankLauncher(object):
                 if len(xr.shape) == 4:
                     for Ni in range(xr.size(0)):
                         oxpath = os.path.join(self.dumpaxd,
-                                f'ox-{self.dumpax_counter:07d}.jpg')
+                                              f'ox-{self.dumpax_counter:07d}.jpg')
                         axpath = os.path.join(self.dumpaxd,
-                                f'ax-{self.dumpax_counter:07d}.jpg')
+                                              f'ax-{self.dumpax_counter:07d}.jpg')
                         V.utils.save_image(images[Ni, :, :, :].squeeze().cpu(),
-                                oxpath)
+                                           oxpath)
                         V.utils.save_image(xr[Ni, :, :, :].squeeze().cpu(),
-                                axpath)
+                                           axpath)
                         self.dumpax_counter += 1
                 else:
                     raise NotImplementedError

@@ -64,7 +64,7 @@ def __get_spc2_dataset():
 
 
 @pytest.mark.skipif(not os.path.exists(configs.fashion.path),
-        reason='test data is not available')
+                    reason='test data is not available')
 @pytest.mark.parametrize('kind', ('classification', 'SPC-2', 'triplet'))
 def test_fashion_getdataset(kind: str):
     x = getDataset(kind=kind)
@@ -72,4 +72,3 @@ def test_fashion_getdataset(kind: str):
         assert(all([len(x[0]) == 55000, len(x[1]) == 5000, len(x[2]) == 10000]))
     else:
         assert(all([len(x[0]) == 60000, len(x[1]) == 10000]))
-

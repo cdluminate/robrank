@@ -1,6 +1,6 @@
 '''
 Copyright (C) 2019-2021, Mo Zhou <cdluminate@gmail.com>
-        
+
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -182,7 +182,7 @@ class MetricBase(thl.LightningModule):
         '''
         optim = getattr(th.optim, getattr(self.config, 'optimizer', 'Adam'))
         optim = optim(self.backbone.parameters(),
-                     lr=self.config.lr, weight_decay=self.config.weight_decay)
+                      lr=self.config.lr, weight_decay=self.config.weight_decay)
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
                                                           milestones=self.config.milestones, gamma=0.1)
@@ -296,7 +296,7 @@ class MetricBase(thl.LightningModule):
                         self._vallabs))
                 mAPR.append(
                     *utils.metric_get_ap_r(dist[i], labels[i],
-                        self._vallabs, rs=[10]))
+                                           self._vallabs, rs=[10]))
             r, r_1, r_2 = np.mean(r), np.mean(r_1), np.mean(r_2)
             mAP = np.mean(mAP)
             mAPR = np.mean(mAPR)

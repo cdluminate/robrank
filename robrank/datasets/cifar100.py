@@ -95,7 +95,7 @@ def get_transform(kind: str = 'train'):
 
 
 @pytest.mark.skipif(not os.path.exists(configs.cifar100.path),
-        reason='test data is not available')
+                    reason='test data is not available')
 @pytest.mark.parametrize('kind', ('classification',))
 def test_cifar100_getdataset(kind: str):
     x = getDataset(kind=kind)

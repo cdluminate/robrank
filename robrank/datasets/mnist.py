@@ -68,7 +68,8 @@ class _MNIST_TRIPLET(th.utils.data.Dataset):
                 imgpath.read(), dtype=np.uint8, offset=16).reshape(len(labels), 784)
         self.labels = th.from_numpy(np.copy(labels))
         self.labelset = set(list(labels))
-        self.images = th.from_numpy(np.copy(images)).view(-1, 1, 28, 28) / 255.0
+        self.images = th.from_numpy(
+            np.copy(images)).view(-1, 1, 28, 28) / 255.0
         self.cls2idx = defaultdict(list)
         for (i, lb) in enumerate(self.labels):
             self.cls2idx[lb.item()].append(i)
@@ -141,7 +142,7 @@ def _get_triplet_dataset():
 
 
 @pytest.mark.skipif(not os.path.exists(configs.mnist.path),
-        reason='test data is not available')
+                    reason='test data is not available')
 @pytest.mark.parametrize('kind', ('classification', 'SPC-2', 'triplet'))
 def test_mnist_getdataset(kind: str):
     x = getDataset(kind=kind)
