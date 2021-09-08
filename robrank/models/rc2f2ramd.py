@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 from . import rc2f2
+from .. import utils
 
 
 class Model(rc2f2.Model):
     is_advtrain_ramd = True
+
+    def post_init_hook(self):
+        utils.warn('reducing pgd step to 7 or it will diverge')
+        self.config.advtrain_pgditer = 7

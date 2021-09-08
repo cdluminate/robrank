@@ -30,6 +30,8 @@ from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters.terminal import TerminalFormatter
 from sklearn.metrics.cluster import normalized_mutual_info_score as __nmi
+import rich
+c = rich.get_console()
 #
 try:
     import faiss
@@ -323,6 +325,14 @@ def test_nsort():
     print(nsort(x, r'.*sion_(\d+)')[0] == 'version_10')
     assert(nsort(y, r'epoch=(\d+)')[0] == 'epoch=10.ckpt')
     print(nsort(y, r'.*ch=(\d+)')[0] == 'epoch=10.ckpt')
+
+
+def warn(message: str):
+    c.print(f'[bold yellow underline]W: {message}[/bold yellow underline]')
+
+
+def info(message: str):
+    c.print(f'[bold cyan underline]I: {message}[/hold cyan underline]')
 
 
 if __name__ == '__main__':
