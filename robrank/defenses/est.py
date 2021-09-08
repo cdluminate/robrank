@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+###############################################################################
+# defenses/est.py
+# Embedding-Shifted Triplet Defense (ECCV 2020) arXiv: 2002.11293
+###############################################################################
 
 from ..attacks import AdvRank
 from ..models.svdreg import svdreg

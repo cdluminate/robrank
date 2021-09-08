@@ -13,6 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+###############################################################################
+# defenses/pnp.py
+# Positive-Negative Perplexing
+# Also known as Anti-Collapse Triplet Defense in the paper.
+# Some other defense methods, such as REST is also presented here.
+###############################################################################
 
 from typing import Tuple
 import re
