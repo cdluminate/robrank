@@ -202,6 +202,8 @@ class MetricBase(thl.LightningModule):
         bit of complicated:
         https://pytorch-lightning.readthedocs.io/en/stable/common/optimizers.html#manual-optimization
         '''
+        # Dispatcher for different defense methods, if specified.
+        # When no defense is specified, we fallback to regular training.
         if hasattr(self, 'is_advtrain') and self.is_advtrain:
             # not recommended to use the ambiguous attribute.
             # will be deprecated in the future.
@@ -236,6 +238,10 @@ class MetricBase(thl.LightningModule):
             return defenses.acap_training_step(self, batch, batch_idx)
         elif hasattr(self, 'is_advtrain_rest') and self.is_advtrain_rest:
             return defenses.rest_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_amd') and self.is_advtrain_amd:
+            return defenses.amd_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_ramd') and self.is_advtrain_ramd:
+            return defenses.ramd_training_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.

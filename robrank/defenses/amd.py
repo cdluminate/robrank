@@ -216,9 +216,9 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
     # compute adversarial loss
     model.train()
     loss = model.lossfunc.raw(
-            apnemb[:len(apnemb)//3,
-                len(apnemb)//3:2*len(apnemb)//3,
-                2*len(apnemb)//3:]).mean()
+            apnemb[:len(apnemb)//3],
+            apnemb[len(apnemb)//3:2*len(apnemb)//3],
+            apnemb[2*len(apnemb)//3:]).mean()
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())

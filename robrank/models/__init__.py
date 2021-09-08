@@ -40,6 +40,8 @@ from . import rc2f2t
 from . import rc2f2a
 from . import rc2f2r
 from . import rc2f2m
+from . import rc2f2amd
+from . import rc2f2ramd
 
 # [group LeNet]
 from . import rlenet

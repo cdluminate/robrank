@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+from . import rc2f2
 
-from .est import *
-from .ses import *
-from .pnp import *
-from .amd import *
+
+class Model(rc2f2.Model):
+    is_advtrain_amd = True
