@@ -200,6 +200,15 @@ finished within 3 days, including adversarial training.
 Memory requirement: 12GB video memory is required for adversarial training of
 RN18, Mnas, and IBN. Additionally, adversarial training of RN50 requires 24GB.
 
+If you encounter the following error message:
+```
+Traceback (most recent call last):
+  File "bin/train.py", line 16, in <module>
+    import robrank as rr
+ModuleNotFoundError: No module named 'robrank'
+```
+Just try `export PYTHONPATH=.` and run your command again.
+
 ### 2.3. Dataset Preparation
 
 The default data path setting for any dataset can be found in
