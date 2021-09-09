@@ -327,8 +327,8 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     images_amd = amd.advtstop(images, triplets,
             #stopat = 0.2 * (model._amdsemi_last_state / 2))
             #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            #stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
-            stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
+            stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
+            #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
     model.train()
     pnemb = model.forward(images_amd)
     if model.lossfunc._metric in ('C', 'N'):

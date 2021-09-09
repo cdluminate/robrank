@@ -65,6 +65,8 @@ from . import rres18px
 from . import rres18pf
 from . import rres18t
 from . import rres18r
+from . import rres18amd
+from . import rres18amdsemi
 from . import rres50
 from . import rres50d
 from . import rres50p
