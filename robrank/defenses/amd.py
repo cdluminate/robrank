@@ -290,6 +290,10 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     adaptation of madry defense to triplet loss.
     we purturb (a, p, n).
     '''
+    # specific to amdsemi
+    if not hasattr(model, '_amdsemi_last_state'):
+        # initialize this variable.
+        model._amdsemi_last_state: float = 2.0
     # prepare data batch in a proper shape
     images = batch[0].to(model.device)
     labels = batch[1].view(-1).to(model.device)
@@ -320,7 +324,11 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
                         verbose=False)
     model.eval()
     model.wantsgrad = True
-    images_amd = amd.advtstop(images, triplets)
+    images_amd = amd.advtstop(images, triplets,
+            #stopat = 0.2 * (model._amdsemi_last_state / 2))
+            #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
+            #stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
+            stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
     model.train()
     pnemb = model.forward(images_amd)
     if model.lossfunc._metric in ('C', 'N'):
@@ -335,5 +343,7 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
+    # specific to amdsemi
+    model._amdsemi_last_state = loss.item()
+    # return
     return loss
-
