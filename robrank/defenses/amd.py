@@ -118,7 +118,8 @@ class MadryInnerMax(object):
             print(images.shape)
         return th.cat([imanc, images])
 
-    def advtstop(self, images: th.Tensor, triplets: tuple):
+    def advtstop(self, images: th.Tensor, triplets: tuple, *,
+            stopat: float = 0.2):
         # prepare
         anc, pos, neg = triplets
         imanc = images[anc, :, :, :].clone().detach().to(self.device)
@@ -149,14 +150,16 @@ class MadryInnerMax(object):
                 #        F.pairwise_distance(ea, ep)).mean()
                 # [ stopping version ]
                 loss = (F.pairwise_distance(ea, en) -
-                        F.pairwise_distance(ea, ep)).clamp(min=0.).mean()
+                        F.pairwise_distance(ea, ep)).clamp(
+                                min=stopat).mean()
             elif self.metric in ('C',):
                 # [ non-stopping version ]
                 #loss = ((1 - F.cosine_similarity(ea, en)) -
                 #        (1 - F.cosine_similarity(ea, ep))).mean()
                 # [ stopping version ]
                 loss = ((1 - F.cosine_similarity(ea, en)) -
-                        (1 - F.cosine_similarity(ea, ep))).clamp(min=0.).mean()
+                        (1 - F.cosine_similarity(ea, ep))).clamp(
+                                min=stopat).mean()
             itermsg = {'loss': loss.item()}
             loss.backward()
             # projected gradient descent
