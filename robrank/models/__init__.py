@@ -54,6 +54,8 @@ from . import rmnas05
 from . import rmnas10
 from . import rmnas10d
 from . import rmnas10p
+from . import rmnas10amd
+from . import rmnas10amdsemi
 
 # [group ResNet]
 from . import rres18
