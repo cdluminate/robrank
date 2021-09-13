@@ -245,6 +245,14 @@ class MetricBase(thl.LightningModule):
         elif hasattr(self, 'is_advtrain_amdsemi') and \
                 self.is_advtrain_amdsemi:
             return defenses.amdsemi_training_step(self, batch, batch_idx)
+        elif hasattr(self, 'is_advtrain_amdsemiact') and \
+            '''
+            Mixed training with AMD Semi + ACT training
+            '''
+            if np.random.random() > 0.5:
+                return defenses.pnp_training_step(self, batch, batch_idx)
+            else:
+                return defenses.amdsemi_training_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.
