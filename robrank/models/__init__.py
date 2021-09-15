@@ -43,6 +43,7 @@ from . import rc2f2m
 from . import rc2f2amd
 from . import rc2f2ramd
 from . import rc2f2amdsemi
+from . import rc2f2amdsemiact
 
 # [group LeNet]
 from . import rlenet
