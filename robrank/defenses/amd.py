@@ -181,6 +181,86 @@ class MadryInnerMax(object):
         images.requires_grad = False
         return images
 
+    def HardnessManipulate(self, images: th.Tensor, triplets: tuple, *,
+            destination: str = None):
+        '''
+        destination can be: (1) None -- random (unchanged);
+        (2) semihard (3) softhard (4) distance (5) hardest
+
+        Side effect variables:
+            self.model._amdsemi_last_state
+        '''
+
+        def _dest_semihard(metric: str, ea: th.Tensor,
+                ep: th.Tensor, en: th.Tensor) -> th.Tensor:
+            '''
+            <module> Destination hardness is semihard.
+            '''
+            #stopat = 0.2
+            #stopat = 0.2 * (model._amdsemi_last_state / 2))
+            #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
+            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
+            #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
+            if metric in ('E', 'N'):
+                loss = (F.pairwise_distance(ea, en) - F.pairwise_distance(
+                        ea, ep)).clamp(min=stopat).mean()
+            elif metric in ('C',):
+                loss = ((1-F.cosine_similarity(ea, en)) - (1-F.cosine_similarity(ea, ep))
+                        ).clamp(min=stopat).mean()
+            else:
+                raise ValueError('illegal metric')
+            return loss
+
+        # function mapping for dispatch.
+        hmmap = {'semihard': _dest_semihard}
+
+        # prepare
+        anc, pos, neg = triplets
+        imanc = images[anc, :, :, :].clone().detach().to(self.device)
+        impos = images[pos, :, :, :].clone().detach().to(self.device)
+        imneg = images[neg, :, :, :].clone().detach().to(self.device)
+        images_orig = th.cat([imanc, impos, imneg]).clone().detach()
+        images = th.cat([imanc, impos, imneg])
+        images.requires_grad = True
+        # start PGD
+        self.model.eval()
+        for iteration in range(self.pgditer):
+            # optimizer
+            optm = th.optim.SGD(self.model.parameters(), lr=0.)
+            optx = th.optim.SGD([images], lr=1.)
+            optm.zero_grad()
+            optx.zero_grad()
+            # forward data to be perturbed
+            emb = self.model.forward(images)
+            if self.metric in ('C', 'N'):
+                emb = F.normalize(emb)
+            ea = emb[:len(emb) // 3]
+            ep = emb[len(emb) // 3:2 * len(emb) // 3]
+            en = emb[2 * len(emb) // 3:]
+            # compute the loss function
+            loss = hmmap[destination](metric, ea, ep, en)  # DISPATCH
+            itermsg = {'loss': loss.item()}
+            loss.backward()
+            # projected gradient descent
+            if self.pgditer > 1:
+                images.grad.data.copy_(self.alpha * th.sign(images.grad))
+            elif self.pgditer == 1:
+                images.grad.data.copy_(self.eps * th.sign(images.grad))
+            optx.step()
+            images = th.min(images, images_orig + self.eps)
+            images = th.max(images, images_orig - self.eps)
+            images = th.clamp(images, min=0., max=1.)
+            images = images.clone().detach()
+            images.requires_grad = True
+            # report for the current iteration
+            if self.verbose:
+                print(images.shape)
+        # note: it is very important to clear the junk gradients.
+        optm.zero_grad()
+        optx.zero_grad()
+        images.requires_grad = False
+        return images
+
 
 def amd_training_step(model: th.nn.Module, batch, batch_idx):
     '''
