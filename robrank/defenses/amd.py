@@ -15,7 +15,7 @@ limitations under the License.
 '''
 ###############################################################################
 # defenses/amd.py
-# A. Madry Defense (AMD)
+# A. Madry Defense (AMD) for deep metric learning.
 # It is originally designed for classification problems (cross-entropy loss).
 # Here we adopt it for deep metric learning.
 ###############################################################################
@@ -152,18 +152,10 @@ class MadryInnerMax(object):
             en = emb[2 * len(emb) // 3:]
             # compute the loss function
             if self.metric in ('E', 'N'):
-                # [ non-stopping version ]
-                #loss = (F.pairwise_distance(ea, en) -
-                #        F.pairwise_distance(ea, ep)).mean()
-                # [ stopping version ]
                 loss = (F.pairwise_distance(ea, en) -
                         F.pairwise_distance(ea, ep)).clamp(
                                 min=stopat).mean()
             elif self.metric in ('C',):
-                # [ non-stopping version ]
-                #loss = ((1 - F.cosine_similarity(ea, en)) -
-                #        (1 - F.cosine_similarity(ea, ep))).mean()
-                # [ stopping version ]
                 loss = ((1 - F.cosine_similarity(ea, en)) -
                         (1 - F.cosine_similarity(ea, ep))).clamp(
                                 min=stopat).mean()
@@ -183,6 +175,10 @@ class MadryInnerMax(object):
             # report for the current iteration
             if self.verbose:
                 print(images.shape)
+        # note: it is very important to clear the junk gradients.
+        optm.zero_grad()
+        optx.zero_grad()
+        images.requires_grad = False
         return images
 
 
