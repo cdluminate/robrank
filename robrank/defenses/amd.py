@@ -188,7 +188,13 @@ class MadryInnerMax(object):
         (2) semihard (3) softhard (4) distance (5) hardest
 
         Side effect variables:
-            self.model._amdsemi_last_state
+            self.model._amdsemi_last_state (loss value, size[1])
+            self.model._amdhm_soft_maxap (max d(a,p), size[batch])
+            self.model._amdhm_soft_minan (min d(a,n), size[batch])
+
+        This function includes some local module functions.
+        Please make sure that they have the same function signature
+        when you need to modify them.
         '''
 
         def _dest_semihard(metric: str, ea: th.Tensor,
@@ -210,6 +216,13 @@ class MadryInnerMax(object):
             else:
                 raise ValueError('illegal metric')
             return loss
+
+        def _dest_softhard(metric: str, ea: th.Tensor,
+                ep: th.Tensor, en: th.Tensor) -> th.Tensor:
+            '''
+            <module> Destination hardness is softhard.
+            '''
+            raise NotImplementedError
 
         # function mapping for dispatch.
         hmmap = {'semihard': _dest_semihard}
@@ -373,9 +386,11 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
 
 
 def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
+    # FIXME: this function is temporary. will be incorporated into amdhm
     '''
     adaptation of madry defense to triplet loss.
     we purturb (a, p, n).
+
     '''
     # specific to amdsemi
     if not hasattr(model, '_amdsemi_last_state'):
@@ -432,13 +447,13 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     return loss
 
 
-def amdhm(model: th.nn.Module, batch, batch_idx):
+def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
     '''
-    adaptation of madry defense to triplet loss.
+    adaptation of madry defense to deep metric learning / triplet loss.
     with hardness manipulation.
     '''
     raise NotImplementedError
-    # specific to amdsemi
+    # specific to amdhm
     if not hasattr(model, '_amdsemi_last_state'):
         # initialize this variable.
         model._amdsemi_last_state: float = 2.0
@@ -487,7 +502,7 @@ def amdhm(model: th.nn.Module, batch, batch_idx):
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
-    # specific to amdsemi
+    # specific to amdhm
     model._amdsemi_last_state = loss.item()
     # return
     return loss
