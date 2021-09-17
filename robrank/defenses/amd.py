@@ -125,7 +125,7 @@ class MadryInnerMax(object):
             #stopat = 0.2
             #stopat = 0.2 * (model._amdsemi_last_state / 2))
             #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
+            stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
             #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
         # prepare
         anc, pos, neg = triplets
@@ -199,7 +199,7 @@ class MadryInnerMax(object):
             #stopat = 0.2
             #stopat = 0.2 * (model._amdsemi_last_state / 2))
             #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2)
+            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
             #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
             if metric in ('E', 'N'):
                 loss = (F.pairwise_distance(ea, en) - F.pairwise_distance(
@@ -256,6 +256,10 @@ class MadryInnerMax(object):
             if self.verbose:
                 print(images.shape)
         # note: it is very important to clear the junk gradients.
+        # `optm` holds gradients of the loss w.r.t. the parameters.
+        # so the gradients used for PGD attack will interfere with the
+        # adversarial training if you don't clear the gradient before
+        # the model learns from the resulting images.
         optm.zero_grad()
         optx.zero_grad()
         images.requires_grad = False
@@ -373,6 +377,67 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     adaptation of madry defense to triplet loss.
     we purturb (a, p, n).
     '''
+    # specific to amdsemi
+    if not hasattr(model, '_amdsemi_last_state'):
+        # initialize this variable.
+        model._amdsemi_last_state: float = 2.0
+    # prepare data batch in a proper shape
+    images = batch[0].to(model.device)
+    labels = batch[1].view(-1).to(model.device)
+    if model.dataset in ('sop', 'cub', 'cars'):
+        images = images.view(-1, 3, 224, 224)
+    elif model.dataset in ('mnist', 'fashion'):
+        images = images.view(-1, 1, 28, 28)
+    else:
+        raise ValueError(f'possibly illegal dataset {model.dataset}?')
+    # evaluate original benign sample
+    model.eval()
+    with th.no_grad():
+        output_orig = model.forward(images)
+        model.train()
+        loss_orig = model.lossfunc(output_orig, labels)
+    # generate adversarial examples
+    triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
+                     metric=model.lossfunc._metric,
+                     margin=configs.triplet.margin_euclidean
+                     if model.lossfunc._metric in ('E', 'N')
+                     else configs.triplet.margin_cosine)
+    anc, pos, neg = triplets
+    model.eval()
+    amd = MadryInnerMax(model, eps=model.config.advtrain_eps,
+                        alpha=model.config.advtrain_alpha,
+                        pgditer=model.config.advtrain_pgditer,
+                        device=model.device, metric=model.metric,
+                        verbose=False)
+    model.eval()
+    model.wantsgrad = True
+    images_amd = amd.advtstop(images, triplets)
+    model.train()
+    pnemb = model.forward(images_amd)
+    if model.lossfunc._metric in ('C', 'N'):
+        pnemb = F.normalize(pnemb)
+    model.wantsgrad = False
+    # compute adversarial loss
+    model.train()
+    loss = model.lossfunc.raw(
+        pnemb[:len(pnemb) // 3],
+        pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
+        pnemb[2 * len(pnemb) // 3:]).mean()
+    # logging
+    model.log('Train/loss_orig', loss_orig.item())
+    model.log('Train/loss_adv', loss.item())
+    # specific to amdsemi
+    model._amdsemi_last_state = loss.item()
+    # return
+    return loss
+
+
+def amdhm(model: th.nn.Module, batch, batch_idx):
+    '''
+    adaptation of madry defense to triplet loss.
+    with hardness manipulation.
+    '''
+    raise NotImplementedError
     # specific to amdsemi
     if not hasattr(model, '_amdsemi_last_state'):
         # initialize this variable.
