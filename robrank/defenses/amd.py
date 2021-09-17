@@ -125,7 +125,7 @@ class MadryInnerMax(object):
             #stopat = 0.2
             #stopat = 0.2 * (model._amdsemi_last_state / 2))
             #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            stopat = np.sqrt(max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
+            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
             #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
         # prepare
         anc, pos, neg = triplets
