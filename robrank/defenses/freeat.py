@@ -34,8 +34,8 @@ def freeat_common_post_init_hook(model):
     model.num_repeats = 4
     model.config.maxepoch_orig = model.config.maxepoch
     model.config.maxepoch = model.config.maxepoch // model.num_repeats
-    c.print(f'[bold cyan]I: lowering number of training epoch from \
-            {model.config.maxepoch_orig} to {model.config.maxepoch} \
+    c.print(f'[bold cyan]I: lowering number of training epoch from\
+            {model.config.maxepoch_orig} to {model.config.maxepoch}\
             due to FAT num_repeats={model.num_repeats}[/bold cyan]')
 
 
@@ -129,3 +129,19 @@ def none_freeat_step(model, batch, batch_idx):
 
     # we don't return anything in manual optimization mode
     return None
+
+
+def est_freeat_step(model, batch, batch_idx):
+    raise NotImplementedError
+
+
+def act_freeat_step(model, batch, batch_idx):
+    raise NotImplementedError
+
+
+def amd_freeat_step(model, batch, batch_idx):
+    raise NotImplementedError
+
+
+def amdsemi_freeat_step(model, batch, batch_idx):
+    raise NotImplementedError
