@@ -252,6 +252,12 @@ class MetricBase(thl.LightningModule):
                 return defenses.pnp_training_step(self, batch, batch_idx)
             else:
                 return defenses.amdsemi_training_step(self, batch, batch_idx)
+        elif getattr(self, 'is_freeat_none', False):
+            # sanity check
+            # https://pytorch-lightning.readthedocs.io/en/latest/common/optimizers.html
+            if getattr(self, 'automatic_optimization', True):
+                raise ValueError('please turn off automatic optimization in FAT mode')
+            return defenses.none_freeat_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.
