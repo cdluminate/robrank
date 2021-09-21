@@ -32,7 +32,8 @@ class triplet:
     '''
     Setting margin_cosine: float = 0.8 can further improve the model
     robustness with EST or ACT defense. But here we don't enable that
-    by default.
+    by default. Note, we also use margin_cosine for euclidean distance
+    on (unit) hypersphere, which is symbolized as the "N" metric.
     '''
     margin_cosine: float = 0.2
     margin_euclidean: float = 1.0

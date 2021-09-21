@@ -1,6 +1,8 @@
-The reference experiments are conducted with four RTX3090 GPUs.
-We report the best performance instead of the last-epoch performance.
-Performance may vary with different model parameter initializations.
+The reference experiments are conducted with multiple RTX3090 GPUs.  We report
+the best performance instead of the last-epoch performance, which is different
+from the experiment tables in the preprint paper.  We may also reproduce any of
+these experiments and update the performance accordingly.  Performance may vary
+with different model parameter initializations.
 
 robXXX columns: CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
 
@@ -8,10 +10,12 @@ robXXX columns: CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
  Fashion-MNIST Ranking 28x28 (fashion:.*)
 ===============================================================================
 
-! MNIST is too easy. Let's skip it.
+! MNIST dataset is too easy. Let's skip it.
 ! ACT is quite strong in Euclidean embedding space. (Metric N and E)
 ! ACT is derived from the gradients based on Euclidean distance -- it is not
   surprising that ACT only performs comparably with EST with cosine distance.
+  Namely, the ACT formulation and gradient analysis in the preprint paper is
+  not directly applicable for the Cosine distance case.
 
 rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
 rc2f2:pdcontrastN    │ r@M= 3.7 r@1= 0.880 r@2= 0.925 mAP= 0.757 mAP@R = 0.829 NMI= 0.784
@@ -60,6 +64,7 @@ rc2f2p:ptripletC     │ r@M= 3.6 r@1= 0.781 r@2= 0.868 mAP= 0.679 mAP@R = 0.696
 ===============================================================================
 
 ! We use MnasNet-1.0 because it is more computationally efficient than ResNet18.
+  This allows faster pace of experiment.
 
 rmnas10:pcontrastN   │ r@M= 5.0 r@1= 0.637 r@2= 0.747 mAP= 0.339 mAP@R = 0.449 NMI= 0.667
 rmnas10:pdcontrastN *│ r@M= 5.1 r@1= 0.659 r@2= 0.762 mAP= 0.343 mAP@R = 0.461 NMI= 0.682
@@ -80,8 +85,8 @@ rmnas10:pnpairE      │ r@M= 4.2 r@1= 0.635 r@2= 0.747 mAP= 0.327 mAP@R = 0.435
 rmnas10:pmsC         │ r@M= 5.1 r@1= 0.647 r@2= 0.758 mAP= 0.347 mAP@R = 0.462 NMI= 0.680
 
 rmnas10:ptripletN    │ r@M= 5.6 r@1= 0.599 r@2= 0.715 mAP= 0.303 mAP@R = 0.405 NMI= 0.634
-rmnas10:ptripletE
-rmnas10:ptripletC
+rmnas10:ptripletE    │ r@M= 4.4 r@1= 0.607 r@2= 0.722 mAP= 0.303 mAP@R = 0.407 NMI= 0.653
+rmnas10:ptripletC    │ r@M= 5.3 r@1= 0.606 r@2= 0.719 mAP= 0.300 mAP@R = 0.401 NMI= 0.652
 
 rmnas10d:ptripletN
 rmnas10d:ptripletE
@@ -94,3 +99,18 @@ rmnas10p:ptripletC
 ===============================================================================
  Stanford Online Product Ranking 224x224 (sop:.*)
 ===============================================================================
+
+! Adversarial training on this dataset can be very time-consuming. It may take
+  ~3 days to train an ResNet50 with ACT defense with 4* RTX3090.
+
+rmnas10:ptripletN    │ r@M= 286.5 r@1= 0.607 r@2= 0.658 mAP= 0.361 mAP@R = 0.184 NMI= 0.869
+rmnas10:ptripletE    │ r@M= 116.6 r@1= 0.706 r@2= 0.755 mAP= 0.466 mAP@R = 0.241 NMI= 0.883
+rmnas10:ptripletC    │ r@M= 173.1 r@1= 0.668 r@2= 0.720 mAP= 0.422 mAP@R = 0.216 NMI= 0.875
+
+rmnas10d:ptripletN
+rmnas10d:ptripletE
+rmnas10d:ptripletC
+
+rmnas10p:ptripletN
+rmnas10p:ptripletE
+rmnas10p:ptripletC
