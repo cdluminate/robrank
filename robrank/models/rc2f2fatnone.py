@@ -17,7 +17,7 @@ from . import rc2f2
 from ..defenses import freeat_common_post_init_hook
 
 class Model(rc2f2.Model):
-    is_advtrain_pnp = True
+    is_freeat_none = True
 
     def post_init_hook(self):
         freeat_common_post_init_hook(self)

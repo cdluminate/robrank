@@ -39,13 +39,13 @@ def freeat_common_post_init_hook(model):
             due to FAT num_repeats={model.num_repeats}[/bold cyan]')
 
 
-def none_freeat_step(model, batch, batch_idx):
+def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     '''
     "Adversarial Training for Free!"
     An isolated training_step(...) method for pytorch lightning module.
     This function is named "none" because it's the dryrun version
     for debugging purpose. It executes the algorithm of FAT, but will
-    reset the perturbation sigma to zero.
+    reset the perturbation sigma to zero with dryrun toggled.
 
     This function has some additional requirements on the pytorch lightning
     model. See the "sanity check" part below for detail.
@@ -60,7 +60,7 @@ def none_freeat_step(model, batch, batch_idx):
     # sanity check
     assert(model.automatic_optimization == False)
     assert(hasattr(model, 'num_repeats'))
-    assert(hasattr(model, 'maxepoch_orig'))
+    assert(hasattr(model.config, 'maxepoch_orig'))
     # preparation
     images = batch[0].to(model.device)
     labels = batch[1].view(-1).to(model.device)
@@ -86,7 +86,15 @@ def none_freeat_step(model, batch, batch_idx):
     # prepare the longlasting perturbation (sigma)
     if not getattr(model, 'sigma', False):
         model.sigma = th.zeros_like(batch[0]).cuda()
-    sigma = model.sigma
+    if len(model.sigma) > len(images):
+        sigma = model.sigma[:len(images), :, :, :]
+    elif len(model.sigma) == len(images):
+        sigma = model.sigma
+    else: # len(sigma) < len(images)
+        N, C, H, W = images.shape
+        model.sigma = th.stack([model.sigma, th.zeros(N-len(model.sigma), C, H, W).cuda()])
+        sigma = model.sigma
+    #c.print(sigma.shape)
 
     # training loop
     model.train()
