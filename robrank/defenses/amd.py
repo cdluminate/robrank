@@ -418,7 +418,7 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
     triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
                      metric=model.lossfunc._metric,
                      margin=configs.triplet.margin_euclidean
-                     if model.lossfunc._metric in ('E', 'N')
+                     if model.lossfunc._metric in ('E',)
                      else configs.triplet.margin_cosine)
     anc, pos, neg = triplets
     model.eval()
