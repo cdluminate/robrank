@@ -204,25 +204,25 @@ class MetricBase(thl.LightningModule):
         '''
         # Dispatcher for different defense methods, if specified.
         # When no defense is specified, we fallback to regular training.
-        if hasattr(self, 'is_advtrain') and self.is_advtrain:
+        if getattr(self, 'is_advtrain', False):
             # not recommended to use the ambiguous attribute.
             # will be deprecated in the future.
             return defenses.est_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_est') and self.is_advtrain_est:
+        elif getattr(self, 'is_advtrain_est', False):
             return defenses.est_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_estf') and self.is_advtrain_estf:
+        elif getattr(self, 'is_advtrain_estf', False):
             return defenses.est_training_step(
                 self, batch, batch_idx, pgditer=1)
-        elif hasattr(self, 'is_advtrain_ses') and self.is_advtrain_ses:
+        elif getattr(self, 'is_advtrain_ses', False):
             return defenses.ses_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_pnp') and self.is_advtrain_pnp:
+        elif getattr(self, 'is_advtrain_pnp', False):
             return defenses.pnp_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_pnpf') and self.is_advtrain_pnpf:
+        elif getattr(self, 'is_advtrain_pnpf', False):
             return defenses.pnp_training_step(
                 self, batch, batch_idx, pgditer=1)
-        elif hasattr(self, 'is_advtrain_pnp_adapt') and self.is_advtrain_pnp_adapt:
+        elif getattr(self, 'is_advtrain_pnp_adapt', False):
             return defenses.pnp_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_pnpx') and self.is_advtrain_pnpx:
+        elif getattr(self, 'is_advtrain_pnpx', False):
             '''
             Benign + adversarial training mode (PNP/Augment, postfix=px)
             '''
@@ -230,21 +230,28 @@ class MetricBase(thl.LightningModule):
                 return defenses.pnp_training_step(self, batch, batch_idx)
             else:
                 pass  # do the normal training step
-        elif hasattr(self, 'is_advtrain_mmt') and self.is_advtrain_mmt:
+        elif getattr(self, 'is_advtrain_mmt', False):
             return defenses.mmt_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_tbc') and self.is_advtrain_tbc:
+        elif getattr(self, 'is_advtrain_tbc', False):
             return defenses.tbc_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_acap') and self.is_advtrain_acap:
+        elif getattr(self, 'is_advtrain_acap', False):
             return defenses.acap_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_rest') and self.is_advtrain_rest:
+        elif getattr(self, 'is_advtrain_rest', False):
             return defenses.rest_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_amd') and self.is_advtrain_amd:
+        elif getattr(self, 'is_advtrain_amd', False):
             return defenses.amd_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_ramd') and self.is_advtrain_ramd:
+        elif getattr(self, 'is_advtrain_ramd', False):
             return defenses.ramd_training_step(self, batch, batch_idx)
-        elif hasattr(self, 'is_advtrain_amdsemi') and \
-                self.is_advtrain_amdsemi:
+        elif getattr(self, 'is_advtrain_amdsemi', False):
             return defenses.amdsemi_training_step(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_amdsemiact', False):
+            '''
+            Mixed training with AMD Semi + ACT training
+            '''
+            if np.random.random() > 0.5:
+                return defenses.pnp_training_step(self, batch, batch_idx)
+            else:
+                return defenses.amdsemi_training_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.

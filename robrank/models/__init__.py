@@ -43,6 +43,7 @@ from . import rc2f2m
 from . import rc2f2amd
 from . import rc2f2ramd
 from . import rc2f2amdsemi
+from . import rc2f2amdsemiact
 
 # [group LeNet]
 from . import rlenet
@@ -69,6 +70,7 @@ from . import rres18t
 from . import rres18r
 from . import rres18amd
 from . import rres18amdsemi
+from . import rres18amdsemiact
 from . import rres50
 from . import rres50d
 from . import rres50p
