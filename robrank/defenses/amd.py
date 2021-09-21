@@ -15,7 +15,7 @@ limitations under the License.
 '''
 ###############################################################################
 # defenses/amd.py
-# A. Madry Defense (AMD) for deep metric learning.
+# A. Madry Defense (AMD) adaptation for deep metric learning.
 # It is originally designed for classification problems (cross-entropy loss).
 # Here we adopt it for deep metric learning.
 ###############################################################################
@@ -37,7 +37,8 @@ c = rich.get_console()
 class MadryInnerMax(object):
     '''
     Madry defense adopted for deep metric learning.
-    Here we are in charge of the inner maximization problem.
+    Here we are in charge of the inner maximization problem, and provide
+    the corresponding adversarial examples.
     '''
 
     def __init__(self,
@@ -188,7 +189,8 @@ class MadryInnerMax(object):
         (2) semihard (3) softhard (4) distance (5) hardest
 
         Side effect variables:
-            self.model._amdsemi_last_state (loss value, size[1])
+            X self.model._amdsemi_last_state (loss value, size[1])  # deprecate
+            self.model._amdhm_prev_loss (prev iter loss value, size[1])
             self.model._amdhm_soft_maxap (max d(a,p), size[batch])
             self.model._amdhm_soft_minan (min d(a,n), size[batch])
 
@@ -205,7 +207,8 @@ class MadryInnerMax(object):
             #stopat = 0.2
             #stopat = 0.2 * (model._amdsemi_last_state / 2))
             #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
+            _prev_iter_loss = self.model._amdhm_prev_loss
+            stopat = np.sqrt(np.clip(_prev_iter_loss, 0.0, 0.2)/0.2)*0.2
             #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
             if metric in ('E', 'N'):
                 loss = (F.pairwise_distance(ea, en) - F.pairwise_distance(
