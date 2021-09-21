@@ -44,6 +44,7 @@ from . import rc2f2amd
 from . import rc2f2ramd
 from . import rc2f2amdsemi
 from . import rc2f2amdsemiact
+from . import rc2f2fatnone
 
 # [group LeNet]
 from . import rlenet

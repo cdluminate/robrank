@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+from . import rc2f2
+from ..defenses import freeat_common_post_init_hook
 
-from .est import *
-from .ses import *
-from .pnp import *
-from .amd import *
-from .freeat import *
+class Model(rc2f2.Model):
+    is_advtrain_pnp = True
+
+    def post_init_hook(self):
+        freeat_common_post_init_hook(self)
