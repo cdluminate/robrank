@@ -82,9 +82,9 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # logging
         model.log('Train/loss_orig', loss_orig.item())
     triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
-            metric=model.lossfunc._metric,
-            margin=configs.triplet.margin_euclidean if model.lossfunc._metric in ('E',)
-                else configs.triplet.margin_cosine)
+                     metric=model.lossfunc._metric,
+                     margin=configs.triplet.margin_euclidean if model.lossfunc._metric in ('E',)
+                     else configs.triplet.margin_cosine)
     anc, pos, neg = triplets
     imanc = images[anc, :, :, :].clone().detach().to(model.device)
     impos = images[pos, :, :, :].clone().detach().to(model.device)
@@ -102,13 +102,14 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         sigma = model.sigma[:len(imapn), :, :, :]
     elif len(model.sigma) == len(imapn):
         sigma = model.sigma
-    else: # len(sigma) < len(imapn)
+    else:  # len(sigma) < len(imapn)
         N, C, H, W = imapn.shape
-        model.sigma = th.stack([model.sigma, th.zeros(N-len(model.sigma), C, H, W).cuda()])
+        model.sigma = th.stack(
+            [model.sigma, th.zeros(N - len(model.sigma), C, H, W).cuda()])
         model.sigma = model.sigma.clone().detach()
         sigma = model.sigma
     model.sigma.requires_grad = True
-    #c.print(sigma.shape)
+    # c.print(sigma.shape)
 
     # training loop
     model.train()
@@ -126,9 +127,9 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # zero grad and get loss
         opt.zero_grad()
         optx.zero_grad()
-        loss = model.lossfunc.raw(emb[:len(emb)//3],
-                emb[len(emb)//3:2*len(emb)//3],
-                emb[2*len(emb)//3:]).mean()
+        loss = model.lossfunc.raw(emb[:len(emb) // 3],
+                                  emb[len(emb) // 3:2 * len(emb) // 3],
+                                  emb[2 * len(emb) // 3:]).mean()
         # manually backward and update
         # then we will have grad of Loss wrt the model parameters and sigma
         model.manual_backward(loss)
@@ -137,23 +138,23 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # [ Update Perturbation sigma ]
         if model.config.advtrain_pgditer > 1:
             sigma.grad.data.copy_(-model.config.advtrain_alpha *
-                    th.sign(sigma.grad))
+                                  th.sign(sigma.grad))
         elif model.config.advtrain_pgditer == 1:
             sigma.grad.data.copy_(-model.config.advtrain_eps *
-                    th.sign(sigma.grad))
+                                  th.sign(sigma.grad))
         else:
             raise ValueError('illegal value for advtrain_pgditer')
         optx.step()
         # clip the perturbation to the L-p norm bound.
         # will get a warnining if we directly do sigma.clamp_.
         model.sigma.data.clamp_(-model.config.advtrain_eps,
-                model.config.advtrain_eps)
+                                model.config.advtrain_eps)
 
         # [NOOP] the perturbation and let it be a dryrun
         model.sigma.data.zero_()
 
     # we don't return anything in manual optimization mode
-    #return None
+    # return None
 
 
 def est_freeat_step(model, batch, batch_idx):

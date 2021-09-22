@@ -120,14 +120,15 @@ class MadryInnerMax(object):
         return th.cat([imanc, images])
 
     def advtstop(self, images: th.Tensor, triplets: tuple, *,
-            stopat: float = None):
+                 stopat: float = None):
         # where we stop attacking.
         if stopat is None:
             #stopat = 0.2
-            #stopat = 0.2 * (model._amdsemi_last_state / 2))
-            #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            stopat = np.sqrt(max(min(self.model._amdsemi_last_state, 0.2), 0.0)/0.2)*0.2
-            #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
+            # stopat = 0.2 * (model._amdsemi_last_state / 2))
+            # stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
+            stopat = np.sqrt(
+                max(min(self.model._amdsemi_last_state, 0.2), 0.0) / 0.2) * 0.2
+            # stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
         # prepare
         anc, pos, neg = triplets
         imanc = images[anc, :, :, :].clone().detach().to(self.device)
@@ -155,11 +156,11 @@ class MadryInnerMax(object):
             if self.metric in ('E', 'N'):
                 loss = (F.pairwise_distance(ea, en) -
                         F.pairwise_distance(ea, ep)).clamp(
-                                min=stopat).mean()
+                    min=stopat).mean()
             elif self.metric in ('C',):
                 loss = ((1 - F.cosine_similarity(ea, en)) -
                         (1 - F.cosine_similarity(ea, ep))).clamp(
-                                min=stopat).mean()
+                    min=stopat).mean()
             itermsg = {'loss': loss.item()}
             loss.backward()
             # projected gradient descent
@@ -183,7 +184,7 @@ class MadryInnerMax(object):
         return images
 
     def HardnessManipulate(self, images: th.Tensor, triplets: tuple, *,
-            destination: str = None):
+                           destination: str = None):
         '''
         destination can be: (1) None -- random (unchanged);
         (2) semihard (3) softhard (4) distance (5) hardest
@@ -200,28 +201,29 @@ class MadryInnerMax(object):
         '''
 
         def _dest_semihard(metric: str, ea: th.Tensor,
-                ep: th.Tensor, en: th.Tensor) -> th.Tensor:
+                           ep: th.Tensor, en: th.Tensor) -> th.Tensor:
             '''
             <module> Destination hardness is semihard.
             '''
             #stopat = 0.2
-            #stopat = 0.2 * (model._amdsemi_last_state / 2))
-            #stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
+            # stopat = 0.2 * (model._amdsemi_last_state / 2))
+            # stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
             _prev_iter_loss = self.model._amdhm_prev_loss
-            stopat = np.sqrt(np.clip(_prev_iter_loss, 0.0, 0.2)/0.2)*0.2
-            #stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state, 0.2), 0.0)/0.2))*0.2)
+            stopat = np.sqrt(np.clip(_prev_iter_loss, 0.0, 0.2) / 0.2) * 0.2
+            # stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state,
+            # 0.2), 0.0)/0.2))*0.2)
             if metric in ('E', 'N'):
                 loss = (F.pairwise_distance(ea, en) - F.pairwise_distance(
                         ea, ep)).clamp(min=stopat).mean()
             elif metric in ('C',):
-                loss = ((1-F.cosine_similarity(ea, en)) - (1-F.cosine_similarity(ea, ep))
+                loss = ((1 - F.cosine_similarity(ea, en)) - (1 - F.cosine_similarity(ea, ep))
                         ).clamp(min=stopat).mean()
             else:
                 raise ValueError('illegal metric')
             return loss
 
         def _dest_softhard(metric: str, ea: th.Tensor,
-                ep: th.Tensor, en: th.Tensor) -> th.Tensor:
+                           ep: th.Tensor, en: th.Tensor) -> th.Tensor:
             '''
             <module> Destination hardness is softhard.
             '''

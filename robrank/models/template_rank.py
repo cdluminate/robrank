@@ -256,7 +256,8 @@ class MetricBase(thl.LightningModule):
             # sanity check
             # https://pytorch-lightning.readthedocs.io/en/latest/common/optimizers.html
             if getattr(self, 'automatic_optimization', True):
-                raise ValueError('please turn off automatic optimization in FAT mode')
+                raise ValueError(
+                    'please turn off automatic optimization in FAT mode')
             return defenses.none_freeat_step(self, batch, batch_idx)
         else:
             pass
