@@ -61,6 +61,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     >>> model.manual_backward(loss)  # instead of loss.backward()
     >>> opt.step()
     '''
+    raise NotImplementedError
     # sanity check
     assert(model.automatic_optimization == False)
     assert(hasattr(model, 'num_repeats'))
@@ -90,7 +91,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     impos = images[pos, :, :, :].clone().detach().to(model.device)
     imneg = images[neg, :, :, :].clone().detach().to(model.device)
     imapn = th.cat([imanc, impos, imneg])
-    imapn.requires_grad = True
+    imapn.requires_grad = False
     del images  # free some CUDA memory
 
     # prepare the longlasting perturbation (sigma)
@@ -100,20 +101,23 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         model.sigma = model.sigma.clone().detach()
     if len(model.sigma) > len(imapn):
         sigma = model.sigma[:len(imapn), :, :, :]
+        c.print('debug: truncate')
     elif len(model.sigma) == len(imapn):
         sigma = model.sigma
     else:  # len(sigma) < len(imapn)
+        c.print('debug: expand')
         N, C, H, W = imapn.shape
         model.sigma = th.stack(
             [model.sigma, th.zeros(N - len(model.sigma), C, H, W).cuda()])
         model.sigma = model.sigma.clone().detach()
         sigma = model.sigma
     model.sigma.requires_grad = True
+    sigma.requires_grad = True
     # c.print(sigma.shape)
 
     # training loop
     model.train()
-    optx = th.optim.SGD([model.sigma], lr=1.)
+    optx = th.optim.SGD([sigma], lr=1.)
     opt = model.optimizers()
     for i in range(model.num_repeats):
         # create adversarial example
@@ -125,8 +129,8 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
 
         # [ Update Model Parameter ]
         # zero grad and get loss
-        opt.zero_grad()
         optx.zero_grad()
+        opt.zero_grad()
         loss = model.lossfunc.raw(emb[:len(emb) // 3],
                                   emb[len(emb) // 3:2 * len(emb) // 3],
                                   emb[2 * len(emb) // 3:]).mean()
@@ -147,11 +151,11 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         optx.step()
         # clip the perturbation to the L-p norm bound.
         # will get a warnining if we directly do sigma.clamp_.
-        model.sigma.data.clamp_(-model.config.advtrain_eps,
+        sigma.data.clamp_(-model.config.advtrain_eps,
                                 model.config.advtrain_eps)
 
         # [NOOP] the perturbation and let it be a dryrun
-        model.sigma.data.zero_()
+        sigma.data.zero_()
 
     # we don't return anything in manual optimization mode
     # return None
