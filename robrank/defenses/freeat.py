@@ -46,6 +46,8 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     This function is named "none" because it's the dryrun version
     for debugging purpose. It executes the algorithm of FAT, but will
     reset the perturbation sigma to zero with dryrun toggled.
+    This function is currently only compatible with triplet style
+    loss functions (that has a "raw" mode in robrank.losses).
 
     This function has some additional requirements on the pytorch lightning
     model. See the "sanity check" part below for detail.
@@ -53,10 +55,11 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     # optimization template from pytorch lightning
     >>> opt = model.optimizers()
     >>> opt.zero_grad()
-    >>> loss = self.compute_loss(batch)  # pseudo compute_loss
-    >>> self.manual_backward(loss)  # instead of loss.backward()
+    >>> loss = model.compute_loss(batch)  # pseudo compute_loss
+    >>> model.manual_backward(loss)  # instead of loss.backward()
     >>> opt.step()
     '''
+    raise NotImplementedError("not yet implemented")
     # sanity check
     assert(model.automatic_optimization == False)
     assert(hasattr(model, 'num_repeats'))
@@ -82,16 +85,23 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
             margin=configs.triplet.margin_euclidean if model.lossfunc._metric in ('E',)
                 else configs.triplet.margin_cosine)
     anc, pos, neg = triplets
+    imanc = images[anc, :, :, :].clone().detach().to(model.device)
+    impos = images[pos, :, :, :].clone().detach().to(model.device)
+    imneg = images[neg, :, :, :].clone().detach().to(model.device)
+    imapn = th.cat([imanc, impos, imneg])
+    imapn.requires_grad = False
+    del images  # free some CUDA memory
 
     # prepare the longlasting perturbation (sigma)
-    if not getattr(model, 'sigma', False):
-        model.sigma = th.zeros_like(batch[0]).cuda()
-    if len(model.sigma) > len(images):
-        sigma = model.sigma[:len(images), :, :, :]
-    elif len(model.sigma) == len(images):
+    if not hasattr(model, 'sigma'):
+        model.sigma = th.zeros_like(imapn).cuda()
         sigma = model.sigma
-    else: # len(sigma) < len(images)
-        N, C, H, W = images.shape
+    if len(model.sigma) > len(imapn):
+        sigma = model.sigma[:len(imapn), :, :, :]
+    elif len(model.sigma) == len(imapn):
+        sigma = model.sigma
+    else: # len(sigma) < len(imapn)
+        N, C, H, W = imapn.shape
         model.sigma = th.stack([model.sigma, th.zeros(N-len(model.sigma), C, H, W).cuda()])
         sigma = model.sigma
     #c.print(sigma.shape)
@@ -103,37 +113,40 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     opt = model.optimizers()
     for i in range(model.num_repeats):
         # create adversarial example
-        images_ptb = (images + sigma).clamp(0., 1.)
+        imapn_ptb = (imapn + sigma).clamp(0., 1.)
         # forward adversarial example
-        emb = model.forward(images)
+        emb = model.forward(imapn_ptb)
         if model.lossfunc._metric in ('C', 'N'):
             emb = F.normalize(emb)
 
         # [ Update Model Parameter ]
         # zero grad and get loss
         opt.zero_grad()
-        loss = model.lossfunc.raw(emb[anc, :, :, :],
-                emb[pos, :, :, :], emb[neg, :, :, :]).mean()
+        loss = model.lossfunc.raw(emb[:len(emb)//3],
+                emb[len(emb)//3:2*len(emb)//3],
+                emb[2*len(emb)//3:]).mean()
         # manually backward and update
         # then we will have grad of Loss wrt the model parameters and sigma
         model.manual_backward(loss)
         opt.step()
 
         # [ Update Perturbation sigma ]
-        if model.configs.advtrain_pgditer > 1:
-            sigma.grad.data.copy_(-model.configs.advtrain_alpha *
+        if model.config.advtrain_pgditer > 1:
+            sigma.grad.data.copy_(-model.config.advtrain_alpha *
                     th.sign(sigma.grad))
-        elif model.configs.advtrain_pgditer == 1:
-            sigma.grad.data.copy_(-model.configs.advtrain_eps *
+        elif model.config.advtrain_pgditer == 1:
+            sigma.grad.data.copy_(-model.config.advtrain_eps *
                     th.sign(sigma.grad))
         else:
             raise ValueError('illegal value for advtrain_pgditer')
         optx.step()
-        sigma.clamp_(-model.configs.advtrain_eps,
-                model.configs.advtrain_eps)
+        # clip the perturbation to the L-p norm bound.
+        # will get a warnining if we directly do sigma.clamp_.
+        sigma.data.clamp_(-model.config.advtrain_eps,
+                model.config.advtrain_eps)
 
         # [NOOP] the perturbation and let it be a dryrun
-        sigma.zero_()
+        sigma.data.zero_()
 
     # we don't return anything in manual optimization mode
     return None
