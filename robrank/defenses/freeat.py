@@ -34,9 +34,11 @@ def freeat_common_post_init_hook(model):
     model.num_repeats = 4
     model.config.maxepoch_orig = model.config.maxepoch
     model.config.maxepoch = model.config.maxepoch // model.num_repeats
-    c.print(f'[bold cyan]I: lowering number of training epoch from\
-            {model.config.maxepoch_orig} to {model.config.maxepoch}\
-            due to FAT num_repeats={model.num_repeats}[/bold cyan]')
+    c.print(f'[bold cyan underline]' +
+            'I: lowering number of training epoch from ' +
+            f'{model.config.maxepoch_orig} to {model.config.maxepoch} ' +
+            f'due to FAT num_repeats = {model.num_repeats}' +
+            '[/bold cyan underline]')
 
 
 def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
@@ -59,7 +61,6 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     >>> model.manual_backward(loss)  # instead of loss.backward()
     >>> opt.step()
     '''
-    raise NotImplementedError("not yet implemented")
     # sanity check
     assert(model.automatic_optimization == False)
     assert(hasattr(model, 'num_repeats'))
@@ -89,13 +90,14 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     impos = images[pos, :, :, :].clone().detach().to(model.device)
     imneg = images[neg, :, :, :].clone().detach().to(model.device)
     imapn = th.cat([imanc, impos, imneg])
-    imapn.requires_grad = False
+    imapn.requires_grad = True
     del images  # free some CUDA memory
 
     # prepare the longlasting perturbation (sigma)
     if not hasattr(model, 'sigma'):
         model.sigma = th.zeros_like(imapn).cuda()
-        sigma = model.sigma
+    else:
+        model.sigma = model.sigma.clone().detach()
     if len(model.sigma) > len(imapn):
         sigma = model.sigma[:len(imapn), :, :, :]
     elif len(model.sigma) == len(imapn):
@@ -103,13 +105,14 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     else: # len(sigma) < len(imapn)
         N, C, H, W = imapn.shape
         model.sigma = th.stack([model.sigma, th.zeros(N-len(model.sigma), C, H, W).cuda()])
+        model.sigma = model.sigma.clone().detach()
         sigma = model.sigma
+    model.sigma.requires_grad = True
     #c.print(sigma.shape)
 
     # training loop
     model.train()
-    sigma.requires_grad = True
-    optx = th.optim.SGD([sigma], lr=1.)
+    optx = th.optim.SGD([model.sigma], lr=1.)
     opt = model.optimizers()
     for i in range(model.num_repeats):
         # create adversarial example
@@ -122,6 +125,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # [ Update Model Parameter ]
         # zero grad and get loss
         opt.zero_grad()
+        optx.zero_grad()
         loss = model.lossfunc.raw(emb[:len(emb)//3],
                 emb[len(emb)//3:2*len(emb)//3],
                 emb[2*len(emb)//3:]).mean()
@@ -142,14 +146,14 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         optx.step()
         # clip the perturbation to the L-p norm bound.
         # will get a warnining if we directly do sigma.clamp_.
-        sigma.data.clamp_(-model.config.advtrain_eps,
+        model.sigma.data.clamp_(-model.config.advtrain_eps,
                 model.config.advtrain_eps)
 
         # [NOOP] the perturbation and let it be a dryrun
-        sigma.data.zero_()
+        model.sigma.data.zero_()
 
     # we don't return anything in manual optimization mode
-    return None
+    #return None
 
 
 def est_freeat_step(model, batch, batch_idx):
