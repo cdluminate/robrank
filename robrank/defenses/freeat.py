@@ -110,11 +110,11 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         model.sigma = model.sigma.clone().detach()
     if len(model.sigma) > len(imapn):
         sigma = model.sigma[:len(imapn), :, :, :]
-        c.print('debug: truncate')
+        c.print(f'{__file__}: debug: truncate')
     elif len(model.sigma) == len(imapn):
         sigma = model.sigma
     else:  # len(sigma) < len(imapn)
-        c.print('debug: expand')
+        c.print(f'{__file__}: debug: expand')
         N, C, H, W = imapn.shape
         model.sigma = th.stack(
             [model.sigma, th.zeros(N - len(model.sigma), C, H, W).cuda()])
