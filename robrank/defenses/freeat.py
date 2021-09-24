@@ -42,11 +42,16 @@ def freeat_common_post_init_hook(model):
 
 
 def freeat_sanity_check(model):
-    # sanity check
-    # https://pytorch-lightning.readthedocs.io/en/latest/common/optimizers.html
+    '''
+    sanity check helper for every freeat training function.
+    https://pytorch-lightning.readthedocs.io/en/latest/common/optimizers.html
+    '''
     if getattr(model, 'automatic_optimization', True):
         raise ValueError(
             'please turn off automatic optimization in FAT mode')
+    assert(model.automatic_optimization == False)
+    assert(hasattr(model, 'num_repeats'))
+    assert(hasattr(model.config, 'maxepoch_orig'))
 
 
 def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
@@ -71,10 +76,6 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     '''
     raise NotImplementedError
     freeat_sanity_check(model)
-    # sanity check
-    assert(model.automatic_optimization == False)
-    assert(hasattr(model, 'num_repeats'))
-    assert(hasattr(model.config, 'maxepoch_orig'))
     # preparation
     images = batch[0].to(model.device)
     labels = batch[1].view(-1).to(model.device)
