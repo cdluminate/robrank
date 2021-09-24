@@ -19,14 +19,19 @@ limitations under the License.
 # task in {c, r, h} for classification, ranking, hybrid
 # backbone e.g. lenet, res18, mnas10
 # moddifier in {, d, e} for vanilla, advrank:defense, experimental defense
+# FIXME: the above comment is outdated.
 
+###############################################################################
 # Classification
+###############################################################################
 from . import cslp
 from . import cc2f2
 from . import clenet
 from . import cres18
 
-# Ranking / Metric Learning
+###############################################################################
+# Deep Ranking / Deep Metric Learning
+###############################################################################
 # [group C2F2]
 from . import rc2f2
 from . import rc2f2d
@@ -45,6 +50,7 @@ from . import rc2f2ramd
 from . import rc2f2amdsemi
 from . import rc2f2amdsemiact
 from . import rc2f2fatnone
+from . import rc2f2fatamd
 
 # [group LeNet]
 from . import rlenet
@@ -59,7 +65,7 @@ from . import rmnas10p
 from . import rmnas10amd
 from . import rmnas10amdsemi
 
-# [group ResNet]
+# [group ResNet18]
 from . import rres18
 from . import rres18d
 from . import rres18df
@@ -72,6 +78,10 @@ from . import rres18r
 from . import rres18amd
 from . import rres18amdsemi
 from . import rres18amdsemiact
+from . import rres18fatnone
+from . import rres18fatamd
+
+# [group ResNet50]
 from . import rres50
 from . import rres50d
 from . import rres50p
@@ -85,6 +95,8 @@ from . import ribn
 from . import ribnd
 from . import ribnp
 
+###############################################################################
 # Hybrid Metric+Classification models
+###############################################################################
 from . import hc2f2
 from . import hres18

@@ -41,6 +41,14 @@ def freeat_common_post_init_hook(model):
             '[/bold cyan underline]')
 
 
+def freeat_sanity_check(model):
+    # sanity check
+    # https://pytorch-lightning.readthedocs.io/en/latest/common/optimizers.html
+    if getattr(self, 'automatic_optimization', True):
+        raise ValueError(
+            'please turn off automatic optimization in FAT mode')
+
+
 def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     '''
     "Adversarial Training for Free!"
@@ -62,6 +70,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     >>> opt.step()
     '''
     raise NotImplementedError
+    freeat_sanity_check(model)
     # sanity check
     assert(model.automatic_optimization == False)
     assert(hasattr(model, 'num_repeats'))
