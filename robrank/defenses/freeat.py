@@ -137,6 +137,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # manually backward and update
         # then we will have grad of Loss wrt the model parameters and sigma
         model.manual_backward(loss)
+        # (outer minimize problem, retain the gradient from loss)
         opt.step()
 
         # [ Update Perturbation sigma ]
@@ -148,6 +149,7 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
                                   th.sign(sigma.grad))
         else:
             raise ValueError('illegal value for advtrain_pgditer')
+        # (inner maximization problem, use negative gradient)
         optx.step()
         # clip the perturbation to the L-p norm bound.
         # will get a warnining if we directly do sigma.clamp_.
@@ -155,21 +157,24 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
                                 model.config.advtrain_eps)
 
         # [NOOP] the perturbation and let it be a dryrun
-        sigma.data.zero_()
+        if dryrun:
+            sigma.data.zero_()
 
     # we don't return anything in manual optimization mode
     # return None
 
+
+def amd_freeat_step(model, batch, batch_idx):
+    '''
+    FAT / AMD variant.
+    '''
+    none_freeat_step(model, batch, batch_idx, dryrun=False)
 
 def est_freeat_step(model, batch, batch_idx):
     raise NotImplementedError
 
 
 def act_freeat_step(model, batch, batch_idx):
-    raise NotImplementedError
-
-
-def amd_freeat_step(model, batch, batch_idx):
     raise NotImplementedError
 
 
