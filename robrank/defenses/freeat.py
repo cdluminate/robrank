@@ -54,7 +54,9 @@ def freeat_sanity_check(model):
     assert(hasattr(model.config, 'maxepoch_orig'))
 
 
-def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
+def none_freeat_step(model, batch, batch_idx, *,
+        dryrun: bool = True,
+        stopatsemi: bool = False):
     '''
     "Adversarial Training for Free!"
     An isolated training_step(...) method for pytorch lightning module.
@@ -76,6 +78,9 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
     '''
     raise NotImplementedError
     freeat_sanity_check(model)
+    # preparation for variants
+    if stopatsemi:
+        _stopat = -0.2
     # preparation
     images = batch[0].to(model.device)
     labels = batch[1].view(-1).to(model.device)
@@ -144,9 +149,10 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         # zero grad and get loss
         optx.zero_grad()
         opt.zero_grad()
-        loss = model.lossfunc.raw(emb[:len(emb) // 3],
-                                  emb[len(emb) // 3:2 * len(emb) // 3],
-                                  emb[2 * len(emb) // 3:]).mean()
+        ea = emb[:len(emb) // 3]
+        ep = emb[len(emb) // 3:2 * len(emb) // 3]
+        en = emb[2 * len(emb) // 3:]
+        loss = model.lossfunc.raw(ea, ep, en).mean()
         # manually backward and update
         # then we will have grad of Loss wrt the model parameters and sigma
         model.manual_backward(loss)
@@ -169,9 +175,24 @@ def none_freeat_step(model, batch, batch_idx, *, dryrun: bool = True):
         sigma.data.clamp_(-model.config.advtrain_eps,
                                 model.config.advtrain_eps)
 
-        # [NOOP] the perturbation and let it be a dryrun
+        # -- process the variants --
+        # variant: no dryrun -> naive amd
+        # -> [NOOP] the perturbation and let it be a dryrun
         if dryrun:
             sigma.data.zero_()
+        # variant: stopatsemi
+        # -> selectively clear the gradient.
+        if stopatsemi:
+            if model.metric in ('E', 'N'):
+                # <- [-margin, 0] <-
+                mask = (F.pairwise_distance(ea, ep)
+                        - F.pairwise_distance(ea, en)) > _stopat
+            else:
+                raise NotImplementedError
+            loc = th.where(mask)[0]
+            sigma.data[loc,:,:,:].zero_()  # wipe A
+            sigma.data[loc+(sigma.size(0)//3),:,:,:].zero_()  # wipe P
+            sigma.data[loc+2*(sigma.size(0)//3),:,:,:].zero_()  # wipe N
 
     # resnet needs this (see resnet's forward method)
     model.wantsgrad = False
@@ -186,6 +207,7 @@ def amd_freeat_step(model, batch, batch_idx):
     '''
     none_freeat_step(model, batch, batch_idx, dryrun=False)
 
+
 def est_freeat_step(model, batch, batch_idx):
     raise NotImplementedError
 
@@ -195,4 +217,11 @@ def act_freeat_step(model, batch, batch_idx):
 
 
 def amdsemi_freeat_step(model, batch, batch_idx):
+    '''
+    FAT / AMDsemi variant.
+    '''
+    none_freeat_step(model, batch, batch_idx, dryrun=False, stopatsemi=True)
+
+
+def amdhm_freeat_step(model, batch, batch_idx):
     raise NotImplementedError

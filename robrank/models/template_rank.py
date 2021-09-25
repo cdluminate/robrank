@@ -256,6 +256,8 @@ class MetricBase(thl.LightningModule):
             return defenses.none_freeat_step(self, batch, batch_idx)
         elif getattr(self, 'is_freeat_amd', False):
             return defenses.amd_freeat_step(self, batch, batch_idx)
+        elif getattr(self, 'is_freeat_amdsemi', False):
+            return defenses.amdsemi_freeat_step(self, batch, batch_idx)
         else:
             pass
         # else: normal training.
