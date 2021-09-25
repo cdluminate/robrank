@@ -81,6 +81,7 @@ from . import rres18amdsemi
 from . import rres18amdsemiact
 from . import rres18fatnone
 from . import rres18fatamd
+from . import rres18fatamdsemi
 
 # [group ResNet50]
 from . import rres50
