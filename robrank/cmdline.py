@@ -61,6 +61,8 @@ class Swipe:
     '''
     Conduct a batch of advrank attack
     it will get stuck if we do not kill the child processes
+
+    invoke script bin/swipe.py to use this cmdline function.
     '''
     profile_eccv28 = (
         #'ES:eps=0.3:alpha=(math 2/255):pgditer=32',
@@ -272,6 +274,8 @@ class AdvClass:
 class AdvRank:
     '''
     Conduct adversarial attack against ranking (deep metric learning)
+
+    invoke script bin/advrank.py to use this cmdline functionality.
     '''
 
     def __init__(self, argv):
@@ -343,6 +347,8 @@ class Validate:
 class Train:
     '''
     Train a ranking model
+
+    invoke script bin/train.py to use this cmdline functionality.
     '''
 
     def __init__(self, argv):
