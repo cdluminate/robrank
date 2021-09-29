@@ -75,6 +75,12 @@ class __ranking_model_28x28(__ranking):
 class __ranking_model_224x224(__ranking):
     '''
     Set pgditer = 1 to enable FGSM adversarial training.
+
+    [ Note ]
+    If you find the adversarial training with pgditer=32
+    (32 steps of PGD update) extremely slow, you may
+    decrease that value to, e.g., 7. We will use 32 by
+    default to retain consistency and the best robustness.
     '''
     allowed_datasets: tuple = ('sop', 'cub', 'cars')
     embedding_dim: int = 512
