@@ -102,3 +102,11 @@ from . import ribnp
 ###############################################################################
 from . import hc2f2
 from . import hres18
+
+
+###############################################################################
+# Automatically Generated Model Configurations
+# You may need to manually run the script in autogen/ to populate these
+# model configurations.
+###############################################################################
+from .autogen import *

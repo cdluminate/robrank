@@ -196,7 +196,7 @@ class MadryInnerMax(object):
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
 
-        Method \in {KL, L2}
+        Method in {KL, L2}
         '''
         # sample the source and destination triplets
         src_triplets = miner(output_orig, labels, method=sourcehardness,
@@ -239,6 +239,9 @@ class MadryInnerMax(object):
             optx = th.optim.SGD([imgs], lr=1.)
             optm.zero_grad()
             optx.zero_grad()
+            # Do nothing if the destination equals source
+            if sourcehardness == destinationhardness:
+                break
             # forward and get the embeddings
             emb = self.model.foward(imgs)
             if self.metric in ('C', 'N'):
@@ -609,5 +612,63 @@ def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
     model.log('Train/loss_adv', loss.item())
     # specific to amdhm
     model._amdsemi_last_state = loss.item()
+    # return
+    return loss
+
+
+def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
+        srch: str, desth: str, hm: str = 'KL', gradual: bool = False):
+    '''
+    Hardness manipulation.
+
+    gradual {,g}hm
+
+    hm in {KL, L2}
+    -> hmkl, hml2
+
+    srch and desth in
+    {spc2-random (r), spc2-semihard (m), spc2-softhard (s),
+    spc2-distance (d), spc2-hard (h)}
+    -> hm{kl,l2}{r,m,s,d,h}{r,m,s,d,h}
+    '''
+    # prepare data batch in a proper shape
+    images = batch[0].to(model.device)
+    labels = batch[1].view(-1).to(model.device)
+    if model.dataset in ('sop', 'cub', 'cars'):
+        images = images.view(-1, 3, 224, 224)
+    elif model.dataset in ('mnist', 'fashion'):
+        images = images.view(-1, 1, 28, 28)
+    else:
+        raise ValueError(f'possibly illegal dataset {model.dataset}?')
+    # evaluate original benign sample
+    model.eval()
+    with th.no_grad():
+        output_orig = model.forward(images)
+        model.train()
+        loss_orig = model.lossfunc(output_orig, labels)
+    # create adversarial examples
+    model.eval()
+    model.wantsgrad = True
+    amd = MadryInnerMax(model, eps=model.config.advtrain_eps,
+                        alpha=model.config.advtrain_alpha,
+                        pgditer=model.config.advtrain_pgditer,
+                        device=model.device, metric=model.metric,
+                        verbose=False)
+    images_amd = amd.HardnessManipulate(images, output_orig, labels,
+            sourcehardness=srch, destinationhardness=desth, method=hm)
+    # train with adversarial examples
+    model.train()
+    pnemb = model.forward(images_amd)
+    if model.lossfunc._metric in ('C', 'N'):
+        pnemb = F.normalize(pnemb)
+    model.wantsgrad = False
+    # compute adversarial loss
+    loss = model.lossfunc.raw(
+        pnemb[:len(pnemb) // 3],
+        pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
+        pnemb[2 * len(pnemb) // 3:]).mean()
+    # logging
+    model.log('Train/loss_orig', loss_orig.item())
+    model.log('Train/loss_adv', loss.item())
     # return
     return loss
