@@ -24,7 +24,7 @@ class Model(rc2f2.Model):
 '''
 
 HM_TEMPLATE_RRES18 = '''
-from . import rres18
+from .. import rres18
 class Model(rres18.Model):
     is_advtrain_hm = True
 '''
@@ -51,6 +51,7 @@ def write_model_config(filename, template, grad, hm, srch, desth):
         f.write(pad * 2 + f"'desth': '{HARDNESS_MAP[desth]}'," + end)
         f.write(pad + '}' + end)
 
+init_py = open('__init__.py', 'wt')
 
 for (name, template) in HM_TEMPLATES:
     for g in (False, True):
@@ -62,6 +63,10 @@ for (name, template) in HM_TEMPLATES:
                 filename += 'hm' + hm
                 filename += srch
                 filename += desth
+                modulename = filename
                 filename += '.py'
                 with c.status('Creating ' + filename + ' ...'):
                     write_model_config(filename, template, g, hm, srch, desth)
+                init_py.write(f'from . import {modulename}\n')
+
+init_py.close()
