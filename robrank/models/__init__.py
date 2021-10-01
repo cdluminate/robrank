@@ -79,6 +79,7 @@ from . import rres18r
 from . import rres18amd
 from . import rres18amdsemi
 from . import rres18amdsemiact
+from . import rres18amdsemiaap
 from . import rres18fatnone
 from . import rres18fatamd
 from . import rres18fatamdsemi

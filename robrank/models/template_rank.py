@@ -244,6 +244,8 @@ class MetricBase(thl.LightningModule):
             return defenses.ramd_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_amdsemi', False):
             return defenses.amdsemi_training_step(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_amdsemiaap', False):
+            return defenses.amdsemi_training_step(self, batch, batch_idx, aap=True)
         elif getattr(self, 'is_advtrain_amdsemiact', False):
             '''
             Mixed training with AMD Semi + ACT training

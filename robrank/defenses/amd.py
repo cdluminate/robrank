@@ -493,12 +493,11 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
     return loss
 
 
-def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
+def amdsemi_training_step(model: th.nn.Module, batch, batch_idx, *, aap=False):
     # FIXME: this function is temporary. will be incorporated into amdhm
     '''
     adaptation of madry defense to triplet loss.
     we purturb (a, p, n).
-
     '''
     # specific to amdsemi
     if not hasattr(model, '_amdsemi_last_state'):
@@ -515,10 +514,17 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    with th.no_grad():
+    if aap:
         output_orig = model.forward(images)
+        if model.lossfunc._metric in ('C', 'N'):
+            output_orig = F.normalize(output_orig)
         model.train()
         loss_orig = model.lossfunc(output_orig, labels)
+    else:
+        with th.no_grad():
+            output_orig = model.forward(images)
+            model.train()
+            loss_orig = model.lossfunc(output_orig, labels)
     # generate adversarial examples
     triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
                      metric=model.lossfunc._metric,
@@ -546,6 +552,12 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
         pnemb[:len(pnemb) // 3],
         pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
         pnemb[2 * len(pnemb) // 3:]).mean()
+    if aap:
+        loss = loss + 1.0 * model.lossfunc.raw(
+                output_orig[anc, :],
+                pnemb[:len(pnemb)//3],
+                output_orig[pos, :],
+                override_margin=0.0)
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())

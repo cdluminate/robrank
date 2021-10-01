@@ -96,11 +96,13 @@ class ptriplet(th.nn.Module):
     def datasetspec(self):
         return self._datasetspec
 
-    def raw(self, repA, repP, repN):
+    def raw(self, repA, repP, repN, *, override_margin: float = None):
         if self._metric in ('C', 'N'):
             margin = configs.triplet.margin_cosine
         elif self._metric in ('E',):
             margin = configs.triplet.margin_euclidean
+        if override_margin != None:
+            margin = override_margin
         loss = fn_ptriplet_kernel(repA, repP, repN,
                                   metric=self._metric, margin=margin)
         return loss
