@@ -262,7 +262,9 @@ class MetricBase(thl.LightningModule):
             if not hasattr(self, 'hm_spec'):
                 raise ValueError('''you should register a dictionary 'hm_spec'
                         as attribute of a model with several keys defined
-                        in the following code in the .py file.''')
+                        in the following code in the .py file. Or just
+                        generate a default set of configurations with
+                        robrank/models/autogen/autogen.py''')
             return defenses.hm_training_step(self, batch, batch_idx,
                     srch = self.hm_spec['srch'],
                     desth = self.hm_spec['desth'],
