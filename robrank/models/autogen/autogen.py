@@ -59,7 +59,7 @@ for (name, template) in HM_TEMPLATES:
                 filename = name
                 if g:
                     filename += 'g'
-                filename += hm
+                filename += 'hm' + hm
                 filename += srch
                 filename += desth
                 filename += '.py'

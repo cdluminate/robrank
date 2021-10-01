@@ -641,6 +641,9 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     {spc2-random (r), spc2-semihard (m), spc2-softhard (s),
     spc2-distance (d), spc2-hard (h)}
     -> hm{kl,l2}{r,m,s,d,h}{r,m,s,d,h}
+
+    This will override the hardness selection from the loss side.
+    e.g., hmklrm:pmtripletN will override 'm' in pmtripletN into 'r'.
     '''
     # prepare data batch in a proper shape
     images = batch[0].to(model.device)
