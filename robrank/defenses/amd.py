@@ -183,7 +183,106 @@ class MadryInnerMax(object):
         images.requires_grad = False
         return images
 
-    def HardnessManipulate(self, images: th.Tensor, triplets: tuple, *,
+    def HardnessManipulate(self,
+            images: th.Tensor,
+            output_orig: th.Tensor,
+            labels: th.Tensor,
+            sourcehardness: str,
+            destinationhardness: str,
+            *,
+            method: str = 'KL',
+            gradual: bool = False):
+        '''
+        Hardness manipulation from source hardness to destination hardness.
+        This is specific to triplet input.
+
+        Method \in {KL, L2}
+        '''
+        # sample the source and destination triplets
+        src_triplets = miner(output_orig, labels, method=sourcehardness,
+                metric=self.model.lossfunc._metric,
+                margin=configs.triplet.margin_euclidean
+                if model.lossfunc._metric in ('E',)
+                else configs.triplet.margin_cosine)
+        sanc, spos, sneg = src_triplets
+        dest_triplets = miner(output_orig, labels, method=destinationhardness,
+                metric=self.model.lossfunc._metric,
+                margin=configs.triplet.margin_euclidean
+                if model.lossfunc._metric in ('E',)
+                else configs.triplet.margin_cosine)
+        danc, dpos, dneg = dest_triplets
+        # calculate destination loss vector
+        with th.no_grad():
+            # destloss is a vector.
+            destloss = self.model.lossfunc.raw(
+                    output_orig[danc, :],
+                    output_orig[dpos, :],
+                    output_orig[dneg, :]).detach().view(-1)
+            if method == 'KL':
+                destloss = F.softmax(destloss, dim=0)
+            elif method == 'L2':
+                pass
+            else:
+                raise NotImplementedError
+        # prepare the template for adversarial examples
+        imanc = images[sanc, :, :, :].clone().detach().to(self.device)
+        impos = images[spos, :, :, :].clone().detach().to(self.device)
+        imneg = images[sneg, :, :, :].clone().detach().to(self.device)
+        imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
+        imgs = th.cat([imanc, impos, imneg])
+        imgs.requires_grad = True
+        # start creating adversarial examples
+        self.model.eval()
+        for iteration in range(self.pgditer):
+            # optimizer
+            optm = th.optim.SGD(self.model.parameters(), lr=0.)
+            optx = th.optim.SGD([imgs], lr=1.)
+            optm.zero_grad()
+            optx.zero_grad()
+            # forward and get the embeddings
+            emb = self.model.foward(imgs)
+            if self.metric in ('C', 'N'):
+                emb = F.normalize(emb)
+            ea = emb[:len(emb)// 3]
+            ep = emb[len(emb)//3:2*len(emb)//3]
+            en = emb[2*len(emb)//3:]
+            # compute the source loss vector
+            srcloss = self.model.lossfunc.raw(ea, ep, en).view(-1)
+            itermsg = {'loss': srcloss.sum().item()}
+            if method == 'KL':
+                srcloss = F.softmax(srcloss, dim=0)
+            else:
+                pass
+            # compute the loss of loss for attack (meta adversarial attack?)
+            if method == 'KL':
+                loss = F.kl_div(srcloss, destloss, reduction='mean')
+            elif method == 'L2':
+                loss = F.mse_loss(srcloss, destloss, reduction='mean')
+            else:
+                raise NotImplementedError
+            # projected gradient descent
+            loss.backward()
+            if self.pgditer > 1:
+                imgs.grad.data.copy_(self.alpha * th.sign(imgs.grad))
+            elif self.pgditer == 1:
+                imgs.grad.data.copy_(self.eps * th.sign(imgs.grad))
+            optx.step()
+            imgs = th.min(imgs, imgs_orig + self.eps)
+            imgs = th.max(imgs, imgs_orig - self.eps)
+            imgs = th.clamp(imgs, min=0., max=1.)
+            imgs = imgs.clone().detach()
+            imgs.requires_grad = True
+            # report for the current step
+            if self.verbose:
+                print(images.shape)
+        # note: clear the junk gradients or it interferes with model training.
+        optm.zero_grad()
+        optx.zero_grad()
+        imgs.requires_grad = False
+        return imgs
+
+
+    def HardnessManipulate_DEPRECATED(self, images: th.Tensor, triplets: tuple, *,
                            destination: str = None):
         '''
         destination can be: (1) None -- random (unchanged);
@@ -199,6 +298,7 @@ class MadryInnerMax(object):
         Please make sure that they have the same function signature
         when you need to modify them.
         '''
+        raise NotImplementedError
 
         def _dest_semihard(metric: str, ea: th.Tensor,
                            ep: th.Tensor, en: th.Tensor) -> th.Tensor:
@@ -455,7 +555,7 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx):
 def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
     '''
     adaptation of madry defense to deep metric learning / triplet loss.
-    with hardness manipulation.
+    with hardness manipulation. (manual conversion rules)
     '''
     raise NotImplementedError
     # specific to amdhm
