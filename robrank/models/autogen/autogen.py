@@ -30,13 +30,13 @@ class Model(rres18.Model):
 '''
 
 HM_TEMPLATES = [
-        ('rc2f2', HM_TEMPLATE_RC2F2),
-        ('rres18', HM_TEMPLATE_RRES18)
-        ]
+    ('rc2f2', HM_TEMPLATE_RC2F2),
+    ('rres18', HM_TEMPLATE_RRES18)
+]
 
 HARDNESS = ('r', 'm', 's', 'd', 'h')
 HARDNESS_MAP = {'r': 'spc2-random', 'm': 'spc2-semihard',
-        's': 'spc2-softhard', 'd': 'spc2-distance', 'h': 'spc2-hard'}
+                's': 'spc2-softhard', 'd': 'spc2-distance', 'h': 'spc2-hard'}
 
 
 def write_model_config(filename, template, grad, hm, srch, desth):
@@ -45,10 +45,10 @@ def write_model_config(filename, template, grad, hm, srch, desth):
     with open(filename, 'wt') as f:
         f.write(template)
         f.write(pad + 'hm_spec = {' + end)
-        f.write(pad*2 + f"'hm': '{hm.upper()}'," + end)
-        f.write(pad*2 + f"'gradual': '{str(g)}'," + end)
-        f.write(pad*2 + f"'srch': '{HARDNESS_MAP[srch]}'," + end)
-        f.write(pad*2 + f"'desth': '{HARDNESS_MAP[desth]}'," + end)
+        f.write(pad * 2 + f"'hm': '{hm.upper()}'," + end)
+        f.write(pad * 2 + f"'gradual': '{str(g)}'," + end)
+        f.write(pad * 2 + f"'srch': '{HARDNESS_MAP[srch]}'," + end)
+        f.write(pad * 2 + f"'desth': '{HARDNESS_MAP[desth]}'," + end)
         f.write(pad + '}' + end)
 
 

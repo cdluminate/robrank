@@ -55,8 +55,8 @@ def freeat_sanity_check(model):
 
 
 def none_freeat_step(model, batch, batch_idx, *,
-        dryrun: bool = True,
-        stopatsemi: bool = False):
+                     dryrun: bool = True,
+                     stopatsemi: bool = False):
     '''
     "Adversarial Training for Free!"
     An isolated training_step(...) method for pytorch lightning module.
@@ -173,7 +173,7 @@ def none_freeat_step(model, batch, batch_idx, *,
         # clip the perturbation to the L-p norm bound.
         # will get a warnining if we directly do sigma.clamp_.
         sigma.data.clamp_(-model.config.advtrain_eps,
-                                model.config.advtrain_eps)
+                          model.config.advtrain_eps)
 
         # -- process the variants --
         # variant: no dryrun -> naive amd
@@ -190,9 +190,10 @@ def none_freeat_step(model, batch, batch_idx, *,
             else:
                 raise NotImplementedError
             loc = th.where(mask)[0]
-            sigma.data[loc,:,:,:].zero_()  # wipe A
-            sigma.data[loc+(sigma.size(0)//3),:,:,:].zero_()  # wipe P
-            sigma.data[loc+2*(sigma.size(0)//3),:,:,:].zero_()  # wipe N
+            sigma.data[loc, :, :, :].zero_()  # wipe A
+            sigma.data[loc + (sigma.size(0) // 3), :, :, :].zero_()  # wipe P
+            sigma.data[loc + 2 * (sigma.size(0) // 3), :,
+                       :, :].zero_()  # wipe N
 
     # resnet needs this (see resnet's forward method)
     model.wantsgrad = False

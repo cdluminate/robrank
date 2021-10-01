@@ -245,7 +245,8 @@ class MetricBase(thl.LightningModule):
         elif getattr(self, 'is_advtrain_amdsemi', False):
             return defenses.amdsemi_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_amdsemiaap', False):
-            return defenses.amdsemi_training_step(self, batch, batch_idx, aap=True)
+            return defenses.amdsemi_training_step(
+                self, batch, batch_idx, aap=True)
         elif getattr(self, 'is_advtrain_amdsemiact', False):
             '''
             Mixed training with AMD Semi + ACT training
@@ -268,10 +269,10 @@ class MetricBase(thl.LightningModule):
                         generate a default set of configurations with
                         robrank/models/autogen/autogen.py''')
             return defenses.hm_training_step(self, batch, batch_idx,
-                    srch = self.hm_spec['srch'],
-                    desth = self.hm_spec['desth'],
-                    hm = self.hm_spec['hm'],
-                    gradual = self.hm_spec['gradual'])
+                                             srch=self.hm_spec['srch'],
+                                             desth=self.hm_spec['desth'],
+                                             hm=self.hm_spec['hm'],
+                                             gradual=self.hm_spec['gradual'])
         else:
             pass
         # else: normal training.

@@ -101,7 +101,7 @@ class ptriplet(th.nn.Module):
             margin = configs.triplet.margin_cosine
         elif self._metric in ('E',):
             margin = configs.triplet.margin_euclidean
-        if override_margin != None:
+        if override_margin is not None:
             margin = override_margin
         loss = fn_ptriplet_kernel(repA, repP, repN,
                                   metric=self._metric, margin=margin)

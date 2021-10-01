@@ -184,14 +184,14 @@ class MadryInnerMax(object):
         return images
 
     def HardnessManipulate(self,
-            images: th.Tensor,
-            output_orig: th.Tensor,
-            labels: th.Tensor,
-            sourcehardness: str,
-            destinationhardness: str,
-            *,
-            method: str = 'KL',
-            gradual: bool = False):
+                           images: th.Tensor,
+                           output_orig: th.Tensor,
+                           labels: th.Tensor,
+                           sourcehardness: str,
+                           destinationhardness: str,
+                           *,
+                           method: str = 'KL',
+                           gradual: bool = False):
         '''
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
@@ -200,24 +200,24 @@ class MadryInnerMax(object):
         '''
         # sample the source and destination triplets
         src_triplets = miner(output_orig, labels, method=sourcehardness,
-                metric=self.model.lossfunc._metric,
-                margin=configs.triplet.margin_euclidean
-                if model.lossfunc._metric in ('E',)
-                else configs.triplet.margin_cosine)
+                             metric=self.model.lossfunc._metric,
+                             margin=configs.triplet.margin_euclidean
+                             if model.lossfunc._metric in ('E',)
+                             else configs.triplet.margin_cosine)
         sanc, spos, sneg = src_triplets
         dest_triplets = miner(output_orig, labels, method=destinationhardness,
-                metric=self.model.lossfunc._metric,
-                margin=configs.triplet.margin_euclidean
-                if model.lossfunc._metric in ('E',)
-                else configs.triplet.margin_cosine)
+                              metric=self.model.lossfunc._metric,
+                              margin=configs.triplet.margin_euclidean
+                              if model.lossfunc._metric in ('E',)
+                              else configs.triplet.margin_cosine)
         danc, dpos, dneg = dest_triplets
         # calculate destination loss vector
         with th.no_grad():
             # destloss is a vector.
             destloss = self.model.lossfunc.raw(
-                    output_orig[danc, :],
-                    output_orig[dpos, :],
-                    output_orig[dneg, :]).detach().view(-1)
+                output_orig[danc, :],
+                output_orig[dpos, :],
+                output_orig[dneg, :]).detach().view(-1)
             if method == 'KL':
                 destloss = F.softmax(destloss, dim=0)
             elif method == 'L2':
@@ -246,9 +246,9 @@ class MadryInnerMax(object):
             emb = self.model.foward(imgs)
             if self.metric in ('C', 'N'):
                 emb = F.normalize(emb)
-            ea = emb[:len(emb)// 3]
-            ep = emb[len(emb)//3:2*len(emb)//3]
-            en = emb[2*len(emb)//3:]
+            ea = emb[:len(emb) // 3]
+            ep = emb[len(emb) // 3:2 * len(emb) // 3]
+            en = emb[2 * len(emb) // 3:]
             # compute the source loss vector
             srcloss = self.model.lossfunc.raw(ea, ep, en).view(-1)
             itermsg = {'loss': srcloss.sum().item()}
@@ -284,9 +284,8 @@ class MadryInnerMax(object):
         imgs.requires_grad = False
         return imgs
 
-
     def HardnessManipulate_DEPRECATED(self, images: th.Tensor, triplets: tuple, *,
-                           destination: str = None):
+                                      destination: str = None):
         '''
         destination can be: (1) None -- random (unchanged);
         (2) semihard (3) softhard (4) distance (5) hardest
@@ -554,10 +553,10 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx, *, aap=False):
         pnemb[2 * len(pnemb) // 3:]).mean()
     if aap:
         loss = loss + 1.0 * model.lossfunc.raw(
-                output_orig[anc, :],
-                pnemb[:len(pnemb)//3],
-                output_orig[pos, :],
-                override_margin=0.0)
+            output_orig[anc, :],
+            pnemb[:len(pnemb) // 3],
+            output_orig[pos, :],
+            override_margin=0.0)
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
@@ -629,7 +628,7 @@ def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
 
 
 def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
-        srch: str, desth: str, hm: str = 'KL', gradual: bool = False):
+                     srch: str, desth: str, hm: str = 'KL', gradual: bool = False):
     '''
     Hardness manipulation.
 
@@ -667,7 +666,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                         device=model.device, metric=model.metric,
                         verbose=False)
     images_amd = amd.HardnessManipulate(images, output_orig, labels,
-            sourcehardness=srch, destinationhardness=desth, method=hm)
+                                        sourcehardness=srch, destinationhardness=desth, method=hm)
     # train with adversarial examples
     model.train()
     pnemb = model.forward(images_amd)
