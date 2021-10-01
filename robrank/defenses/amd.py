@@ -202,13 +202,13 @@ class MadryInnerMax(object):
         src_triplets = miner(output_orig, labels, method=sourcehardness,
                              metric=self.model.lossfunc._metric,
                              margin=configs.triplet.margin_euclidean
-                             if model.lossfunc._metric in ('E',)
+                             if self.model.lossfunc._metric in ('E',)
                              else configs.triplet.margin_cosine)
         sanc, spos, sneg = src_triplets
         dest_triplets = miner(output_orig, labels, method=destinationhardness,
                               metric=self.model.lossfunc._metric,
                               margin=configs.triplet.margin_euclidean
-                              if model.lossfunc._metric in ('E',)
+                              if self.model.lossfunc._metric in ('E',)
                               else configs.triplet.margin_cosine)
         danc, dpos, dneg = dest_triplets
         # calculate destination loss vector
@@ -243,7 +243,7 @@ class MadryInnerMax(object):
             if sourcehardness == destinationhardness:
                 break
             # forward and get the embeddings
-            emb = self.model.foward(imgs)
+            emb = self.model.forward(imgs)
             if self.metric in ('C', 'N'):
                 emb = F.normalize(emb)
             ea = emb[:len(emb) // 3]
@@ -658,6 +658,8 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     model.eval()
     with th.no_grad():
         output_orig = model.forward(images)
+        if model.metric in ('C', 'N'):
+            output_orig = F.normalize(output_orig)
         model.train()
         loss_orig = model.lossfunc(output_orig, labels)
     # create adversarial examples
