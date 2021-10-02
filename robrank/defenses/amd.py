@@ -138,6 +138,7 @@ class MadryInnerMax(object):
         images = th.cat([imanc, impos, imneg])
         images.requires_grad = True
         # start PGD
+        state_for_saturate_stop: float = -1.0
         self.model.eval()
         for iteration in range(self.pgditer):
             # optimizer
@@ -177,6 +178,11 @@ class MadryInnerMax(object):
             # report for the current iteration
             if self.verbose:
                 print(images.shape)
+            # stop when saturate in order to save time.
+            if abs(state_for_saturate_stop - loss.item()) < 1e-7:
+                break
+            else:
+                state_for_saturate_stop = loss.item()
         # note: it is very important to clear the junk gradients.
         optm.zero_grad()
         optx.zero_grad()
