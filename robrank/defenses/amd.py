@@ -218,14 +218,19 @@ class MadryInnerMax(object):
                               else configs.triplet.margin_cosine)
         danc, dpos, dneg = dest_triplets
         # calculate destination loss vector
+        if self.model.metric in ('E', 'N'):
+            def _d(x, y):
+                return F.pairwise_distance(x, y)
+        else:
+            def _d(x, y):
+                return 1 - F.cosine_similarity(x, y)
         with th.no_grad():
             # destloss is a vector.
-            destloss = self.model.lossfunc.raw(
-                output_orig[danc, :],
-                output_orig[dpos, :],
-                output_orig[dneg, :]).detach().view(-1)
+            destloss = (1 + _d(output_orig[danc, :], output_orig[dpos, :]) - \
+                _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
             if method == 'KL':
-                destloss = F.softmax(destloss, dim=0)
+                #destloss = F.softmax(destloss, dim=0)
+                destloss = F.normalize(destloss, p=1, dim=0)
             elif method == 'L2':
                 pass
             else:
@@ -238,6 +243,7 @@ class MadryInnerMax(object):
         imgs = th.cat([imanc, impos, imneg])
         imgs.requires_grad = True
         # start creating adversarial examples
+        state_for_saturate_stop: float = -1.0
         self.model.eval()
         for iteration in range(self.pgditer):
             # optimizer
@@ -256,10 +262,10 @@ class MadryInnerMax(object):
             ep = emb[len(emb) // 3:2 * len(emb) // 3]
             en = emb[2 * len(emb) // 3:]
             # compute the source loss vector
-            srcloss = self.model.lossfunc.raw(ea, ep, en).view(-1)
-            itermsg = {'loss': srcloss.sum().item()}
+            srcloss = (1 + _d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
-                srcloss = F.softmax(srcloss, dim=0)
+                #srcloss = F.softmax(srcloss, dim=0)
+                srcloss = F.normalize(srcloss, p=1, dim=0)
             else:
                 pass
             # compute the loss of loss for attack (meta adversarial attack?)
@@ -269,6 +275,9 @@ class MadryInnerMax(object):
                 loss = F.mse_loss(srcloss, destloss, reduction='mean')
             else:
                 raise NotImplementedError
+            itermsg = {'destloss': destloss.sum().item(),
+                    'srcloss': srcloss.sum().item(),
+                    'metaloss': loss.item()}
             # projected gradient descent
             loss.backward()
             if self.pgditer > 1:
@@ -284,6 +293,11 @@ class MadryInnerMax(object):
             # report for the current step
             if self.verbose:
                 print(images.shape)
+            # stop when saturate in order to save time.
+            if abs(state_for_saturate_stop - loss.item()) < 1e-7:
+                break
+            else:
+                state_for_saturate_stop = loss.item()
         # note: clear the junk gradients or it interferes with model training.
         optm.zero_grad()
         optx.zero_grad()
