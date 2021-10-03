@@ -201,9 +201,15 @@ class MadryInnerMax(object):
         '''
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
-
-        Method in {KL, L2}
+        Method in {KL, L2} for hardness alignment.
+        Gradual Adversary is a bool argument.
         '''
+        # Sanity check
+        if self.model.metric != 'N':
+            raise NotImplementedError("currently only impleted for N metric")
+        if gradual:
+            if not hasattr(self.model, '_hm_prev_loss'):
+                raise AttributeError("HM/GradualAdversary not properly initialized")
         # sample the source and destination triplets
         src_triplets = miner(output_orig, labels, method=sourcehardness,
                              metric=self.model.lossfunc._metric,
@@ -228,6 +234,16 @@ class MadryInnerMax(object):
             # destloss is a vector.
             destloss = (1 + _d(output_orig[danc, :], output_orig[dpos, :]) - \
                 _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
+            # gradually increase hardness
+            if gradual:
+                phi = 0.2
+                inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
+                        max=2+configs.triplet.margin_cosine)/(2+configs.triplet.margin_cosine))
+                       )*(phi - destloss).clamp(min=0.0)
+                #inc = th.sqrt(1-(th.tensor(self._hm_prev_loss).clamp(min=0.0,
+                #        max=2+configs.margin_cosine)/(2+configs.margin_cosine))
+                #       )*(phi - destloss).clamp(min=0.0)
+                destloss = destloss + inc
             if method == 'KL':
                 #destloss = F.softmax(destloss, dim=0)
                 destloss = F.normalize(destloss, p=1, dim=0)
@@ -264,7 +280,7 @@ class MadryInnerMax(object):
             # compute the source loss vector
             srcloss = (1 + _d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
-                #srcloss = F.softmax(srcloss, dim=0)
+                # srcloss = F.softmax(srcloss, dim=0)
                 srcloss = F.normalize(srcloss, p=1, dim=0)
             else:
                 pass
@@ -648,7 +664,8 @@ def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
 
 
 def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
-                     srch: str, desth: str, hm: str = 'KL', gradual: bool = False):
+                     srch: str, desth: str, hm: str = 'KL',
+                     gradual: bool = False):
     '''
     Hardness manipulation.
 
@@ -665,6 +682,10 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     This will override the hardness selection from the loss side.
     e.g., hmklrm:pmtripletN will override 'm' in pmtripletN into 'r'.
     '''
+    # Sanity check
+    if gradual:
+        if not hasattr(model, '_hm_prev_loss'):
+            model._hm_prev_loss: float = 2.0
     # prepare data batch in a proper shape
     images = batch[0].to(model.device)
     labels = batch[1].view(-1).to(model.device)
@@ -691,7 +712,9 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                         device=model.device, metric=model.metric,
                         verbose=False)
     images_amd = amd.HardnessManipulate(images, output_orig, labels,
-                                        sourcehardness=srch, destinationhardness=desth, method=hm)
+                                        sourcehardness=srch,
+                                        destinationhardness=desth,
+                                        method=hm, gradual=gradual)
     # train with adversarial examples
     model.train()
     pnemb = model.forward(images_amd)
@@ -703,6 +726,8 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         pnemb[:len(pnemb) // 3],
         pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
         pnemb[2 * len(pnemb) // 3:]).mean()
+    if gradual:
+        model._hm_prev_loss = loss.item()
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
