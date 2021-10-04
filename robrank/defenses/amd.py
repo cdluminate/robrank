@@ -668,7 +668,7 @@ def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
 
 def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                      srch: str, desth: str, hm: str = 'KL',
-                     gradual: bool = False):
+                     gradual: bool = False, ics: bool = False):
     '''
     Hardness manipulation.
 
@@ -681,6 +681,9 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     {spc2-random (r), spc2-semihard (m), spc2-softhard (s),
     spc2-distance (d), spc2-hard (h)}
     -> hm{kl,l2}{r,m,s,d,h}{r,m,s,d,h}
+
+    ics (intra class structure)
+    -> {,i} postfix
 
     This will override the hardness selection from the loss side.
     e.g., hmklrm:pmtripletN will override 'm' in pmtripletN into 'r'.
@@ -700,12 +703,20 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    with th.no_grad():
+    if not ics:
+        with th.no_grad():
+            output_orig = model.forward(images)
+            if model.metric in ('C', 'N'):
+                output_orig = F.normalize(output_orig)
+            model.train()
+            loss_orig = model.lossfunc(output_orig, labels)
+    else: # ics True
         output_orig = model.forward(images)
         if model.metric in ('C', 'N'):
             output_orig = F.normalize(output_orig)
         model.train()
         loss_orig = model.lossfunc(output_orig, labels)
+
     # create adversarial examples
     model.eval()
     model.wantsgrad = True
@@ -731,6 +742,19 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         pnemb[2 * len(pnemb) // 3:]).mean()
     if gradual:
         model._hm_prev_loss = loss.item()
+    if ics:
+        loss = loss + 0.5 * (
+                model.lossfunc.raw(
+                    output_orig[anc, :],
+                    pnemb[:len(pnemb) // 3],
+                    output_orig[pos, :],
+                    override_margin=0.0) +
+                model.lossfunc.raw(
+                    output_orig[pos, :]
+                    pnemb[len(pnemb) // 3 : 2*len(pnemb)//3],
+                    output_orig[anc, :],
+                    override_margin=0.0)
+                )
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
