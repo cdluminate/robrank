@@ -750,7 +750,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                     output_orig[pos, :],
                     override_margin=0.0) +
                 model.lossfunc.raw(
-                    output_orig[pos, :]
+                    output_orig[pos, :],
                     pnemb[len(pnemb) // 3 : 2*len(pnemb)//3],
                     output_orig[anc, :],
                     override_margin=0.0)
