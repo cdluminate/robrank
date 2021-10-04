@@ -197,7 +197,8 @@ class MadryInnerMax(object):
                            destinationhardness: str,
                            *,
                            method: str = 'KL',
-                           gradual: bool = False):
+                           gradual: bool = False,
+                           return_triplets: bool = False):
         '''
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
@@ -321,6 +322,8 @@ class MadryInnerMax(object):
         optm.zero_grad()
         optx.zero_grad()
         imgs.requires_grad = False
+        if return_triplets:
+            return imgs, src_triplets
         return imgs
 
     def HardnessManipulate_DEPRECATED(self, images: th.Tensor, triplets: tuple, *,
@@ -725,10 +728,12 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                         pgditer=model.config.advtrain_pgditer,
                         device=model.device, metric=model.metric,
                         verbose=False)
-    images_amd = amd.HardnessManipulate(images, output_orig, labels,
+    images_amd, triplets = amd.HardnessManipulate(images, output_orig, labels,
                                         sourcehardness=srch,
                                         destinationhardness=desth,
-                                        method=hm, gradual=gradual)
+                                        method=hm, gradual=gradual,
+                                        return_triplets=True)
+    anc, pos, neg = triplets
     # train with adversarial examples
     model.train()
     pnemb = model.forward(images_amd)
