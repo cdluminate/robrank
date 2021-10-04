@@ -39,7 +39,7 @@ HARDNESS_MAP = {'r': 'spc2-random', 'm': 'spc2-semihard',
                 's': 'spc2-softhard', 'd': 'spc2-distance', 'h': 'spc2-hard'}
 
 
-def write_model_config(filename, template, grad, hm, srch, desth):
+def write_model_config(filename, template, grad, hm, srch, desth, ics):
     pad = '    '
     end = '\n'
     with open(filename, 'wt') as f:
@@ -49,6 +49,7 @@ def write_model_config(filename, template, grad, hm, srch, desth):
         f.write(pad * 2 + f"'gradual': '{str(g)}'," + end)
         f.write(pad * 2 + f"'srch': '{HARDNESS_MAP[srch]}'," + end)
         f.write(pad * 2 + f"'desth': '{HARDNESS_MAP[desth]}'," + end)
+        f.write(pad * 2 + f"'ics': '{str(ics)}'," + end)
         f.write(pad + '}' + end)
 
 init_py = open('__init__.py', 'wt')
@@ -57,16 +58,19 @@ for (name, template) in HM_TEMPLATES:
     for g in (False, True):
         for hm in ('kl', 'l2'):
             for (srch, desth) in it.product(HARDNESS, HARDNESS):
-                filename = name
-                if g:
-                    filename += 'g'
-                filename += 'hm' + hm
-                filename += srch
-                filename += desth
-                modulename = filename
-                filename += '.py'
-                with c.status('Creating ' + filename + ' ...'):
-                    write_model_config(filename, template, g, hm, srch, desth)
-                init_py.write(f'from . import {modulename}\n')
+                for ics in (False, True):
+                    filename = name
+                    if g:
+                        filename += 'g'
+                    filename += 'hm' + hm
+                    filename += srch
+                    filename += desth
+                    if ics:
+                        filename += 'i'
+                    modulename = filename
+                    filename += '.py'
+                    with c.status('Creating ' + filename + ' ...'):
+                        write_model_config(filename, template, g, hm, srch, desth, ics)
+                    init_py.write(f'from . import {modulename}\n')
 
 init_py.close()
