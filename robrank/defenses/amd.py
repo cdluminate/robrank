@@ -231,22 +231,25 @@ class MadryInnerMax(object):
             def _d(x, y):
                 return 1 - F.cosine_similarity(x, y)
         with th.no_grad():
-            # destloss is a vector.
-            destloss = (1 + _d(output_orig[danc, :], output_orig[dpos, :]) - \
+            # destH is a vector.
+            destH = (1 + _d(output_orig[danc, :], output_orig[dpos, :]) - \
                 _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
             # gradually increase hardness
             if gradual:
-                phi = 0.2
-                inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
-                        max=2+configs.triplet.margin_cosine)/(2+configs.triplet.margin_cosine))
-                       )*(phi - destloss).clamp(min=0.0)
-                #inc = th.sqrt(1-(th.tensor(self._hm_prev_loss).clamp(min=0.0,
-                #        max=2+configs.margin_cosine)/(2+configs.margin_cosine))
-                #       )*(phi - destloss).clamp(min=0.0)
-                destloss = destloss + inc
+                # linear addition (increase E[H] by uh)
+                ul, uh = configs.triplet.margin_cosine, 0.1
+                nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
+                        min=0.0, max=ul)/ul  # in [0,1]
+                inc = (1.0 - nrmloss) * uh
+                destH = destH + inc
+                # least square approaching (min |E[H]-uh|)
+                #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
+                #        max=2+configs.triplet.margin_cosine)/(2+configs.triplet.margin_cosine))
+                #       )*(uh - destH).clamp(min=0.0)
+                # destH = destH + inc
             if method == 'KL':
-                #destloss = F.softmax(destloss, dim=0)
-                destloss = F.normalize(destloss, p=1, dim=0)
+                #destH = F.softmax(destH, dim=0)
+                destH = F.normalize(destH, p=1, dim=0)
             elif method == 'L2':
                 pass
             else:
@@ -278,21 +281,21 @@ class MadryInnerMax(object):
             ep = emb[len(emb) // 3:2 * len(emb) // 3]
             en = emb[2 * len(emb) // 3:]
             # compute the source loss vector
-            srcloss = (1 + _d(ea, ep) - _d(ea, en)).view(-1)
+            srcH = (1 + _d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
-                # srcloss = F.softmax(srcloss, dim=0)
-                srcloss = F.normalize(srcloss, p=1, dim=0)
+                # srcH = F.softmax(srcH, dim=0)
+                srcH = F.normalize(srcH, p=1, dim=0)
             else:
                 pass
             # compute the loss of loss for attack (meta adversarial attack?)
             if method == 'KL':
-                loss = F.kl_div(srcloss, destloss, reduction='mean')
+                loss = F.kl_div(srcH, destH, reduction='mean')
             elif method == 'L2':
-                loss = F.mse_loss(srcloss, destloss, reduction='mean')
+                loss = F.mse_loss(srcH, destH, reduction='mean')
             else:
                 raise NotImplementedError
-            itermsg = {'destloss': destloss.sum().item(),
-                    'srcloss': srcloss.sum().item(),
+            itermsg = {'destH': destH.sum().item(),
+                    'srcH': srcH.sum().item(),
                     'metaloss': loss.item()}
             # projected gradient descent
             loss.backward()
