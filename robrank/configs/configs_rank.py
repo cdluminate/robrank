@@ -22,6 +22,8 @@ import re
 from dataclasses import dataclass
 import multiprocessing as mp
 import os
+import rich
+c = rich.get_console()
 
 #################
 # Model Configs #
@@ -73,9 +75,14 @@ class __ranking_model_28x28(__ranking):
 
     def __init__(self, dataset, loss):
         # used for overriding this configuration.
+        if os.path.exists('override_pgditer_16'):
+            self.advtrain_pgditer = 16
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
+                    'indicated by override[/bold yellow]')
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
-            print('! Overriding advtrain_pgditer to 8 as indicated by override')
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
+                    'indicated by override[/bold yellow]')
 
 @dataclass
 class __ranking_model_224x224(__ranking):
@@ -102,9 +109,14 @@ class __ranking_model_224x224(__ranking):
         elif dataset == 'sop':
             self.num_class = 11316
         # used for overriding this configuration.
+        if os.path.exists('override_pgditer_16'):
+            self.advtrain_pgditer = 16
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
+                    'indicated by override[/bold yellow]')
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
-            print('! Overriding advtrain_pgditer to 8 as indicated by override')
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
+                    'indicated by override[/bold yellow]')
 
 
 @dataclass
