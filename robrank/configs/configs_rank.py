@@ -79,7 +79,7 @@ class __ranking_model_224x224(__ranking):
     [ Note ]
     If you find the adversarial training with pgditer=32
     (32 steps of PGD update) extremely slow, you may
-    decrease that value to, e.g., 7. We will use 32 by
+    decrease that value to, e.g., 8. We will use 32 by
     default to retain consistency and the best robustness.
     '''
     allowed_datasets: tuple = ('sop', 'cub', 'cars')
@@ -95,6 +95,10 @@ class __ranking_model_224x224(__ranking):
             self.num_class = 98
         elif dataset == 'sop':
             self.num_class = 11316
+        # used for overriding this configuration.
+        if os.path.exists('override_pgditer_8'):
+            self.advtrain_pgditer = 8
+            c.print('Overriding advtrain_pgditer to 8 as indicated by override')
 
 
 @dataclass
