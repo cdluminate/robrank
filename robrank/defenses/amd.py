@@ -706,20 +706,12 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    if not ics:
-        with th.no_grad():
-            output_orig = model.forward(images)
-            if model.metric in ('C', 'N'):
-                output_orig = F.normalize(output_orig)
-            model.train()
-            loss_orig = model.lossfunc(output_orig, labels)
-    else: # ics True
+    with th.no_grad():
         output_orig = model.forward(images)
         if model.metric in ('C', 'N'):
             output_orig = F.normalize(output_orig)
         model.train()
         loss_orig = model.lossfunc(output_orig, labels)
-
     # create adversarial examples
     model.eval()
     model.wantsgrad = True
@@ -734,8 +726,14 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                                         method=hm, gradual=gradual,
                                         return_triplets=True)
     anc, pos, neg = triplets
-    # train with adversarial examples
+    # get embeddings of anchors.
     model.train()
+    if ics:
+        apidx = th.cat([anc, pos]).view(-1)
+        ap_orig = model.forward(images[apidx, :, :, :])
+        if model.metric in ('C', 'N'):
+            ap_orig = F.normalize(ap_orig)
+    # train with adversarial examples
     pnemb = model.forward(images_amd)
     if model.lossfunc._metric in ('C', 'N'):
         pnemb = F.normalize(pnemb)
@@ -748,16 +746,11 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     if gradual:
         model._hm_prev_loss = loss.item()
     if ics:
-        loss = loss + 0.5 * (
+        loss = loss + 1.0 * (
                 model.lossfunc.raw(
-                    output_orig[anc, :],
+                    ap_orig[:len(ap_orig)//2],
                     pnemb[:len(pnemb) // 3],
-                    output_orig[pos, :],
-                    override_margin=0.0) +
-                model.lossfunc.raw(
-                    output_orig[pos, :],
-                    pnemb[len(pnemb) // 3 : 2*len(pnemb)//3],
-                    output_orig[anc, :],
+                    ap_orig[len(ap_orig)//2:],
                     override_margin=0.0)
                 )
     # logging
