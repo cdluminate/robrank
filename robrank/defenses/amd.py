@@ -233,7 +233,7 @@ class MadryInnerMax(object):
                 return 1 - F.cosine_similarity(x, y)
         with th.no_grad():
             # destH is a vector.
-            destH = (1 + _d(output_orig[danc, :], output_orig[dpos, :]) - \
+            destH = (_d(output_orig[danc, :], output_orig[dpos, :]) - \
                 _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
             # gradually increase hardness
             if gradual:
@@ -241,7 +241,8 @@ class MadryInnerMax(object):
                 ul, uh = configs.triplet.margin_cosine, 0.1
                 nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
                         min=0.0, max=ul)/ul  # in [0,1]
-                inc = (1.0 - nrmloss) * uh
+                pad = destH.clamp(max=0.0).abs()
+                inc = (1.0 - nrmloss) * (uh + pad)
                 destH = destH + inc
                 # least square approaching (min |E[H]-uh|)
                 #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
@@ -282,7 +283,7 @@ class MadryInnerMax(object):
             ep = emb[len(emb) // 3:2 * len(emb) // 3]
             en = emb[2 * len(emb) // 3:]
             # compute the source loss vector
-            srcH = (1 + _d(ea, ep) - _d(ea, en)).view(-1)
+            srcH = (_d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
                 # srcH = F.softmax(srcH, dim=0)
                 srcH = F.normalize(srcH, p=1, dim=0)
