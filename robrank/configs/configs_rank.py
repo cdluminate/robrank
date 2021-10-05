@@ -21,6 +21,7 @@ limitations under the License.
 import re
 from dataclasses import dataclass
 import multiprocessing as mp
+import os
 
 #################
 # Model Configs #
@@ -70,6 +71,11 @@ class __ranking_model_28x28(__ranking):
     advtrain_alpha: float = 3. / 255.
     advtrain_pgditer: int = 32
 
+    def __init__(self, dataset, loss):
+        # used for overriding this configuration.
+        if os.path.exists('override_pgditer_8'):
+            self.advtrain_pgditer = 8
+            print('! Overriding advtrain_pgditer to 8 as indicated by override')
 
 @dataclass
 class __ranking_model_224x224(__ranking):
@@ -98,7 +104,7 @@ class __ranking_model_224x224(__ranking):
         # used for overriding this configuration.
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
-            c.print('Overriding advtrain_pgditer to 8 as indicated by override')
+            print('! Overriding advtrain_pgditer to 8 as indicated by override')
 
 
 @dataclass
@@ -128,6 +134,7 @@ class rc2f2(__ranking_model_28x28):
     num_class: int = 10
 
     def __init__(self, dataset, loss):
+        super().__init__(dataset, loss)
         if re.match(r'p.+', loss):
             self.maxepoch //= 2
         if re.match(r't.+', loss):
