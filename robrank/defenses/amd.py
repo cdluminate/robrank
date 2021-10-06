@@ -198,12 +198,14 @@ class MadryInnerMax(object):
                            *,
                            method: str = 'KL',
                            gradual: bool = False,
-                           return_triplets: bool = False):
+                           return_triplets: bool = False,
+                           fix_anchor: bool = False):
         '''
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
         Method in {KL, L2, ET} for hardness alignment.
         Gradual Adversary is a bool argument.
+        Fix-Anchor is a boolean argument.
         '''
         # Sanity check
         if self.model.metric != 'N':
@@ -262,8 +264,12 @@ class MadryInnerMax(object):
         imanc = images[sanc, :, :, :].clone().detach().to(self.device)
         impos = images[spos, :, :, :].clone().detach().to(self.device)
         imneg = images[sneg, :, :, :].clone().detach().to(self.device)
-        imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
-        imgs = th.cat([imanc, impos, imneg])
+        if not fix_anchor:
+            imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
+            imgs = th.cat([imanc, impos, imneg])
+        else:
+            imgs_orig = th.cat([impos, imneg]).clone().detach()
+            imgs = th.cat([impos, imneg]).clone().detach()
         imgs.requires_grad = True
         # start creating adversarial examples
         state_for_saturate_stop: float = -1.0
@@ -281,9 +287,14 @@ class MadryInnerMax(object):
             emb = self.model.forward(imgs)
             if self.metric in ('C', 'N'):
                 emb = F.normalize(emb)
-            ea = emb[:len(emb) // 3]
-            ep = emb[len(emb) // 3:2 * len(emb) // 3]
-            en = emb[2 * len(emb) // 3:]
+            if not fix_anchor:
+                ea = emb[:len(emb) // 3]
+                ep = emb[len(emb) // 3:2 * len(emb) // 3]
+                en = emb[2 * len(emb) // 3:]
+            else:
+                ea = output_orig[sanc, :]
+                ep = emb[:len(emb)//2]
+                en = emb[len(emb)//2:]
             # compute the source loss vector
             srcH = (_d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
@@ -327,6 +338,8 @@ class MadryInnerMax(object):
         # note: clear the junk gradients or it interferes with model training.
         optm.zero_grad()
         optx.zero_grad()
+        if fix_anchor:
+            imgs = th.cat([imanc, imgs]).detach()
         imgs.requires_grad = False
         if return_triplets:
             return imgs, src_triplets
@@ -677,9 +690,12 @@ def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
 
 def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                      srch: str, desth: str, hm: str = 'KL',
-                     gradual: bool = False, ics: bool = False):
+                     gradual: bool = False, ics: bool = False,
+                     fix_anchor: bool = False):
     '''
     Hardness manipulation.
+
+    hm, hm with fixed anchor (rh)
 
     gradual {,g}hm
 
@@ -730,6 +746,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                                         sourcehardness=srch,
                                         destinationhardness=desth,
                                         method=hm, gradual=gradual,
+                                        fix_anchor=fix_anchor,
                                         return_triplets=True)
     anc, pos, neg = triplets
     # get embeddings of anchors.

@@ -273,7 +273,9 @@ class MetricBase(thl.LightningModule):
                                              desth=self.hm_spec['desth'],
                                              hm=self.hm_spec['hm'],
                                              gradual=self.hm_spec['gradual'],
-                                             ics=self.hm_spec['ics'])
+                                             ics=self.hm_spec['ics'],
+                                             fix_anchor=self.hm_spec['fix_anchor'],
+                                             )
         else:
             pass
         # else: normal training.
