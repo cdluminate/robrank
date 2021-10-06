@@ -113,9 +113,25 @@ class __ranking_model_224x224(__ranking):
             self.advtrain_pgditer = 16
             c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
                     'indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_15'):
+            self.advtrain_pgditer = 15
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 15 as' +
+                    'indicated by override[/bold yellow]')
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
             c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
+                    'indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_7'):
+            self.advtrain_pgditer = 7
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 7 as' +
+                    'indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_4'):
+            self.advtrain_pgditer = 4
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 4 as' +
+                    'indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_3'):
+            self.advtrain_pgditer = 3
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 3 as' +
                     'indicated by override[/bold yellow]')
 
 
