@@ -309,7 +309,8 @@ class MadryInnerMax(object):
             elif method == 'L2':
                 loss = F.mse_loss(srcH, destH, reduction='mean')
             elif method == 'ET':
-                loss = th.min(th.tensor(0), srcH - destH).square().mean()
+                # loss = th.min(th.tensor(0).to(srcH.device), srcH - destH).square().mean()
+                loss = (srcH - destH).clamp(max=0.).square().mean()
             else:
                 raise NotImplementedError
             itermsg = {'destH': destH.sum().item(),
