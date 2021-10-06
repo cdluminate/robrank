@@ -202,7 +202,7 @@ class MadryInnerMax(object):
         '''
         Hardness manipulation from source hardness to destination hardness.
         This is specific to triplet input.
-        Method in {KL, L2} for hardness alignment.
+        Method in {KL, L2, ET} for hardness alignment.
         Gradual Adversary is a bool argument.
         '''
         # Sanity check
@@ -254,6 +254,8 @@ class MadryInnerMax(object):
                 destH = F.normalize(destH, p=1, dim=0)
             elif method == 'L2':
                 pass
+            elif method == 'ET':
+                pass
             else:
                 raise NotImplementedError
         # prepare the template for adversarial examples
@@ -288,12 +290,15 @@ class MadryInnerMax(object):
                 # srcH = F.softmax(srcH, dim=0)
                 srcH = F.normalize(srcH, p=1, dim=0)
             else:
+                # L2, ET, no operation
                 pass
             # compute the loss of loss for attack (meta adversarial attack?)
             if method == 'KL':
                 loss = F.kl_div(srcH, destH, reduction='mean')
             elif method == 'L2':
                 loss = F.mse_loss(srcH, destH, reduction='mean')
+            elif method == 'ET':
+                loss = (srcH - destH).clamp(min=0.0).square().mean()
             else:
                 raise NotImplementedError
             itermsg = {'destH': destH.sum().item(),
@@ -678,13 +683,13 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
 
     gradual {,g}hm
 
-    hm in {KL, L2}
-    -> hmkl, hml2
+    hm in {KL, L2, ET}
+    -> hmkl, hml2, hmet
 
     srch and desth in
     {spc2-random (r), spc2-semihard (m), spc2-softhard (s),
     spc2-distance (d), spc2-hard (h)}
-    -> hm{kl,l2}{r,m,s,d,h}{r,m,s,d,h}
+    -> hm{kl,l2,et}{r,m,s,d,h}{r,m,s,d,h}
 
     ics (intra class structure)
     -> {,i} postfix
