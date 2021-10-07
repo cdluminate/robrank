@@ -292,7 +292,7 @@ class MadryInnerMax(object):
                 ep = emb[len(emb) // 3:2 * len(emb) // 3]
                 en = emb[2 * len(emb) // 3:]
             else:
-                ea = output_orig[sanc, :]
+                ea = output_orig[sanc, :].clone().detach()
                 ep = emb[:len(emb)//2]
                 en = emb[len(emb)//2:]
             # compute the source loss vector
