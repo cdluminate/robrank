@@ -729,7 +729,14 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    with th.no_grad():
+    if not fix_anchor:
+        with th.no_grad():
+            output_orig = model.forward(images)
+            if model.metric in ('C', 'N'):
+                output_orig = F.normalize(output_orig)
+            model.train()
+            loss_orig = model.lossfunc(output_orig, labels)
+    else:
         output_orig = model.forward(images)
         if model.metric in ('C', 'N'):
             output_orig = F.normalize(output_orig)
