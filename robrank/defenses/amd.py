@@ -722,6 +722,9 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     e.g., hmklrm:pmtripletN will override 'm' in pmtripletN into 'r'.
     '''
     # Sanity check
+    assert(isinstance(fix_anchor, bool))
+    assert(isinstance(gradual, bool))
+    assert(isinstance(ics, bool))
     if gradual:
         if not hasattr(model, '_hm_prev_loss'):
             model._hm_prev_loss: float = 2.0
