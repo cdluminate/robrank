@@ -78,11 +78,11 @@ class __ranking_model_28x28(__ranking):
         if os.path.exists('override_pgditer_16'):
             self.advtrain_pgditer = 16
             c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
-                    'indicated by override[/bold yellow]')
+                    ' indicated by override[/bold yellow]')
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
             c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
-                    'indicated by override[/bold yellow]')
+                    ' indicated by override[/bold yellow]')
 
 @dataclass
 class __ranking_model_224x224(__ranking):
