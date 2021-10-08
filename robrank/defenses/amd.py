@@ -239,12 +239,19 @@ class MadryInnerMax(object):
                 _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
             # gradually increase hardness
             if gradual:
-                # linear addition (increase E[H] by uh)
-                ul, uh = configs.triplet.margin_cosine, 0.1
+                # parameters
+                ul, uh = configs.triplet.margin_cosine, 0.2
                 nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
                         min=0.0, max=ul)/ul  # in [0,1]
-                pad = destH.clamp(max=0.0).abs()
-                inc = (1.0 - nrmloss) * (uh + pad)
+                # switch
+                _G = 0
+                if _G == 0:
+                    # linear addition (increase E[H] by uh)
+                    inc = (1.0 - nrmloss) * uh  # in [0,uh]
+                if _G == 1:
+                    # linear addition with padding
+                    pad = destH.clamp(max=0.0).abs()
+                    inc = (1.0 - nrmloss) * (uh + pad)
                 destH = destH + inc
                 # least square approaching (min |E[H]-uh|)
                 #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
