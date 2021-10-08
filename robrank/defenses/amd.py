@@ -244,7 +244,7 @@ class MadryInnerMax(object):
                 nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
                         min=0.0, max=ul)/ul  # in [0,1]
                 # switch
-                _G = 0
+                _G = 2
                 if _G == 0:
                     # linear addition (increase E[H] by uh)
                     inc = (1.0 - nrmloss) * uh  # in [0,uh]
@@ -252,6 +252,9 @@ class MadryInnerMax(object):
                     # linear addition with padding
                     pad = destH.clamp(max=0.0).abs()
                     inc = (1.0 - nrmloss) * (uh + pad)
+                if _G == 2:
+                    inc = 0.0
+                    destH = destH.clamp(min=-ul) # at least provide grads.
                 destH = destH + inc
                 # least square approaching (min |E[H]-uh|)
                 #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
