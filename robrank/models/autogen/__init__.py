@@ -13,3 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+import rich
+c = rich.get_console()
+c.print('''[white on red]
+[!] Maybe you forgot to run `robrank/models/autogen/autogen.py` ?
+    You can use the shortcut script: `$ bash tools/autogen.bash` as well.
+''')
