@@ -213,6 +213,8 @@ class MadryInnerMax(object):
         if gradual:
             if not hasattr(self.model, '_hm_prev_loss'):
                 raise AttributeError("HM/GradualAdversary not properly initialized")
+        if fix_anchor:
+            raise NotImplementedError
         # sample the source and destination triplets
         src_triplets = miner(output_orig, labels, method=sourcehardness,
                              metric=self.model.lossfunc._metric,
@@ -274,12 +276,8 @@ class MadryInnerMax(object):
         imanc = images[sanc, :, :, :].clone().detach().to(self.device)
         impos = images[spos, :, :, :].clone().detach().to(self.device)
         imneg = images[sneg, :, :, :].clone().detach().to(self.device)
-        if not fix_anchor:
-            imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
-            imgs = th.cat([imanc, impos, imneg])
-        else:
-            imgs_orig = th.cat([impos, imneg]).clone().detach()
-            imgs = th.cat([impos, imneg]).clone().detach()
+        imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
+        imgs = th.cat([imanc, impos, imneg])
         imgs.requires_grad = True
         # start creating adversarial examples
         state_for_saturate_stop: float = -1.0
@@ -297,14 +295,9 @@ class MadryInnerMax(object):
             emb = self.model.forward(imgs)
             if self.metric in ('C', 'N'):
                 emb = F.normalize(emb)
-            if not fix_anchor:
-                ea = emb[:len(emb) // 3]
-                ep = emb[len(emb) // 3:2 * len(emb) // 3]
-                en = emb[2 * len(emb) // 3:]
-            else:
-                ea = output_orig[sanc, :].clone().detach()
-                ep = emb[:len(emb)//2]
-                en = emb[len(emb)//2:]
+            ea = emb[:len(emb) // 3]
+            ep = emb[len(emb) // 3:2 * len(emb) // 3]
+            en = emb[2 * len(emb) // 3:]
             # compute the source loss vector
             srcH = (_d(ea, ep) - _d(ea, en)).view(-1)
             if method == 'KL':
@@ -349,8 +342,6 @@ class MadryInnerMax(object):
         # note: clear the junk gradients or it interferes with model training.
         optm.zero_grad()
         optx.zero_grad()
-        if fix_anchor:
-            imgs = th.cat([imanc, imgs]).detach()
         imgs.requires_grad = False
         if return_triplets:
             return imgs, src_triplets
@@ -728,6 +719,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     assert(isinstance(fix_anchor, bool))
     assert(isinstance(gradual, bool))
     assert(isinstance(ics, bool))
+    assert(fix_anchor == False)
     if gradual:
         if not hasattr(model, '_hm_prev_loss'):
             model._hm_prev_loss: float = 2.0
@@ -742,14 +734,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         raise ValueError(f'possibly illegal dataset {model.dataset}?')
     # evaluate original benign sample
     model.eval()
-    if not fix_anchor:
-        with th.no_grad():
-            output_orig = model.forward(images)
-            if model.metric in ('C', 'N'):
-                output_orig = F.normalize(output_orig)
-            model.train()
-            loss_orig = model.lossfunc(output_orig, labels)
-    else:
+    with th.no_grad():
         output_orig = model.forward(images)
         if model.metric in ('C', 'N'):
             output_orig = F.normalize(output_orig)
