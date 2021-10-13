@@ -347,107 +347,6 @@ class MadryInnerMax(object):
             return imgs, src_triplets
         return imgs
 
-    def HardnessManipulate_DEPRECATED(self, images: th.Tensor, triplets: tuple, *,
-                                      destination: str = None):
-        '''
-        destination can be: (1) None -- random (unchanged);
-        (2) semihard (3) softhard (4) distance (5) hardest
-
-        Side effect variables:
-            X self.model._amdsemi_last_state (loss value, size[1])  # deprecate
-            self.model._amdhm_prev_loss (prev iter loss value, size[1])
-            self.model._amdhm_soft_maxap (max d(a,p), size[batch])
-            self.model._amdhm_soft_minan (min d(a,n), size[batch])
-
-        This function includes some local module functions.
-        Please make sure that they have the same function signature
-        when you need to modify them.
-        '''
-        raise NotImplementedError
-
-        def _dest_semihard(metric: str, ea: th.Tensor,
-                           ep: th.Tensor, en: th.Tensor) -> th.Tensor:
-            '''
-            <module> Destination hardness is semihard.
-            '''
-            #stopat = 0.2
-            # stopat = 0.2 * (model._amdsemi_last_state / 2))
-            # stopat = max(min(model._amdsemi_last_state, 0.2), 0.0))
-            _prev_iter_loss = self.model._amdhm_prev_loss
-            stopat = np.sqrt(np.clip(_prev_iter_loss, 0.0, 0.2) / 0.2) * 0.2
-            # stopat = (1 - np.exp(-10.0 * max(min(model._amdsemi_last_state,
-            # 0.2), 0.0)/0.2))*0.2)
-            if metric in ('E', 'N'):
-                loss = (F.pairwise_distance(ea, en) - F.pairwise_distance(
-                        ea, ep)).clamp(min=stopat).mean()
-            elif metric in ('C',):
-                loss = ((1 - F.cosine_similarity(ea, en)) - (1 - F.cosine_similarity(ea, ep))
-                        ).clamp(min=stopat).mean()
-            else:
-                raise ValueError('illegal metric')
-            return loss
-
-        def _dest_softhard(metric: str, ea: th.Tensor,
-                           ep: th.Tensor, en: th.Tensor) -> th.Tensor:
-            '''
-            <module> Destination hardness is softhard.
-            '''
-            raise NotImplementedError
-
-        # function mapping for dispatch.
-        hmmap = {'semihard': _dest_semihard}
-
-        # prepare
-        anc, pos, neg = triplets
-        imanc = images[anc, :, :, :].clone().detach().to(self.device)
-        impos = images[pos, :, :, :].clone().detach().to(self.device)
-        imneg = images[neg, :, :, :].clone().detach().to(self.device)
-        images_orig = th.cat([imanc, impos, imneg]).clone().detach()
-        images = th.cat([imanc, impos, imneg])
-        images.requires_grad = True
-        # start PGD
-        self.model.eval()
-        for iteration in range(self.pgditer):
-            # optimizer
-            optm = th.optim.SGD(self.model.parameters(), lr=0.)
-            optx = th.optim.SGD([images], lr=1.)
-            optm.zero_grad()
-            optx.zero_grad()
-            # forward data to be perturbed
-            emb = self.model.forward(images)
-            if self.metric in ('C', 'N'):
-                emb = F.normalize(emb)
-            ea = emb[:len(emb) // 3]
-            ep = emb[len(emb) // 3:2 * len(emb) // 3]
-            en = emb[2 * len(emb) // 3:]
-            # compute the loss function
-            loss = hmmap[destination](metric, ea, ep, en)  # DISPATCH
-            itermsg = {'loss': loss.item()}
-            loss.backward()
-            # projected gradient descent
-            if self.pgditer > 1:
-                images.grad.data.copy_(self.alpha * th.sign(images.grad))
-            elif self.pgditer == 1:
-                images.grad.data.copy_(self.eps * th.sign(images.grad))
-            optx.step()
-            images = th.min(images, images_orig + self.eps)
-            images = th.max(images, images_orig - self.eps)
-            images = th.clamp(images, min=0., max=1.)
-            images = images.clone().detach()
-            images.requires_grad = True
-            # report for the current iteration
-            if self.verbose:
-                print(images.shape)
-        # note: it is very important to clear the junk gradients.
-        # `optm` holds gradients of the loss w.r.t. the parameters.
-        # so the gradients used for PGD attack will interfere with the
-        # adversarial training if you don't clear the gradient before
-        # the model learns from the resulting images.
-        optm.zero_grad()
-        optx.zero_grad()
-        images.requires_grad = False
-        return images
-
 
 def amd_training_step(model: th.nn.Module, batch, batch_idx):
     '''
@@ -556,10 +455,10 @@ def ramd_training_step(model: th.nn.Module, batch, batch_idx):
 
 
 def amdsemi_training_step(model: th.nn.Module, batch, batch_idx, *, aap=False):
-    # FIXME: this function is temporary. will be incorporated into amdhm
     '''
     adaptation of madry defense to triplet loss.
     we purturb (a, p, n).
+    Manual prototype for HM. Nonstandard
     '''
     # specific to amdsemi
     if not hasattr(model, '_amdsemi_last_state'):
@@ -624,67 +523,6 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx, *, aap=False):
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
     # specific to amdsemi
-    model._amdsemi_last_state = loss.item()
-    # return
-    return loss
-
-
-def amdhm_training_step(model: th.nn.Module, batch, batch_idx):
-    '''
-    adaptation of madry defense to deep metric learning / triplet loss.
-    with hardness manipulation. (manual conversion rules)
-    '''
-    raise NotImplementedError
-    # specific to amdhm
-    if not hasattr(model, '_amdsemi_last_state'):
-        # initialize this variable.
-        model._amdsemi_last_state: float = 2.0
-    # prepare data batch in a proper shape
-    images = batch[0].to(model.device)
-    labels = batch[1].view(-1).to(model.device)
-    if model.dataset in ('sop', 'cub', 'cars'):
-        images = images.view(-1, 3, 224, 224)
-    elif model.dataset in ('mnist', 'fashion'):
-        images = images.view(-1, 1, 28, 28)
-    else:
-        raise ValueError(f'possibly illegal dataset {model.dataset}?')
-    # evaluate original benign sample
-    model.eval()
-    with th.no_grad():
-        output_orig = model.forward(images)
-        model.train()
-        loss_orig = model.lossfunc(output_orig, labels)
-    # generate adversarial examples
-    triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
-                     metric=model.lossfunc._metric,
-                     margin=configs.triplet.margin_euclidean
-                     if model.lossfunc._metric in ('E', 'N')
-                     else configs.triplet.margin_cosine)
-    anc, pos, neg = triplets
-    model.eval()
-    amd = MadryInnerMax(model, eps=model.config.advtrain_eps,
-                        alpha=model.config.advtrain_alpha,
-                        pgditer=model.config.advtrain_pgditer,
-                        device=model.device, metric=model.metric,
-                        verbose=False)
-    model.eval()
-    model.wantsgrad = True
-    images_amd = amd.advtstop(images, triplets)
-    model.train()
-    pnemb = model.forward(images_amd)
-    if model.lossfunc._metric in ('C', 'N'):
-        pnemb = F.normalize(pnemb)
-    model.wantsgrad = False
-    # compute adversarial loss
-    model.train()
-    loss = model.lossfunc.raw(
-        pnemb[:len(pnemb) // 3],
-        pnemb[len(pnemb) // 3:2 * len(pnemb) // 3],
-        pnemb[2 * len(pnemb) // 3:]).mean()
-    # logging
-    model.log('Train/loss_orig', loss_orig.item())
-    model.log('Train/loss_adv', loss.item())
-    # specific to amdhm
     model._amdsemi_last_state = loss.item()
     # return
     return loss
