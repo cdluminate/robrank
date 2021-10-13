@@ -240,11 +240,11 @@ class MadryInnerMax(object):
             # gradually increase hardness
             if gradual:
                 # parameters
-                ul, uh = configs.triplet.margin_cosine, 0.2
+                ul, uh = configs.triplet.margin_cosine, 0.1
                 nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
                         min=0.0, max=ul)/ul  # in [0,1]
                 # switch
-                _G = 2
+                _G = 0
                 if _G == 0:
                     # linear addition (increase E[H] by uh)
                     inc = (1.0 - nrmloss) * uh  # in [0,uh]
