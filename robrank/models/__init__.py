@@ -52,6 +52,7 @@ from . import rc2f2amdsemiact
 from . import rc2f2fatnone
 from . import rc2f2fatamd
 from . import rc2f2fatamdsemi
+from . import rc2f2hmix
 
 # [group LeNet]
 from . import rlenet
@@ -83,6 +84,7 @@ from . import rres18amdsemiaap
 from . import rres18fatnone
 from . import rres18fatamd
 from . import rres18fatamdsemi
+from . import rres18hmix
 
 # [group ResNet50]
 from . import rres50
