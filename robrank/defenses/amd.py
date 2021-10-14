@@ -250,14 +250,23 @@ class MadryInnerMax(object):
                 if _G == 0:
                     # linear addition (increase E[H] by uh)
                     inc = (1.0 - nrmloss) * uh  # in [0,uh]
-                if _G == 1:
+                    destH = destH + inc
+                elif _G == 1:
                     # linear addition with padding
                     pad = destH.clamp(max=0.0).abs()
                     inc = (1.0 - nrmloss) * (uh + pad)
-                if _G == 2:
-                    inc = 0.0
+                    destH = destH + inc
+                elif _G == 2:
                     destH = destH.clamp(min=-ul) # at least provide grads.
-                destH = destH + inc
+                elif _G == 3:
+                    # also scale max(0, HD-HS)
+                    destH = ((destH - srcH).clamp(min=0.) + uh) * (1-nrmloss)
+                elif _G == 4:
+                    # pure GA (semihard)
+                    # destH = -0.2 + 0.2 * (1-nrmloss)
+                    destH = -0.2 * nrmloss
+                else:
+                    raise ValueError
                 # least square approaching (min |E[H]-uh|)
                 #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
                 #        max=2+configs.triplet.margin_cosine)/(2+configs.triplet.margin_cosine))
