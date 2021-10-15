@@ -269,6 +269,18 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 6. https://github.com/fra31/auto-attack
 7. https://github.com/KevinMusgrave/powerful-benchmarker
 
+## Frequently Asked Questions
+
+* Q: Training stuck at the end of validation with Nvidia A100 or RTX3090, etc.
+
+A: Try to comment out `th.distributed.barrier()` from the code and run again.
+You can locate that barrier function in the code using ripgrep [].
+
+* Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
+
+A: They are equivalent due to the implementation details in the dataset
+sampler. It is a fixable problem (but not necessary). See issue #9.
+
 ### Copyright and License
 
 ```
