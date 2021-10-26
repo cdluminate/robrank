@@ -622,7 +622,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     if gradual:
         model._hm_prev_loss = loss.item()
     if ics:
-        loss = loss + 1.0 * model.lossfunc.raw(
+        loss = loss + 0.5 * model.lossfunc.raw(
                     ap_orig[:len(ap_orig)//2],
                     pnemb[:len(pnemb) // 3],
                     ap_orig[len(ap_orig)//2:],
