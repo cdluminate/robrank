@@ -101,8 +101,10 @@ class TFdump:
                         last['r@1'] = f'{100*value:.1f}'
                     if 'r@2' in tag:
                         last['r@2'] = f'{100*value:.1f}'
-                    if 'mAP' in tag:
+                    if ('mAP' in tag) and not ('@R' in tag):
                         last['mAP'] = f'{100*value:.1f}'
+                    if 'mAP@R' in tag:
+                        last['mAP@R'] = f'{100*value:.1f}'
                     for k in ('r@1', 'r@2', 'mAP', 'NMI'):
                         if k not in tag:
                             continue
