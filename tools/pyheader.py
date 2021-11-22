@@ -24,35 +24,48 @@ import rich
 c = rich.get_console()
 
 
+class State(Enum):
+    INIT = 0
+    FIRST_QUOTE_START = 1
+    FIRST_QUOTE = 2
+    FIRST_QUOTE_END = 3
+    TRAP = 4
+
+
 def has_copyright_header(lines: List[str], filtering=False) -> bool:
     '''
     Does the given lines contain a copyright header?
     '''
     needle = re.compile(r'.*copyright.*', re.IGNORECASE)
     tquote = re.compile(r'.*[\'"]{3}.*')
-    in_comment, counter = False, 0
-    filtered_lines = []
-    ret = False
+    st, ret, flines = State.INIT, False, []
     for line in lines:
-        if tquote.match(line):
-            in_comment = not in_comment
-            counter += 1
-        elif in_comment and needle.match(line):
+        # change status
+        if tquote.match(line) and st == State.INIT:
+            st = State.FIRST_QUOTE_START
+        elif st == State.FIRST_QUOTE_START:
+            st = State.FIRST_QUOTE
+        elif tquote.match(line) and st == State.FIRST_QUOTE:
+            st = State.FIRST_QUOTE_END
+        elif st == State.FIRST_QUOTE_END:
+            st = State.TRAP
+        elif st in (State.INIT, State.FIRST_QUOTE, State.TRAP):
+            pass
+        else:
+            raise Exception(line, st)
+        # actions
+        if st == State.FIRST_QUOTE and needle.match(line):
             if not filtering:
                 return True
             else:
                 ret = True
-        else:
-            pass
-        if counter == 2 and tquote.match(line):
-            continue
-        elif not in_comment and counter >= 2:
-            filtered_lines.append(line)
+        if st in (State.INIT, State.TRAP):
+            flines.append(line)
     if not filtering:
         return False
     else:
         ret = True if ret else False
-    return ret, filtered_lines
+    return ret, flines
 
 
 def edit_python_file(fpath: str, ag: vars) -> None:
