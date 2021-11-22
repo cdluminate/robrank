@@ -20,8 +20,6 @@ import os
 import argparse
 import sys
 import re
-import rich
-c = rich.get_console()
 
 
 class State(Enum):
@@ -90,7 +88,7 @@ def edit_python_file(fpath: str, ag: vars) -> None:
         for l in lines:
             print(l, end='')
     if ag.verbose:
-        c.print(fpath, ':', 'has_copyright_header=', flag)
+        print(fpath, ':', 'has_copyright_header=', flag)
 
 
 if __name__ == '__main__':
