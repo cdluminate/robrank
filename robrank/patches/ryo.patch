@@ -1,0 +1,125 @@
+commit 1752d0efb42bad037d9938d6e3e133afd4ccc54e
+Author: Mo Zhou <cdluminate@gmail.com>
+Date:   Thu Jun 24 08:08:05 2021 +0000
+
+    ryo
+
+diff --git a/robrank/attacks/advclass_launcher.py b/robrank/attacks/advclass_launcher.py
+index 942cfee..4d94219 100644
+--- a/robrank/attacks/advclass_launcher.py
++++ b/robrank/attacks/advclass_launcher.py
+@@ -58,6 +58,8 @@ class AdvClassLauncher(object):
+             images = images.to(self.device)
+             labels = labels.to(self.device)
+ 
++            assert(images.size(0) == 1)
++
+             # evaluate original examples
+             with th.no_grad():
+                 output_orig = model.forward(images)
+@@ -67,14 +69,76 @@ class AdvClassLauncher(object):
+                 print('* Orig:', images.shape, labels.shape, sorig)
+ 
+             # generate adversarial example
++            t = th.arange(10).to(self.device)
++            x = images.view(-1, 1, 28, 28).expand(10, 1, 28, 28)
+             if self.attack_type == 'PGD':
+-                xr, r = projGradDescent(model, images, labels, **self.kw)
++                xr, r = projGradDescent(model, x, t, targeted=True, **self.kw)
++                yr, r = projGradDescent(model, images, labels, **self.kw)
++                oy = model.forward(yr)
++                yr = yr.expand(10, 1, 28, 28)
++                Y, r = projGradDescent(model, yr, t, targeted=True, **self.kw)
+ 
+             # evaluate adversarial example
+             with th.no_grad():
+                 output_adv = model.forward(xr)
+                 accuracy_adv = output_adv.max(1)[1].eq(labels).float().mean().item()
+-            sadv = (accuracy_adv,)
++
++            with th.no_grad():
++                U, S, Vh = th.linalg.svd(xr.view(10, -1), full_matrices=False)
++                print(U.shape, S.shape, Vh.shape)
++                print(S)
++                y = th.zeros_like(S)
++                y[0] = S.max().item()
++                print(y)
++                rxr = U @ th.diag(y) @ Vh
++                print(rxr.shape)
++                rxr = rxr.mean(0, keepdim=True)
++                print(rxr.shape)
++                output_rxr = model.forward(rxr)
++                accuracy_rxr = output_rxr.max(1)[1].eq(labels).float().mean().item()
++                print('* RXR:', accuracy_rxr, labels)
++
++                xsing1 = (output_adv - output_orig.view(-1, 10))
++                xsing2 = th.linalg.pinv(xr.view(10, -1))
++                print('xsing12', xsing1.shape, xsing2.shape)
++                xsing = xsing1 @ xsing2.T  # (10, 784)
++                print('xsing', xsing.shape)
++                U, S, Vh = th.linalg.svd(xsing, full_matrices=False)
++                s = th.zeros_like(S)
++                s[0] = S.max().item()
++                rsing = U @ th.diag(s) @ Vh
++                print('rsing', rsing.shape)
++                rso = xr.view(10, -1) @ rsing.T
++                print('rso', rso.shape)
++                accuracy_rso = rso.max(1)[1].eq(labels).float().mean().item()
++                print('rso acc', accuracy_rso)
++
++
++                UU, SS, VVh = th.linalg.svd(Y.view(10, -1), full_matrices=False)
++                z = th.zeros_like(SS)
++                z[0] = SS.max().item()
++                ryr = UU @ th.diag(z) @ VVh
++                ryr = ryr.mean(0, keepdim=True)
++                output_ryr = model.forward(ryr)
++                accuracy_ryr = output_ryr.max(1)[1].eq(labels).float().mean().item()
++                print('* RYR:', accuracy_ryr, labels)
++
++                oyr = model.forward(Y)
++                ysing1 = (oyr - oy.view(1, 10))
++                ysing2 = th.linalg.pinv(Y.view(10, -1))
++                print('ysing12', ysing1.shape, ysing2.shape)
++                ysing = ysing1 @ ysing2.T  # (10, 784)
++                U, S, Vh = th.linalg.svd(ysing, full_matrices=False)
++                s = th.zeros_like(S)
++                s[0] = S.max().item()
++                rysing = U @ th.diag(s) @ Vh
++                print('rysing', rysing.shape)
++                ryo = Y.view(10, -1) @ rysing.T
++                print('ryo', ryo.shape)
++                accuracy_ryo = ryo.max(1)[1].eq(labels).float().mean().item()
++                print('ryo acc', accuracy_ryo)
++
++            sadv = (accuracy_adv, accuracy_rxr, accuracy_ryr, accuracy_rso, accuracy_ryo)
+             if self.verbose:
+                 print('* Advr:', sadv)
+ 
+@@ -84,7 +148,12 @@ class AdvClassLauncher(object):
+ 
+         # aggregate the summary
+         Sorig = [np.mean([x[0] for x in Sorig])]
+-        Sadv = [np.mean([x[0] for x in Sadv])]
++        Sadv = [np.mean([x[0] for x in Sadv]),
++                np.mean([x[1] for x in Sadv]),
++                np.mean([x[2] for x in Sadv]),
++                np.mean([x[3] for x in Sadv]),
++                np.mean([x[4] for x in Sadv]),
++                ]
+ 
+         # report the resutls
+         c.rule('Summary for Original Examples')
+diff --git a/robrank/configs/configs_classify.py b/robrank/configs/configs_classify.py
+index 826644a..d88fe1e 100644
+--- a/robrank/configs/configs_classify.py
++++ b/robrank/configs/configs_classify.py
+@@ -46,7 +46,7 @@ class __classify_model_224x224(__classify):
+ class cslp(__classify_model_28x28):
+     maxepoch: int = 10
+     loader_num_workers: int = min(8, mp.cpu_count())
+-    batchsize: int = 1000
++    batchsize: int = 1
+     lr: float = 1e-3
+     weight_decay: float = 1e-7
+     validate_every: int = 1

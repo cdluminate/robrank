@@ -1,0 +1,98 @@
+commit a52c010fd38fbb6eba4b7f048a41838a43d997e8
+Author: Mo Zhou <cdluminate@gmail.com>
+Date:   Fri Jun 25 02:22:40 2021 +0000
+
+    gil
+
+diff --git a/robrank/configs/configs_rank.py b/robrank/configs/configs_rank.py
+index 0f95f75..cf02365 100644
+--- a/robrank/configs/configs_rank.py
++++ b/robrank/configs/configs_rank.py
+@@ -50,6 +50,7 @@ class __ranking:
+         'prhomC', 'prhomE', 'prhomN', 'pdrhomN',
+         'pmsC', 'pmsN',
+         'pgilC', 'pgilE', 'pgilN', 'ptripxaN',
++        'pmgilN', 'psgilN', 'pdgilN',
+         # extra.py: borrowed functions
+         'pstripN',
+         'pangularN',
+diff --git a/robrank/losses/triplet_variant.py b/robrank/losses/triplet_variant.py
+index 6b3e2e7..e6884bb 100644
+--- a/robrank/losses/triplet_variant.py
++++ b/robrank/losses/triplet_variant.py
+@@ -208,28 +208,38 @@ def fn_pgil(repres: th.Tensor, labels: th.Tensor,
+     '''
+     GIL for Deep Metric Learning
+     '''
++    if metric in ('N', 'C'):
++        margin = configs.triplet.margin_cosine
++    elif metric in ('E',):
++        margin = configs.triplet.margin_euclidean
++    else:
++        raise NotImplementedError
+     # sample the triplets
+     anc, pos, neg = miner(repres, labels, method=minermethod,
+-                          metric=metric)
++                          metric=metric, margin=margin)
+     # normalize
+     if metric in ('C', 'N'):
+         repres = F.normalize(repres, p=2)
+     # loss function
+     rA, rP, rN = repres[anc, :], repres[pos, :], repres[neg, :]
+     if metric == 'C':
+-        margin = configs.triplet.margin_cosine
+         dap = 1 - F.cosine_similarity(rA, rP, dim=-1)
+         dan = 1 - F.cosine_similarity(rA, rN, dim=-1)
+         dpn = 1 - F.cosine_similarity(rP, rN, dim=-1)
+     elif metric in ('E', 'N'):
+-        margin = configs.triplet.margin_euclidean
+         dap = F.pairwise_distance(rA, rP, p=2)
+         dan = F.pairwise_distance(rA, rN, p=2)
+         dpn = F.pairwise_distance(rP, rN, p=2)
+     else:
+         raise NotImplementedError
+-    if metric == 'N':
+-        margin = configs.triplet.margin_cosine
++
++    assert(metric == 'N')
++    # minor fix to n in (a, p, n)
++    rC = F.normalize((rA + rP)/2.)
++    #rC = (rA + rP)/2.
++    dac = F.pairwise_distance(rC, rN, p=2)
++    loss = (margin + dap - dac).relu().mean()
++
+     # [method 1: move anchor]
+     #mask_repulse = (dap > dan).view(-1)
+     ##loss_repulse = ((repres[anc, :] * (repres[anc, :] - repres[neg, :])).sum(-1) + 1.0) / (dan ** 2)
+@@ -321,9 +331,9 @@ def fn_pgil(repres: th.Tensor, labels: th.Tensor,
+     #l1 = (th.mul(rP, rP/2 - rA).sum(-1) + 1.0)
+     #l2 = (th.mul(rN, rA - rN/2).sum(-1) + 1.0) / (dan**2).detach()
+     # [simple: direction + norm . pow(2)
+-    l1 = (th.mul(rP, rP / 2 - rA).sum(-1) + 1.0) * dap.detach()
+-    l2 = (th.mul(rN, rA - rN / 2).sum(-1) + 1.0) / (dan**3).detach()
+-    loss = th.cat([l1, l2]).mean()
++    #l1 = (th.mul(rP, rP / 2 - rA).sum(-1) + 1.0) * dap.detach()
++    #l2 = (th.mul(rN, rA - rN / 2).sum(-1) + 1.0) / (dan**3).detach()
++    #loss = th.cat([l1, l2]).mean()
+     return loss
+ 
+ 
+@@ -358,6 +368,18 @@ class pgilN(pgil):
+     _metric = 'N'
+ 
+ 
++class pmgilN(pgilN):
++    _minermethod = 'spc2-semihard'
++
++
++class psgilN(pgilN):
++    _minermethod = 'spc2-softhard'
++
++
++class pdgilN(pgilN):
++    _minermethod = 'spc2-distance'
++
++
+ @pytest.mark.parametrize('func', (pgilC, pgilE, pgilN))
+ def test_pgil(func):
+     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
