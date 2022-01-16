@@ -317,7 +317,7 @@ def __miner_spc2_softhard(
     anchors = th.arange(0, len(labels), 2)
     positives = th.tensor(poss, dtype=th.long, device=repres.device)
     negatives = th.tensor(negs, dtype=th.long, device=repres.device)
-    return (anchors, positives, negatives)
+    return (anchors.cpu(), positives.cpu(), negatives.cpu())
 
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))

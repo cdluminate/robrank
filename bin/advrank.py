@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-import robrank as rr
 import sys
 sys.path.append('.')
+
+import robrank as rr
 rr.cmdline.AdvRank(sys.argv[1:])

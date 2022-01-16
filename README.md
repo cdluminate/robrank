@@ -232,6 +232,9 @@ extracted).
 
 **CUB:** The tarball can be downloaded from `http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz`. Then change your working directory to `~/.torch` and `tar xvf <path>/CUB_200_2011.tgz -C .`. Now we are all set.
 
+**CARS:** Create a directory `~/.torch/cars` then change working directory into it. Download `http://imagenet.stanford.edu/internal/car196/car_ims.tgz`
+and `http://imagenet.stanford.edu/internal/car196/cars_annos.mat` into the directory. In the end extract the tarball `tar xvf car_ims.tgz`. We are ready to go.
+
 **SOP:** After you downloaded `Stanford_Online_Products.zip` from `ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip`,
 just do `$ cd ~/.torch` and `$ unzip <path>/Stanford_Online_Products.zip`. Now SOP is ready to use.
 
@@ -265,6 +268,18 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 5. https://github.com/RobustBench/robustbench
 6. https://github.com/fra31/auto-attack
 7. https://github.com/KevinMusgrave/powerful-benchmarker
+
+## Frequently Asked Questions
+
+* Q: Training stuck at the end of validation with Nvidia A100 or RTX3090, etc.
+
+A: Try to comment out `th.distributed.barrier()` from the code and run again.
+You can locate that barrier function in the code using ripgrep [].
+
+* Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
+
+A: They are equivalent due to the implementation details in the dataset
+sampler. It is a fixable problem (but not necessary). See issue #9.
 
 ### Copyright and License
 

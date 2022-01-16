@@ -272,7 +272,19 @@ class MetricBase(thl.LightningModule):
                                              srch=self.hm_spec['srch'],
                                              desth=self.hm_spec['desth'],
                                              hm=self.hm_spec['hm'],
-                                             gradual=self.hm_spec['gradual'])
+                                             gradual=self.hm_spec['gradual'],
+                                             ics=self.hm_spec['ics'],
+                                             fix_anchor=self.hm_spec['fix_anchor'],
+                                             )
+        elif getattr(self, 'is_advtrain_hmix', False):
+            if np.random.random() > 0.5:
+                return defenses.hm_training_step(self, batch, batch_idx,
+                        srch='spc2-random', desth='spc2-semihard',
+                        hm='ET', gradual=False, ics=False, fix_anchor=False)
+            else:
+                return defenses.hm_training_step(self, batch, batch_idx,
+                        srch='spc2-softhard', desth='spc2-semihard',
+                        hm='ET', gradual=False, ics=False, fix_anchor=False)
         else:
             pass
         # else: normal training.

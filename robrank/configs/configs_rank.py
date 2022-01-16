@@ -21,6 +21,9 @@ limitations under the License.
 import re
 from dataclasses import dataclass
 import multiprocessing as mp
+import os
+import rich
+c = rich.get_console()
 
 #################
 # Model Configs #
@@ -70,6 +73,16 @@ class __ranking_model_28x28(__ranking):
     advtrain_alpha: float = 3. / 255.
     advtrain_pgditer: int = 32
 
+    def __init__(self, dataset, loss):
+        # used for overriding this configuration.
+        if os.path.exists('override_pgditer_16'):
+            self.advtrain_pgditer = 16
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_8'):
+            self.advtrain_pgditer = 8
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
+                    ' indicated by override[/bold yellow]')
 
 @dataclass
 class __ranking_model_224x224(__ranking):
@@ -96,9 +109,34 @@ class __ranking_model_224x224(__ranking):
         elif dataset == 'sop':
             self.num_class = 11316
         # used for overriding this configuration.
+        if os.path.exists('override_pgditer_16'):
+            self.advtrain_pgditer = 16
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 16 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_15'):
+            self.advtrain_pgditer = 15
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 15 as' +
+                    ' indicated by override[/bold yellow]')
         if os.path.exists('override_pgditer_8'):
             self.advtrain_pgditer = 8
-            c.print('Overriding advtrain_pgditer to 8 as indicated by override')
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 8 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_7'):
+            self.advtrain_pgditer = 7
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 7 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_4'):
+            self.advtrain_pgditer = 4
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 4 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_3'):
+            self.advtrain_pgditer = 3
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 3 as' +
+                    ' indicated by override[/bold yellow]')
+        if os.path.exists('override_pgditer_2'):
+            self.advtrain_pgditer = 2
+            c.print('[bold yellow]! Overriding advtrain_pgditer to 2 as' +
+                    ' indicated by override[/bold yellow]')
 
 
 @dataclass
@@ -128,6 +166,7 @@ class rc2f2(__ranking_model_28x28):
     num_class: int = 10
 
     def __init__(self, dataset, loss):
+        super().__init__(dataset, loss)
         if re.match(r'p.+', loss):
             self.maxepoch //= 2
         if re.match(r't.+', loss):

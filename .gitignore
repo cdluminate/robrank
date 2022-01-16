@@ -3,3 +3,8 @@ __pycache__
 doc/html
 doc/latex
 Makefile.private
+logs_fashion*
+logs_mnist*
+logs_cub*
+logs_cars*
+logs_sop*

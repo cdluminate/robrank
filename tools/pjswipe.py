@@ -97,13 +97,17 @@ class TFdump:
                     value = s.summary.value[0].simple_value
                     if 'NMI' in tag:
                         last['NMI'] = f'{100*value:.1f}'
-                    if 'r@1' in tag:
+                    elif 'r@1' in tag:
                         last['r@1'] = f'{100*value:.1f}'
-                    if 'r@2' in tag:
+                    elif 'r@2' in tag:
                         last['r@2'] = f'{100*value:.1f}'
-                    if 'mAP' in tag:
+                    elif 'mAP@R' in tag:
+                        last['mAP@R'] = f'{100*value:.1f}'
+                    elif ('mAP' in tag) and not ('@R' in tag):
                         last['mAP'] = f'{100*value:.1f}'
-                    for k in ('r@1', 'r@2', 'mAP', 'NMI'):
+                    else:
+                        pass
+                    for k in ('r@1', 'r@2', 'mAP@R', 'mAP', 'NMI'):
                         if k not in tag:
                             continue
                         if k not in self.best:
