@@ -106,14 +106,17 @@ is flexible enough to express many combinations. Specifically:
   * rres18d: resnet-18 for DML with EST defense
   * rres18p: resnet-18 for DML with ACT defense
 * loss (for all available losses see `robrank/losses/__init__.py`)
+  * ce: cross-entropy for classification
   * ptripletN: triplet using Normalized Euclidean with SPC-2 batch.
   * ptripletE: triplet using Euclidean (not on unit hypersphere) with SPC-2 batch.
   * ptripletC: triplet using Cosine Distance with SPC-2 batch.
-  * ce: cross-entropy for classification
 
 For example:
 ```shell
-python3 bin/train.py -C mnist:cc2f2:ce
+# classification
+python3 bin/train.py -C mnist:cc2f2:ce --do_test
+python3 bin/train.py -C cifar10:cres18:ce
+# deep metric learning
 python3 bin/train.py -C mnist:rc2f2:ptripletN
 python3 bin/train.py -C mnist:rc2f2p:ptripletN
 python3 bin/train.py -C cub:rres18:ptripletN
