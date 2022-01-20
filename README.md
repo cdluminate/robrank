@@ -31,7 +31,6 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 
 **Project Status:** Actively maintained.  
 **Install-RobRank-Python-Dependency:** `$ pip install -r requirements.txt`  
-**Install-RobRank:** `$ python3 setup.py install` (this is optional)  
 
 **News and Updates**
 
