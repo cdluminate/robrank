@@ -19,7 +19,6 @@ import pytorch_lightning as thl
 from pytorch_lightning.utilities.enums import DistributedType
 import os
 import re
-import pytorch_lightning.metrics.functional
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from .. import datasets

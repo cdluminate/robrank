@@ -16,7 +16,6 @@ limitations under the License.
 import torch as th
 import pytorch_lightning as thl
 import os
-import pytorch_lightning.metrics.functional
 from .. import datasets
 from .. import configs
 import multiprocessing as mp
