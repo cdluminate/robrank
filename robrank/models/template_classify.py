@@ -94,7 +94,7 @@ class ClassifierTemplate(object):
         if self.dataset in ('cifar10', 'cifar100'):
             optim = SGD(self.parameters(),
                         lr=self.config.lr, momentum=self.config.momentum,
-                        weight_decay=configs.cres18.weight_decay)
+                        weight_decay=self.config.weight_decay)
         elif self.dataset in ('mnist', 'fashion'):
             optim = Adam(self.parameters(),
                          lr=self.config.lr, weight_decay=self.config.weight_decay)
@@ -102,7 +102,7 @@ class ClassifierTemplate(object):
             raise NotImplementedError
         if hasattr(self.config, 'milestones'):
             scheduler = th.optim.lr_scheduler.MultiStepLR(optim,
-                                                          milestones=configs.cres18.milestones, gamma=0.1)
+                                                          milestones=self.config.milestones, gamma=0.1)
             return [optim], [scheduler]
         return optim
 

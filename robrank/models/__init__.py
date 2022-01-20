@@ -28,6 +28,7 @@ from . import cslp
 from . import cc2f2
 from . import clenet
 from . import cres18
+from . import cres50
 
 ###############################################################################
 # Deep Ranking / Deep Metric Learning
