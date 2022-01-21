@@ -10,7 +10,7 @@ pretrainedmodels
 psutil
 pygments
 pytest
-pytorch-lightning (>= 1.2.7)
+pytorch-lightning (== 1.5.9)
 pytorch-metric-learning (>= 0.9.98)
 rich
 scikit-learn
