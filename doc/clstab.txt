@@ -1,0 +1,13 @@
+Classification Performance Table
+
+Dataset         Model       Loss     Val-Accuracy (/100)
+===============================================================================
+
+MNIST
+
+FASHION-MNIST
+
+CIFAR10         cres18      ce       86.3
+                cres50      ce       85.5
+
+CIFAT100

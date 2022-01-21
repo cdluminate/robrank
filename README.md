@@ -116,6 +116,7 @@ For example:
 # classification
 python3 bin/train.py -C mnist:cc2f2:ce --do_test
 python3 bin/train.py -C cifar10:cres18:ce
+python3 bin/train.py -C cifar10:cres50:ce
 # deep metric learning
 python3 bin/train.py -C mnist:rc2f2:ptripletN
 python3 bin/train.py -C mnist:rc2f2p:ptripletN
@@ -124,8 +125,9 @@ python3 bin/train.py -C cub:rres18p:ptripletN
 ```
 
 Tips:
-1. export `FAISS_CPU=1` to disable NMI score calculation on GPU. This could
-save a little bit of video memory of you encounter CUDA OOM.
+1. When training DML models, export `FAISS_CPU=1` to disable NMI score
+calculation on GPU (faiss). This could save a little bit of video memory of you
+encounter CUDA OOM.
 
 ### 1.2. Adversarial Attack
 
