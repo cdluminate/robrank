@@ -254,6 +254,8 @@ The dataset loader is able to smartly read the dataset from `/dev/shm` to
 overcome IO bottleneck (especially from HDDs) if a copy of dataset if available
 there. For instance, `rsync -av ~/.torch/Stanford_Online_Products /dev/shm`.
 
+**CIFAR:** For cifar10 `cd ~/.torch/; wget -c https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz; tar xvf cifar-10-python.tar.gz`. And for cifar100 `cd ~/.torch/; wget -c https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz; tar xvf cifar-100-python.tar.gz`.
+
 ### 2.4. References and Bibtex
 
 If you found the paper/code useful/inspiring, please consider citing my work:
