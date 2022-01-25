@@ -10,4 +10,5 @@ FASHION-MNIST
 CIFAR10         cres18      ce       86.3
                 cres50      ce       85.5
 
-CIFAT100
+CIFAR100        cres18      ce       55.8
+                cres50      ce
