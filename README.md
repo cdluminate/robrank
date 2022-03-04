@@ -34,7 +34,7 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 
 **News and Updates**
 
-...
+1. [2022-03-02] New paper based on this code base has been published: [Enhancing Adversarial Robustness for Deep Metric Learning, CVPR, 2022](https://github.com/cdluminate/robdml). Note, in this new paper, we further improved the benign performance, adversarial robustness, as well as training efficiency altogether for robust metric learning.
 
 ## Tables for Robustness Comparison
 
