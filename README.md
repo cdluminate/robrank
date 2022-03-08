@@ -48,7 +48,7 @@ comparison in these tables.
 | MNIST | C2F2 | Triplet | N/A | 99.0 | 99.4 | 98.7 | 84.7 | 13.3 |
 | MNIST | C2F2 | Triplet | EST | 98.3 | 99.0 | 91.3 | 80.7 | 40.5 |
 | MNIST | C2F2 | Triplet | ACT | 98.6 | 99.1 | 98.1 | 86.4 | 78.6 |
-| MNIST | C2F2 | Triplet | HM  |      |      |      |      |      |
+| MNIST | C2F2 | Triplet | HM  | 99.0 | 99.4 | 99.0 | 82.6 | 77.9 |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
