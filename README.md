@@ -172,8 +172,16 @@ python3 bin/swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
 ```
 
 Currently only single-GPU mode is supported. When the batched attack is finished,
-the script `tools/pjswipe.py` can display the content of resulting
-json files and calculate the corresponding ERS.
+a json file `logs_fashion-rc2f2-ptripletN/.../xxx.ckpt.json` will be written.
+A helper script `tools/pjswipe.py` can display the content of resulting
+json files and calculate the corresponding ERS:
+
+```
+$ python3 tools/pjswipe.py logs_fashion-rc2f2-ptripletN
+```
+
+The script will automatically use the json file corresponding to the latest
+version of the specified config. So specifying the log directory is enough.
 
 ## 2. Project Information
 
