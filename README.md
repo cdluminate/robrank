@@ -48,30 +48,42 @@ comparison in these tables.
 | MNIST | C2F2 | Triplet | N/A | 99.0 | 99.4 | 98.7 | 84.7 | 13.3 |
 | MNIST | C2F2 | Triplet | EST | 98.3 | 99.0 | 91.3 | 80.7 | 40.5 |
 | MNIST | C2F2 | Triplet | ACT | 98.6 | 99.1 | 98.1 | 86.4 | 78.6 |
+| MNIST | C2F2 | Triplet | HM  |      |      |      |      |      |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
 | Fashion | C2F2 | Triplet | N/A | 87.6 | 92.7 | 84.9 | 77.8 | 4.5  |
 | Fashion | C2F2 | Triplet | EST | 78.6 | 86.8 | 64.6 | 64.9 | 36.4 |
 | Fashion | C2F2 | Triplet | ACT | 79.4 | 87.9 | 71.6 | 69.6 | 67.7 |
+| Fashion | C2F2 | Triplet | HM  |      |      |      |      |      |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
 | CUB | RN18 | Triplet | N/A | 53.9 | 66.4 | 26.1 | 59.5 | 3.8  |
 | CUB | RN18 | Triplet | EST | 8.5  | 13.0 | 2.6  | 25.2 | 5.3  |
 | CUB | RN18 | Triplet | ACT | 27.5 | 38.2 | 12.2 | 43.0 | 33.9 |
+| CUB | RN18 | Triplet | HM  | 34.9 | 45.0 | 19.8 | 47.1 | 36.0 |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
 | CARS | RN18 | Triplet | N/A | 62.5 | 74.0 | 23.8 | 57.0 | 3.6  |
 | CARS | RN18 | Triplet | EST | 30.7 | 41.0 | 5.6  | 31.8 | 7.3  |
 | CARS | RN18 | Triplet | ACT | 43.4 | 56.5 | 11.8 | 42.9 | 38.6 |
+| CARS | RN18 | Triplet | HM  | 60.2 | 71.6 | 33.9 | 51.2 | 46.0 |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
 | SOP | RN18 | Triplet | N/A | 62.9 | 68.5 | 39.2 | 87.4 | 4.0  |
 | SOP | RN18 | Triplet | EST | 46.0 | 51.4 | 24.5 | 84.7 | 31.7 |
 | SOP | RN18 | Triplet | ACT | 47.5 | 52.6 | 25.5 | 84.9 | 50.8 |
+| SOP | RN18 | Triplet | HM  | 46.8 | 51.7 | 24.5 | 84.7 | 61.6 |
+
+Source of these defense methods:
+
+1. N/A: Just standard classification network.
+2. EST: Adversarial Ranking Attack and Defense (ECCV2020)
+3. ACT: Adversarial Attack and Defense in Deep Ranking (arXiv:2106.03614)
+4. HM (or, concreately, ghmetsmi): Enhancing Adversarial Robustness for Deep Metric Learning (CVPR2022)
 
 ## 1. Common Usage of CLI
 
