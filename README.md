@@ -55,7 +55,7 @@ comparison in these tables.
 | Fashion | C2F2 | Triplet | N/A | 87.6 | 92.7 | 84.9 | 77.8 | 4.5  |
 | Fashion | C2F2 | Triplet | EST | 78.6 | 86.8 | 64.6 | 64.9 | 36.4 |
 | Fashion | C2F2 | Triplet | ACT | 79.4 | 87.9 | 71.6 | 69.6 | 67.7 |
-| Fashion | C2F2 | Triplet | HM  |      |      |      |      |      |
+| Fashion | C2F2 | Triplet | HM  | 88.0 | 92.9 | 85.6 | 77.2 | 83.9 |
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
