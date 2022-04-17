@@ -324,6 +324,7 @@ sampler. It is a fixable problem (but not necessary). See issue #9.
 
 RTX A5000 performance is similar to RTX 3090. RTX A6000 is slightly faster
 than RTX 3090. Nvidia A100 is roughly 1.5 times faster than RTX 3090.
+RTX 3090 is roughly 2~3 times faster than Nvidia Titan Xp (or GTX 1080Ti).
 
 | GPU Model | Number of GPUs | Config                         | Time          |
 | ---       | ---            | ---                            | ---           |
