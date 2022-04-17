@@ -320,6 +320,16 @@ Some other tricks might or might not work are:
 A: They are equivalent due to the implementation details in the dataset
 sampler. It is a fixable problem (but not necessary). See issue #9.
 
+* Q: Training time?
+
+RTX A5000 performance is similar to RTX 3090. RTX A6000 is slightly faster
+than RTX 3090. Nvidia A100 is roughly 1.5 times faster than RTX 3090.
+
+| GPU Model | Number of GPUs | Config                         | Time          |
+| ---       | ---            | ---                            | ---           |
+| RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`         | 9 min         |
+
+
 ### Copyright and License
 
 ```
