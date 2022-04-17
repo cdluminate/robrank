@@ -311,7 +311,9 @@ A: Try to comment out `th.distributed.barrier()` from the code and run again.
 You can locate that barrier function in the code using ripgrep [].
 On Nvidia A5000 the weird stuck issue is also observed.
 Some other tricks might or might not work are:
-(1) use `rank_zero_only` option for pytorch-lightning logger: `sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"`
+(1) use [`rank_zero_only` option](https://github.com/PyTorchLightning/pytorch-lightning/issues/8821#issuecomment-902402784) for pytorch-lightning logger:
+`sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"` ;
+(2) [change the backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch distributed](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`.
 
 * Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
 
