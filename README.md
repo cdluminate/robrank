@@ -326,10 +326,15 @@ RTX A5000 performance is similar to RTX 3090. RTX A6000 is slightly faster
 than RTX 3090. Nvidia A100 is roughly 1.5 times faster than RTX 3090.
 RTX 3090 is roughly 2~3 times faster than Nvidia Titan Xp (or GTX 1080Ti).
 
-| GPU Model | Number of GPUs | Config                         | Time          |
-| ---       | ---            | ---                            | ---           |
-| RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`         | 9 min         |
-| RTX A5000 | 4 (DDP)        | `cars:rres18:ptripletN`        | 15 min        |
+| GPU Model | Number of GPUs | Config                         | Time (roughly) |
+| ---       | ---            | ---                            | ---            |
+| RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`         | 10 min         |
+| RTX A5000 | 4 (DDP)        | `cub:rres18d:ptripletN`        |    min         |
+| RTX A5000 | 4 (DDP)        | `cub:rres18p:ptripletN`        |    min         |
+| RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsm:ptripletN`  |    min         |
+| RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsmi:ptripletN` |    min         |
+| RTX A5000 | 4 (DDP)        | `cars:rres18:ptripletN`        | 15 min         |
+| RTX A5000 | 4 (DDP)        | `sop:rres18:ptripletN`         | 60 min         |
 
 
 ### Copyright and License
