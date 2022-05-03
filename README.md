@@ -330,6 +330,7 @@ RTX 3090 is roughly 2~3 times faster than Nvidia Titan Xp (or GTX 1080Ti).
 | ---       | ---            | ---                            | ---            |
 | Titan Xp  | 2 (DDP)        | `cub:rres18:ptripletN`         | 30 min         |
 | RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`         | 10 min         |
+| Titan Xp  | 2 (DDP)        | `cub:rres18p:ptripletN`        | 420 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18p:ptripletN`        | 120 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsm:ptripletN`  | 120 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsmi:ptripletN` | 120 min        |
@@ -344,13 +345,10 @@ This is under preparation.
 
 | Config                                 | Download |
 | ---                                    | ---      |
-| `cub:rres18:ptripletN`                 | TODO     |
 | `cub:rres18p:ptripletN`                | TODO     |
 | `cub:rres18ghmetsmi:ptripletN`         | TODO     |
-| `cars:rres18:ptripletN`                | TODO     |
 | `cars:rres18p:ptripletN`               | TODO     |
 | `cars:rres18ghmetsmi:ptripletN`        | TODO     |
-| `sop:rres18:ptripletN`                 | TODO     |
 | `sop:rres18p:ptripletN`                | TODO     |
 | `sop:rres18ghmetsmi:ptripletN`         | TODO     |
 
