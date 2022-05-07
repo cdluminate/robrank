@@ -374,12 +374,13 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`              | N/A | 10 min         |
 | Titan Xp  | 2 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 420 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 120 min        |
-| RTX A6000 | 2 (DDP)        | `cub:rres18p:ptripletN`             | 32  |                |
+| RTX A6000 | 2 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 180 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsm:ptripletN`       | 32  | 120 min        |
 | RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsmi:ptripletN`      | 32  | 120 min        |
 | RTX A5000 | 4 (DDP)        | `cars:rres18:ptripletN`             | N/A | 15 min         |
 | RTX A5000 | 4 (DDP)        | `cars:rres18p:ptripletN`            | 32  | 150 min        |
 | RTX A5000 | 4 (DDP)        | `sop:rres18:ptripletN`              | N/A | 60 min         |
+| RTX A6000 | 2 (DDP)        | `sop:rres18p:ptripletN`             | 32  |                |
 
 * Q: Pretrained Weights?
 
