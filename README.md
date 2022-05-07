@@ -334,7 +334,7 @@ Some other tricks might or might not work are:
 (2) [change the backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch distributed](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`;
 (3) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`;
 (4) change accelerator from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the parallel training again. Let it raise error. Change back to `ddp`. The A5000 is started working. I hate Nvidia for such weird issue;
-(5) [P2P GPU traffic will fail with IOMMU](https://github.com/pytorch/pytorch/issues/1637#issuecomment-338268158). Check the `p2pBandwithLatencyTest` cuda example and see whether it could run. If not, then it's not a pytorch issue. Disable `iommu` from kernel parameter should work. `GRUB_CMDLINE_LINUX="iommu=soft"` in `/etc/default/grub`. Run `sudo update-grub2` after edit.
+(5) [P2P GPU traffic will fail with IOMMU](https://github.com/pytorch/pytorch/issues/1637#issuecomment-338268158). Check the `p2pBandwithLatencyTest` cuda example and see whether it could run. If not, then it's not a pytorch issue. Disable `iommu` from kernel parameter should work. `GRUB_CMDLINE_LINUX="iommu=soft"` in `/etc/default/grub`. Run `sudo update-grub2` after edit. Linux kernel has a documentation describing [this iommu parameter](https://www.kernel.org/doc/Documentation/x86/x86_64/boot-options.txt).
 
 * Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
 
