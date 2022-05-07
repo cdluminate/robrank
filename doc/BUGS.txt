@@ -7,3 +7,6 @@
    Preliminary experiment suggest slight influence
    for amdsemi. Influence for ACT and EST is to be
    investigated.
+
+2. investigate the difference between original and alternative impls
+   of pnp and amd defense.
