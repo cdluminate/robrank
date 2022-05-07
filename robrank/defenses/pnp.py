@@ -105,6 +105,51 @@ class PositiveNegativePerplexing(object):
         # images: concatenation of adversarial positive and negative
         return images
 
+    def pncollapse_alt(self, images: th.Tensor, triplets: tuple):
+        '''
+        alternative implementation of pncollapse
+        this avoids optimizer trick and requires relatively new pytorch
+        '''
+        # prepare
+        anc, pos, neg = triplets
+        impos = images[pos, :, :, :].clone().detach().to(self.device)
+        imneg = images[neg, :, :, :].clone().detach().to(self.device)
+        images_orig = th.cat([impos, imneg]).clone().detach()
+        images = th.cat([impos, imneg])
+        # start PGD
+        self.model.eval()
+        for iteration in range(self.pgditer):
+            # forward data to be perturbed
+            emb = self.model.forward(images)
+            if self.metric in ('C', 'N'):
+                emb = F.normalize(emb)
+            # draw two samples close to each other
+            if self.metric in ('E', 'N'):
+                loss = F.pairwise_distance(emb[:len(emb) // 2],
+                                           emb[len(emb) // 2:]).mean()
+            elif self.metric in ('C',):
+                loss = 1 - F.cosine_similarity(emb[:len(emb) // 2],
+                                               emb[len(emb) // 2:]).mean()
+            itermsg = {'loss': loss.item()}
+            loss.backward()
+            # projected gradient descent
+            grad = th.autograd.grad(loss, images,
+                    retain_graph=False, create_graph=False)[0]
+            if self.pgditer > 1:
+                images = images.detach() + self.alpha * grad.sign()
+            elif self.pgditer == 1:
+                images = images.detach() + self.eps * grad.sign()
+            delta = th.clamp(images - images_orig, min=-self.eps, max=self.eps)
+            images = th.clamp(images + delta, min=0., max=1.).detach()
+            # report for the current iteration
+            if self.verbose:
+                print(f'(PGD)>', itermsg)
+        # return the adversarial example
+        if self.verbose:
+            print(images.shape)
+        # images: concatenation of adversarial positive and negative
+        return images
+
     def pnanchor(self, images: th.Tensor, triplets: tuple,
                  emb_anchor_detached: th.Tensor):
         '''
@@ -495,6 +540,7 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
     else:
         # use pnp/act for triplet ignoring the loss type.
         images_pnp = pnp.pncollapse(images, triplets)
+        #images_pnp = pnp.pncollapse_alt(images, triplets)
     # Adversarial Training
     model.train()
     pnemb = model.forward(images_pnp)
