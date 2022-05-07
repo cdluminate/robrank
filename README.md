@@ -191,19 +191,28 @@ customize the code and create your own profile for batched evaluation.
 
 ```shell
 python3 bin/swipe.py -p rob28 -C logs_fashion-rc2f2-ptripletN/.../xxx.ckpt
+python3 bin/swipe.py -p rob224 -C logs_cub-rres18-ptripletN/.../xxx.ckpt
 ```
 
-Currently only single-GPU mode is supported. When the batched attack is finished,
-a json file `logs_fashion-rc2f2-ptripletN/.../xxx.ckpt.json` will be written.
-A helper script `tools/pjswipe.py` can display the content of resulting
-json files and calculate the corresponding ERS:
+You may use `-m <number>` (e.g. `-m 10`) specify the max number of iterations
+to get a quick accessment instead of going through the whole validation
+dataset.
+
+Currently only single-GPU mode is supported for attacks. When the batched
+attack is finished, the results will be written into a json file
+`logs_fashion-rc2f2-ptripletN/.../xxx.ckpt.json`.  A helper script
+`tools/pjswipe.py` can display the content of resulting json files and
+calculate the corresponding ERS:
 
 ```
 $ python3 tools/pjswipe.py logs_fashion-rc2f2-ptripletN
 ```
-
 The script will automatically use the json file corresponding to the latest
 version of the specified config. So specifying the log directory is enough.
+That said, if multiple versions of the same config exists, and you want to
+let it print result of an old version, export `ITH=<version>` (e.g. `ITH=1`)
+and run again. If tested with multiple profiles, export `JTYPE` to select
+exact profile. Read the comments in `tools/pjswipe.py` for details.
 
 ## 2. Project Information
 
