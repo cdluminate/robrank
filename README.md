@@ -160,10 +160,21 @@ python3 bin/advrank.py -v -A CA:pm=+:W=1:eps=0.30196:alpha=0.011764:pgditer=32 -
 ```
 where `xxx.ckpt` is the path to the trained model (saved as a pytorch-lightning checkpoint).
 The arguments specific to adversarial attacks are joined with a colon ":"
-in order to avoid lengthy python code based `argparse` module.
+in order to avoid lengthy python code based `argparse` module. Example:
+
+```shell
+python3 bin/advrank.py -v -A CA:pm=+:W=1:eps=0.30196:alpha=0.011764:pgditer=32 -C logs_cub-rres18p-ptripletN/lightning_logs/version_0/checkpoints/epoch=74-step=3974.ckpt
+```
 
 Please browse the bash scripts under the `tools/` directory for examples
-of other types of attacks discussed in the paper.
+of other types of attacks discussed in the paper. Example:
+
+```shell
+export CKPT=logs_cub-rres18p-ptripletN/lightning_logs/version_0/checkpoints/epoch=74-step=3974.ckpt
+bash tools/ca.bash + $CKPT      # CA+ column
+bash tools/ca.bash - $CKPT      # CA- column
+bash tools/es.bash $CKPT        # ES:D and ES:R column
+```
 
 ### 1.3. Batched Adversarial Attack
 
