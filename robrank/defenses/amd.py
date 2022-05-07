@@ -357,6 +357,144 @@ class MadryInnerMax(object):
             return imgs, src_triplets
         return imgs
 
+    def HardnessManipulate_alt(self,
+                           images: th.Tensor,
+                           output_orig: th.Tensor,
+                           labels: th.Tensor,
+                           sourcehardness: str,
+                           destinationhardness: str,
+                           *,
+                           method: str = 'KL',
+                           gradual: bool = False,
+                           return_triplets: bool = False,
+                           fix_anchor: bool = False):
+        '''
+        alternative implementation of HardnessManipulate(...)
+        drops some historical burden but requires relatively new pytorch
+        avoids optimizer trick.
+        '''
+        # Sanity check
+        if self.model.metric != 'N':
+            raise NotImplementedError("currently only impleted for N metric")
+        if gradual:
+            if not hasattr(self.model, '_hm_prev_loss'):
+                raise AttributeError("HM/GradualAdversary not properly initialized")
+        if fix_anchor:
+            raise NotImplementedError
+        # sample the source and destination triplets
+        src_triplets = miner(output_orig, labels, method=sourcehardness,
+                             metric=self.model.lossfunc._metric,
+                             margin=configs.triplet.margin_euclidean
+                             if self.model.lossfunc._metric in ('E',)
+                             else configs.triplet.margin_cosine)
+        sanc, spos, sneg = src_triplets
+        dest_triplets = miner(output_orig, labels, method=destinationhardness,
+                              metric=self.model.lossfunc._metric,
+                              margin=configs.triplet.margin_euclidean
+                              if self.model.lossfunc._metric in ('E',)
+                              else configs.triplet.margin_cosine)
+        danc, dpos, dneg = dest_triplets
+        # calculate destination loss vector
+        if self.model.metric in ('E', 'N'):
+            def _d(x, y):
+                return F.pairwise_distance(x, y)
+        else:
+            def _d(x, y):
+                return 1 - F.cosine_similarity(x, y)
+        with th.no_grad():
+            # destH is a vector.
+            destH = (_d(output_orig[danc, :], output_orig[dpos, :]) - \
+                _d(output_orig[danc, :], output_orig[dneg, :])).view(-1)
+            # gradually increase hardness
+            if gradual:
+                # parameters
+                ul, uh = configs.triplet.margin_cosine, 0.1
+                nrmloss = th.tensor(self.model._hm_prev_loss).clamp(
+                        min=0.0, max=ul)/ul  # in [0,1]
+                # switch
+                _G = 4
+                if _G == 4:
+                    # pure GA (semihard)
+                    # destH = -0.2 + 0.2 * (1-nrmloss)
+                    destH = -0.2 * nrmloss
+                else:
+                    raise ValueError
+                # least square approaching (min |E[H]-uh|)
+                #inc = (1-(th.tensor(self.model._hm_prev_loss).clamp(min=0.0,
+                #        max=2+configs.triplet.margin_cosine)/(2+configs.triplet.margin_cosine))
+                #       )*(uh - destH).clamp(min=0.0)
+                # destH = destH + inc
+            if method == 'KL':
+                #destH = F.softmax(destH, dim=0)
+                destH = F.normalize(destH, p=1, dim=0)
+            elif method == 'L2':
+                pass
+            elif method == 'ET':
+                pass
+            else:
+                raise NotImplementedError
+        # prepare the template for adversarial examples
+        imanc = images[sanc, :, :, :].clone().detach().to(self.device)
+        impos = images[spos, :, :, :].clone().detach().to(self.device)
+        imneg = images[sneg, :, :, :].clone().detach().to(self.device)
+        imgs_orig = th.cat([imanc, impos, imneg]).clone().detach()
+        imgs = th.cat([imanc, impos, imneg])
+        # start creating adversarial examples
+        state_for_saturate_stop: float = -1.0
+        self.model.eval()
+        for iteration in range(self.pgditer):
+            # Do nothing if the destination equals source
+            if sourcehardness == destinationhardness:
+                break
+            # forward and get the embeddings
+            emb = self.model.forward(imgs)
+            if self.metric in ('C', 'N'):
+                emb = F.normalize(emb)
+            ea = emb[:len(emb) // 3]
+            ep = emb[len(emb) // 3:2 * len(emb) // 3]
+            en = emb[2 * len(emb) // 3:]
+            # compute the source loss vector
+            srcH = (_d(ea, ep) - _d(ea, en)).view(-1)
+            if method == 'KL':
+                # srcH = F.softmax(srcH, dim=0)
+                srcH = F.normalize(srcH, p=1, dim=0)
+            else:
+                # L2, ET, no operation
+                pass
+            # compute the loss of loss for attack (meta adversarial attack?)
+            if method == 'KL':
+                loss = F.kl_div(srcH, destH, reduction='mean')
+            elif method == 'L2':
+                loss = F.mse_loss(srcH, destH, reduction='mean')
+            elif method == 'ET':
+                # loss = th.min(th.tensor(0).to(srcH.device), srcH - destH).square().mean()
+                loss = (srcH - destH).clamp(max=0.).square().mean()
+            else:
+                raise NotImplementedError
+            itermsg = {'destH': destH.sum().item(),
+                    'srcH': srcH.sum().item(),
+                    'metaloss': loss.item()}
+            # projected gradient descent
+            grad = th.autograd.grad(loss, imgs,
+                    retain_graph=False, create_graph=False)[0]
+            if self.pgditer > 1:
+                imgs = imgs.detach() + self.alpha * grad.sign()
+            elif self.pgditer == 1:
+                imgs = imgs.detach() + self.eps * grad.sign()
+            delta = th.clamp(imgs - imgs_orig, min=-eps, max=+eps)
+            imgs = th.clamp(imgs + delta, min=0, max=1).detach()
+            # report for the current step
+            if self.verbose:
+                print(images.shape)
+            # stop when saturate in order to save time.
+            if abs(state_for_saturate_stop - loss.item()) < 1e-7:
+                break
+            else:
+                state_for_saturate_stop = loss.item()
+        if return_triplets:
+            return imgs, src_triplets
+        return imgs
+
 
 def amd_training_step(model: th.nn.Module, batch, batch_idx):
     '''
@@ -597,6 +735,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                         device=model.device, metric=model.metric,
                         verbose=False)
     images_amd, triplets = amd.HardnessManipulate(images, output_orig, labels,
+    #images_amd, triplets = amd.HardnessManipulate_alt(images, output_orig, labels,
                                         sourcehardness=srch,
                                         destinationhardness=desth,
                                         method=hm, gradual=gradual,
