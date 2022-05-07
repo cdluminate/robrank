@@ -482,8 +482,12 @@ class MadryInnerMax(object):
                 imgs = imgs.detach() - self.alpha * grad.sign()
             elif self.pgditer == 1:
                 imgs = imgs.detach() - self.eps * grad.sign()
-            delta = th.clamp(imgs - imgs_orig, min=-self.eps, max=+self.eps)
-            imgs = th.clamp(imgs + delta, min=0, max=1).detach()
+            #delta = th.clamp(imgs - imgs_orig, min=-self.eps, max=+self.eps)
+            imgs = th.min(imgs, imgs_orig + self.eps)
+            imgs = th.max(imgs, imgs_orig - self.eps)
+            #imgs = th.clamp(imgs + delta, min=0, max=1).detach()
+            imgs = th.clamp(imgs, min=0., max=1.)
+            imgs = imgs.clone().detach()
             # report for the current step
             if self.verbose:
                 print(images.shape)
