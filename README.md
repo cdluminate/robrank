@@ -122,18 +122,26 @@ is flexible enough to express many combinations. Specifically:
   * ptripletN: triplet using Normalized Euclidean with SPC-2 batch.
   * ptripletE: triplet using Euclidean (not on unit hypersphere) with SPC-2 batch.
   * ptripletC: triplet using Cosine Distance with SPC-2 batch.
+  * pmtripletN: ptripletN using semihard sampling instead of random
+  * pstripletN: ptripletN using softhard sampling
+  * pdtripletN: ptripletN using distance weithed sampling
+  * phtripletN: ptripletN using batch hardest sampling
 
 For example:
 ```shell
 # classification
 python3 bin/train.py -C mnist:cc2f2:ce --do_test
-python3 bin/train.py -C cifar10:cres18:ce
-python3 bin/train.py -C cifar10:cres50:ce
+python3 bin/train.py -C cifar10:cres18:ce   # cifar10, resnet 18 classify, CE loss
+python3 bin/train.py -C cifar10:cres50:ce   # cifar10, resnet 50 classify, CE loss
 # deep metric learning
 python3 bin/train.py -C mnist:rc2f2:ptripletN
 python3 bin/train.py -C mnist:rc2f2p:ptripletN
 python3 bin/train.py -C cub:rres18:ptripletN
 python3 bin/train.py -C cub:rres18p:ptripletN
+python3 bin/train.py -C cars:rres18:ptripletN
+python3 bin/train.py -C cars:rres18p:ptripletN
+python3 bin/train.py -C sop:rres18:ptripletN
+python3 bin/train.py -C sop:rres18p:ptripletN
 ```
 
 Tips:
