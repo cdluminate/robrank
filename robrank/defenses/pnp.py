@@ -119,6 +119,7 @@ class PositiveNegativePerplexing(object):
         # start PGD
         self.model.eval()
         for iteration in range(self.pgditer):
+            images.requires_grad = True
             # forward data to be perturbed
             emb = self.model.forward(images)
             if self.metric in ('C', 'N'):
@@ -131,7 +132,6 @@ class PositiveNegativePerplexing(object):
                 loss = 1 - F.cosine_similarity(emb[:len(emb) // 2],
                                                emb[len(emb) // 2:]).mean()
             itermsg = {'loss': loss.item()}
-            loss.backward()
             # projected gradient descent
             grad = th.autograd.grad(loss, images,
                     retain_graph=False, create_graph=False)[0]

@@ -446,6 +446,7 @@ class MadryInnerMax(object):
             # Do nothing if the destination equals source
             if sourcehardness == destinationhardness:
                 break
+            imgs.requires_grad = True
             # forward and get the embeddings
             emb = self.model.forward(imgs)
             if self.metric in ('C', 'N'):
@@ -481,7 +482,7 @@ class MadryInnerMax(object):
                 imgs = imgs.detach() + self.alpha * grad.sign()
             elif self.pgditer == 1:
                 imgs = imgs.detach() + self.eps * grad.sign()
-            delta = th.clamp(imgs - imgs_orig, min=-eps, max=+eps)
+            delta = th.clamp(imgs - imgs_orig, min=-self.eps, max=+self.eps)
             imgs = th.clamp(imgs + delta, min=0, max=1).detach()
             # report for the current step
             if self.verbose:
