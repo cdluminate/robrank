@@ -7,3 +7,6 @@ document.
 
 The tool for automatic doc generation is doxygen. Its config file is `Doxyfile`
 at the root directory of this project.
+
+There is a text-formated table showing reference performance of DML models
+in various configurations: [dmltab.txt](dmltab.txt)
