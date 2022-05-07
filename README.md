@@ -332,7 +332,8 @@ Some other tricks might or might not work are:
 (1) use [`rank_zero_only` option](https://github.com/PyTorchLightning/pytorch-lightning/issues/8821#issuecomment-902402784) for pytorch-lightning logger:
 `sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"` ;
 (2) [change the backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch distributed](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`;
-(3) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`.
+(3) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`;
+(4) change accelerator from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the parallel training again. Let it raise error. Change back to `ddp`. The A5000 is started working. I hate Nvidia for such weird issue.
 
 * Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
 
