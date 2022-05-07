@@ -148,6 +148,9 @@ Tips:
 1. When training DML models, export `FAISS_CPU=1` to disable NMI score
 calculation on GPU (faiss). This could save a little bit of video memory of you
 encounter CUDA OOM.
+2. To change the number of PGD iterations for creating adversarial examples during
+the training process, create an empty file to indicate the change. For example, 
+`touch override_pgditer_8`. See `robrank/configs/configs_rank.py` for detail.
 
 ### 1.2. Adversarial Attack
 
