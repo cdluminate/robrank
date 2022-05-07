@@ -479,9 +479,9 @@ class MadryInnerMax(object):
             grad = th.autograd.grad(loss, imgs,
                     retain_graph=False, create_graph=False)[0]
             if self.pgditer > 1:
-                imgs = imgs.detach() + self.alpha * grad.sign()
+                imgs = imgs.detach() - self.alpha * grad.sign()
             elif self.pgditer == 1:
-                imgs = imgs.detach() + self.eps * grad.sign()
+                imgs = imgs.detach() - self.eps * grad.sign()
             delta = th.clamp(imgs - imgs_orig, min=-self.eps, max=+self.eps)
             imgs = th.clamp(imgs + delta, min=0, max=1).detach()
             # report for the current step

@@ -136,9 +136,9 @@ class PositiveNegativePerplexing(object):
             grad = th.autograd.grad(loss, images,
                     retain_graph=False, create_graph=False)[0]
             if self.pgditer > 1:
-                images = images.detach() + self.alpha * grad.sign()
+                images = images.detach() - self.alpha * grad.sign()
             elif self.pgditer == 1:
-                images = images.detach() + self.eps * grad.sign()
+                images = images.detach() - self.eps * grad.sign()
             delta = th.clamp(images - images_orig, min=-self.eps, max=self.eps)
             images = th.clamp(images + delta, min=0., max=1.).detach()
             # report for the current iteration
