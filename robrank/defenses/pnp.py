@@ -115,7 +115,7 @@ class PositiveNegativePerplexing(object):
         impos = images[pos, :, :, :].clone().detach().to(self.device)
         imneg = images[neg, :, :, :].clone().detach().to(self.device)
         images_orig = th.cat([impos, imneg]).clone().detach()
-        images = th.cat([impos, imneg])
+        images = th.cat([impos, imneg]).detach()
         # start PGD
         self.model.eval()
         for iteration in range(self.pgditer):
@@ -139,8 +139,12 @@ class PositiveNegativePerplexing(object):
                 images = images.detach() - self.alpha * grad.sign()
             elif self.pgditer == 1:
                 images = images.detach() - self.eps * grad.sign()
-            delta = th.clamp(images - images_orig, min=-self.eps, max=self.eps)
-            images = th.clamp(images + delta, min=0., max=1.).detach()
+            #delta = th.clamp(images - images_orig, min=-self.eps, max=self.eps)
+            images = th.min(images, images_orig + self.eps)
+            images = th.max(images, images_orig - self.eps)
+            #images = th.clamp(images + delta, min=0., max=1.).detach()
+            images = th.clamp(images, min=0., max=1.)
+            images = images.clone().detach()
             # report for the current iteration
             if self.verbose:
                 print(f'(PGD)>', itermsg)
