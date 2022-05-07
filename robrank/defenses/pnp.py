@@ -142,7 +142,7 @@ class PositiveNegativePerplexing(object):
             #delta = th.clamp(images - images_orig, min=-self.eps, max=self.eps)
             images = th.min(images, images_orig + self.eps)
             images = th.max(images, images_orig - self.eps)
-            #images = th.clamp(images + delta, min=0., max=1.).detach()
+            #images = th.clamp(images_orig + delta, min=0., max=1.).detach()
             images = th.clamp(images, min=0., max=1.)
             images = images.clone().detach()
             # report for the current iteration
