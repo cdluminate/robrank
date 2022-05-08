@@ -366,21 +366,21 @@ It can be overriden by file indicators like `override_pgditer_8` as described
 in previous documentation. Time cost on MNIST and Fashion-MNIST is expected
 to be identical. For the rest datasets, time consumption order is CUB < CARS < SOP.
 
-| GPU Model | Number of GPUs | Config                              | eta | Time (roughly) |
-| ---       | ---            | ---                                 | --- | ---            |
-| Titan Xp  | 2 (DDP)        | `fashion:rc2f2:ptripletN`           | N/A | 2 min          |
-| Titan Xp  | 2 (DDP)        | `fashion:rc2f2p:ptripletN`          | 32  | 10 min         |
-| Titan Xp  | 2 (DDP)        | `cub:rres18:ptripletN`              | N/A | 30 min         |
-| RTX A5000 | 4 (DDP)        | `cub:rres18:ptripletN`              | N/A | 10 min         |
-| Titan Xp  | 2 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 420 min        |
-| RTX A5000 | 4 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 120 min        |
-| RTX A6000 | 2 (DDP)        | `cub:rres18p:ptripletN`             | 32  | 180 min        |
-| RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsm:ptripletN`       | 32  | 120 min        |
-| RTX A5000 | 4 (DDP)        | `cub:rres18ghmetsmi:ptripletN`      | 32  | 120 min        |
-| RTX A5000 | 4 (DDP)        | `cars:rres18:ptripletN`             | N/A | 15 min         |
-| RTX A5000 | 4 (DDP)        | `cars:rres18p:ptripletN`            | 32  | 150 min        |
-| RTX A5000 | 4 (DDP)        | `sop:rres18:ptripletN`              | N/A | 60 min         |
-| RTX A6000 | 2 (DDP)        | `sop:rres18p:ptripletN`             | 32  |                |
+| Config                              | eta | GPU Model | Number of GPUs | Time (roughly) |
+| ---                                 | --- | ---       | ---            | ---            |
+| `fashion:rc2f2:ptripletN`           | N/A | Titan Xp  | 2 (DDP)        | 2 min          |
+| `fashion:rc2f2p:ptripletN`          | 32  | Titan Xp  | 2 (DDP)        | 10 min         |
+| `cub:rres18:ptripletN`              | N/A | Titan Xp  | 2 (DDP)        | 30 min         |
+| `cub:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 10 min         |
+| `cub:rres18p:ptripletN`             | 32  | Titan Xp  | 2 (DDP)        | 420 min        |
+| `cub:rres18p:ptripletN`             | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
+| `cub:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        | 180 min        |
+| `cub:rres18ghmetsm:ptripletN`       | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
+| `cub:rres18ghmetsmi:ptripletN`      | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
+| `cars:rres18:ptripletN`             | N/A | RTX A5000 | 4 (DDP)        | 15 min         |
+| `cars:rres18p:ptripletN`            | 32  | RTX A5000 | 4 (DDP)        | 150 min        |
+| `sop:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 60 min         |
+| `sop:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        |                |
 
 * Q: Pretrained Weights?
 
