@@ -32,7 +32,7 @@ Note, the project name is Rob**R**ank, instead of Rob**B**ank.
 **Project Status:** Actively maintained.  
 **Install-RobRank-Python-Dependency:** `$ pip install -r requirements.txt`  
 **Try-It-on-Colab:** [[`fashion:rc2f2p:ptripletN`]](https://colab.research.google.com/drive/1QC34RCadO0QCj-YUsLTUI9_pzqn8nrBH?usp=sharing)
-[[`cub:rres18p:ptripletN`]](https://colab.research.google.com/drive/1jjDK4X64bIv7fLyMSlVs-btEMxxzgm6V?usp=sharing)
+[[`cars:rres18p:ptripletN`]](https://colab.research.google.com/drive/1jjDK4X64bIv7fLyMSlVs-btEMxxzgm6V?usp=sharing)
 
 **News and Updates**
 
