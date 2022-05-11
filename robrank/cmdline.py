@@ -131,6 +131,7 @@ class Swipe:
                 'eps=0.03137:alpha=0.011764:pgditer=32',
             ))],
     )
+    # rob28 profile: ERS score for 28x28 input setting, such as fashion, mnist
     profile_rob28 = (
         *[':'.join(x) for x in it.product(
             ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
@@ -145,7 +146,26 @@ class Swipe:
                 'eps=0.30196:alpha=0.011764:pgditer=32',
             ))],
     )
+    # rob224 profile: ERS score for 224x224 input setting, such as cub, cars, sop
     profile_rob224 = (
+        *[':'.join(x) for x in it.product(
+            ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('QA',), ('pm=+', 'pm=-'), ('M=1',), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+        *[':'.join(x) for x in it.product(
+            ('TMA', 'ES', 'LTM', 'GTM', 'GTT'), (
+                'eps=0.03137:alpha=0.011764:pgditer=32',
+            ))],
+    )
+    # cvpr profile: ERS score for 224x224 input setting, such as cub, cars, sop
+    # this profile is identical to the first version of rob224 profile
+    # this profile (rob224) is used for ERS calculation in CVPR2022 paper:
+    # "Enhancing Adversarial Robustness for Deep Metric Learning"
+    profile_cvpr = (
         *[':'.join(x) for x in it.product(
             ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
                 'eps=0.03137:alpha=0.011764:pgditer=32',
