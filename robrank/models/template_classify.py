@@ -15,11 +15,14 @@ limitations under the License.
 '''
 
 # pylint: disable=no-member
+from packaging import version
 import torch as th
 import torchvision as vision
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
 import pytorch_lightning as thl
+if version.parse(thl.__version__) >= version.parse('1.6.0'):
+    import pytorch_lightning.strategies as thlstra
 from pytorch_lightning.utilities.enums import DistributedType
 import os
 import re
@@ -138,8 +141,13 @@ class ClassifierTemplate(object):
         return {'loss': loss.item(), 'accuracy': accuracy}
 
     def validation_epoch_end(self, outputs: list):
-        if str(self._distrib_type) in (
-                'DistributedType.DDP', 'DistributedType.DDP2'):
+        if version.parse(thl.__version__) >= version.parse('1.6.0') and \
+                hasattr(self, 'strategy') and \
+                isinstance(self.strategy, thlstra.DDPStrategy):
+            if th.distributed.get_rank() != 0:
+                return
+        elif hasattr(self, '_distrib_type') and \
+                str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
             if th.distributed.get_rank() != 0:
                 return
         summary = {key: np.mean(tuple(
