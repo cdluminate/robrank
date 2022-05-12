@@ -1,9 +1,0 @@
-1. in defense/*.py
-
-   margin=configs.triplet.margin_euclidean \
-	if model.lossfunc._metric in ('E', 'N')
-
-   does not match the margin for triplet loss.
-   Preliminary experiment suggest slight influence
-   for amdsemi. Influence for ACT and EST is to be
-   investigated.

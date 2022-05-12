@@ -358,23 +358,26 @@ training is the ES attack from the [`AdvRank` class](https://github.com/cdlumina
 
 * Q: Training stuck at the end of validation with Nvidia A100, A6000, A5000, RTX3090, etc.
 
-A: Try to comment out `th.distributed.barrier()` from the code and run again.
-You can locate that barrier function in the code using ripgrep [].
-Some other tricks might or might not work are:
-(1) use [`rank_zero_only` option](https://github.com/PyTorchLightning/pytorch-lightning/issues/8821#issuecomment-902402784) for pytorch-lightning logger:
-`sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"` ;
-(2) [change the backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch distributed](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`;
-(3) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`;
-(4) change accelerator from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the parallel training again. Let it raise error. Change back to `ddp`. The A5000 is started working. I hate Nvidia for such weird issue;
-(5) [P2P GPU traffic will fail with IOMMU](https://github.com/pytorch/pytorch/issues/1637#issuecomment-338268158). Check the `p2pBandwithLatencyTest` cuda example and see whether it could run. If not, then it's not a pytorch issue. Disable `iommu` from kernel parameter should work. `GRUB_CMDLINE_LINUX="iommu=soft"` in `/etc/default/grub`. Run `sudo update-grub2` after edit. Linux kernel has a documentation describing [this iommu parameter](https://www.kernel.org/doc/Documentation/x86/x86_64/boot-options.txt). IOMMU group assignment can be found under `/sys/kernel/iommu_group`.
-(6) Use only even/odd numbered GPUs `CUDA_VISIBLE_DEVICES=1,3,5` instead of `CUDA_VISIBLE_DEVICES=1,2,3`. This works sometimes for at least the `p2pBandwithLatencyTest` test program.
-(7) turn off ACS in BIOS.
-(8) change `num_workers=0` for dataloader.
+A: I hate Nvidia for such weird issue. And the reason of distributed data parallel
+being stuck varies across different situations or machines.
+Here are a bunch of tricks that might or might not work:  
+(1) Comment out `th.distributed.barrier()` from the code and run again.
+You can locate that barrier function in the code using ripgrep. This seemed effective on RTX3090;  
+(2) use [`rank_zero_only` option](https://github.com/PyTorchLightning/pytorch-lightning/issues/8821#issuecomment-902402784) for pytorch-lightning logger:
+`sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"`;  
+(3) [change the distributed backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`;  
+(4) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`;  
+(5) change accelerator from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the training again and let it raise error.
+Then change back to `ddp` and the A5000 started working;  
+(6) [P2P GPU traffic will fail with IOMMU](https://github.com/pytorch/pytorch/issues/1637#issuecomment-338268158). Check the `p2pBandwithLatencyTest` cuda example and see whether it could run. If not, then it's not a pytorch issue. Disable `iommu` from kernel parameter should work. `GRUB_CMDLINE_LINUX="iommu=soft"` in `/etc/default/grub`. Run `sudo update-grub2` after edit. Linux kernel has a documentation describing [this iommu parameter](https://www.kernel.org/doc/Documentation/x86/x86_64/boot-options.txt). IOMMU group assignment can be found under `/sys/kernel/iommu_group`;  
+(7) Use only even/odd numbered GPUs `CUDA_VISIBLE_DEVICES=1,3,5` instead of `CUDA_VISIBLE_DEVICES=1,2,3`. This works sometimes for at least the `p2pBandwithLatencyTest` test program;  
+(8) turn off ACS in BIOS;  
+(9) change `num_workers=0` for dataloader.  
 
 * Q: Maxepoch is 16 or 150 in the paper, but 8 or 75 in the code?
 
 A: They are equivalent due to the implementation details in the dataset
-sampler. It is a fixable problem (but not necessary). See issue #9.
+sampler. It is a fixable problem (but not necessary). See [issue #9](https://github.com/cdluminate/robrank/issues/9).
 
 * Q: Training time?
 
@@ -393,6 +396,7 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | `fashion:rc2f2ghmetsmi:ptripletN`   | 32  | RTX A5000 | 4 (DDP)        | 8 min          |
 | `cub:rres18:ptripletN`              | N/A | Titan Xp  | 2 (DDP)        | 30 min         |
 | `cub:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 10 min         |
+` `cub:rres18p:ptripletN`             | 8   | Titan Xp  | 2 (DDP)        |                |
 | `cub:rres18p:ptripletN`             | 32  | Titan Xp  | 2 (DDP)        | 420 min        |
 | `cub:rres18p:ptripletN`             | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
 | `cub:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        | 180 min        |
@@ -400,7 +404,9 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | `cub:rres18ghmetsmi:ptripletN`      | 32  | Titan Xp  | 2 (DDP)        | 470 min        |
 | `cub:rres18ghmetsmi:ptripletN`      | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
 | `cars:rres18:ptripletN`             | N/A | RTX A5000 | 4 (DDP)        | 15 min         |
+` `cars:rres18p:ptripletN`            | 8   | Titan Xp  | 2 (DDP)        |                |
 | `cars:rres18p:ptripletN`            | 32  | RTX A5000 | 4 (DDP)        | 150 min        |
+| `cars:rres18ghmetsmi:ptripletN`     | 32  | Titan Xp  | 2 (DDP)        | 530 min        |
 | `sop:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 60 min         |
 | `sop:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        |                |
 
