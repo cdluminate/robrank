@@ -1,1 +1,2 @@
-1. transformer backbone?
+* transformer backbone?
+* deprecate the `wantsgrad` attribute
