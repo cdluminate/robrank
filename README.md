@@ -245,18 +245,19 @@ exact profile. Read the comments in `tools/pjswipe.py` for details.
 
 ### 2.2. Tested Platform
 
-Tested Software:
+Tested Software versions:
 
 ```
-OS: Debian unstable (May 2021), Ubuntu LTS
-Python: 3.8.5 (anaconda)
-PyTorch: 1.7.1, 1.8.1
+OS: Debian unstable, Debian Bullseye, Ubuntu 20.04 LTS, Ubuntu 16.04 LTS
+Python (anaconda distribution): 3.8.5, 3.9.X
+PyTorch: 1.7.1, 1.8.1, 1.11.0
+PyTorch-Lightning: see requirements.txt
 ```
 
 Mainly Tested Hardware:
 ```
-CPU: Intel Xeon 6226R
-GPU: Nvidia RTX3090 (24GB)
+CPU: Intel Xeon Family
+GPU: Nvidia GTX1080Ti, Titan Xp, RTX3090, A5000, A6000, A100
 ```
 With 8 RTX3090 GPUs, most experiments can be finished within 1 day.
 With older configurations (such as `4* GTX1080Ti`), most experiments can be
