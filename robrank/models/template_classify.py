@@ -141,17 +141,21 @@ class ClassifierTemplate(object):
         return {'loss': loss.item(), 'accuracy': accuracy}
 
     def validation_epoch_end(self, outputs: list):
+        summary = {key: np.mean(tuple(
+            x[key] for x in outputs)) for key in outputs[0].keys()}
         if version.parse(thl.__version__) >= version.parse('1.6.0') and \
-                hasattr(self, 'strategy') and \
-                isinstance(self.strategy, thlstra.DDPStrategy):
+                hasattr(self.trainer, 'strategy') and \
+                isinstance(self.trainer.strategy, thlstra.DDPStrategy):
+            for key in summary.keys():
+                tmp = th.tensor(summary[key]).to(self.device)
+                th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
+                summary[key] = tmp.item() / th.distributed.get_world_size()
             if th.distributed.get_rank() != 0:
                 return
         elif hasattr(self, '_distrib_type') and \
                 str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
             if th.distributed.get_rank() != 0:
                 return
-        summary = {key: np.mean(tuple(
-            x[key] for x in outputs)) for key in outputs[0].keys()}
         c.print(f'[yellow]\nValidation |  loss= {summary["loss"]:.5f} '
                 + f'accuracy= {summary["accuracy"]:.5f}')
 

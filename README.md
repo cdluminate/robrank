@@ -367,7 +367,7 @@ You can locate that barrier function in the code using ripgrep. This seemed effe
 `sed -i robrank/models/template_rank.py -e "s/self.log(\(.*\))/self.log(\1, rank_zero_only=True)/g"`;  
 (3) [change the distributed backend](https://github.com/PyTorchLightning/pytorch-lightning/discussions/6509) of [pytorch](https://pytorch.org/docs/stable/distributed.html#debugging-torch-distributed-applications): `export PL_TORCH_DISTRIBUTED_BACKEND=gloo`;  
 (4) disable P2P feature for NCCL. `export NCCL_P2P_DISABLE=1`;  
-(5) change accelerator from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the training again and let it raise error.
+(5) change strategy from `ddp` to `ddp_spawn` in `robrank/cmdline.py`. Run the training again and let it raise error.
 Then change back to `ddp` and the A5000 started working;  
 (6) [P2P GPU traffic will fail with IOMMU](https://github.com/pytorch/pytorch/issues/1637#issuecomment-338268158). Check the `p2pBandwithLatencyTest` cuda example and see whether it could run. If not, then it's not a pytorch issue. Disable `iommu` from kernel parameter should work. `GRUB_CMDLINE_LINUX="iommu=soft"` in `/etc/default/grub`. Run `sudo update-grub2` after edit. Linux kernel has a documentation describing [this iommu parameter](https://www.kernel.org/doc/Documentation/x86/x86_64/boot-options.txt). IOMMU group assignment can be found under `/sys/kernel/iommu_group`;  
 (7) Use only even/odd numbered GPUs `CUDA_VISIBLE_DEVICES=1,3,5` instead of `CUDA_VISIBLE_DEVICES=1,2,3`. This works sometimes for at least the `p2pBandwithLatencyTest` test program;  
