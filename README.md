@@ -338,6 +338,22 @@ Bibtex of [M. Zhou, et al. "Adversarial Ranking Attack and Defense," ECCV'2020.]
 
 ## Frequently Asked Questions
 
+* Q: Concrete code position of the defense methods?
+
+A: As you may have find it ... there are lots of leftover attemps towards a
+better defense in `robrank/defenses`. And renames during research process
+also results in some inconsistency. So I'd better directly point out the
+code position here:  
+(1) `hm_training_step` in [`defenses/amd.py`](https://github.com/cdluminate/robrank/blob/main/robrank/defenses/amd.py)
+is the Hardness Manipulation (HM) defense. The function for creating adversarial
+examples for adversarial training is `MadryInnerMax.HardnessManipulate` in the same file.  
+(2) `pnp_training_step` in [`defenses/pnp.py`](https://github.com/cdluminate/robrank/blob/main/robrank/defenses/pnp.py)
+is the Anti-Collapse Triplet (ACT) defense. The function for creating adversarial examples for adversarial
+training is `PositiveNegativePerplexing.pncollapse` in the same file.  
+(3) `est_training_step` in [`defenses/est.py`](https://github.com/cdluminate/robrank/blob/main/robrank/defenses/est.py)
+is the Embedding-Shift Triplet (EST) defense. The function for creating adversarial examples for adversarial
+training is the ES attack from the [`AdvRank` class](https://github.com/cdluminate/robrank/blob/main/robrank/attacks/advrank.py).  
+
 * Q: Training stuck at the end of validation with Nvidia A100, A6000, A5000, RTX3090, etc.
 
 A: Try to comment out `th.distributed.barrier()` from the code and run again.
