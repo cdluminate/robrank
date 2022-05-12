@@ -27,10 +27,10 @@ class TestNet(thl.LightningModule):
         self.dataset = 'mnist'
         self.loss = 'ptripletN'
         self.lossfunc = ptripletN()
-        self.is_advtrain_pnp = True
         self.config = rc2f2(self.dataset, self.loss)
         self.metric = self.lossfunc.determine_metric()
         self.datasetspec = self.lossfunc.datasetspec()
+        #self.is_advtrain_pnp = True
     def forward(self, x):
         x = th.nn.Flatten()(x)
         return self.fc(x)
@@ -41,13 +41,4 @@ def test_testnet():
     images = th.rand(10, 1, 28, 28)
     output = model.forward(images)
     loss = output.mean()
-    loss.backward()
-
-
-@pytest.mark.skip(reason='this is test helper')
-def test_xxx_training_step(training_step: callable):
-    model = TestNet()
-    images = th.rand(10, 1, 28, 28)
-    labels = th.stack([th.arange(5), th.arange(5)]).T.flatten()
-    loss = training_step(model, (images, labels), 0)
     loss.backward()
