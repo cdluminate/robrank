@@ -364,7 +364,8 @@ class MetricBase(thl.LightningModule):
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
         if version.parse(thl.__version__) >= version.parse('1.6.0') and \
-                isinstance(self.strategy, thlstra.DDPStrategy):
+                hasattr(self.trainer, 'strategy') and \
+                isinstance(self.trainer.strategy, thlstra.DDPStrategy):
             '''
             This branch is for pytorch-lightining >= 1.6.0
             '''
@@ -373,7 +374,11 @@ class MetricBase(thl.LightningModule):
                 tmp = th.tensor(summary[key]).to(self.device)
                 th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
                 summary[key] = tmp.item() / th.distributed.get_world_size()
-        elif str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+            #th.distributed.barrier()  # rank specific operation needs a barrier
+            #if th.distributed.get_rank() != 0:
+            #    return None
+        elif hasattr(self, '_distrib_type') and \
+                str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
             '''
             This branch is for pytorch-lightining < 1.6.0, e.g. 1.5.9
             '''
