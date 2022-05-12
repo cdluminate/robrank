@@ -412,9 +412,9 @@ class Train:
         c.status('[white on magenta]>_< Initializing Optimizer ...')
         other_options = {}
         if ag.dp:
-            other_options['accelerator'] = 'dp'
+            other_options['strategy'] = 'dp'
         elif ag.gpus > 1:
-            other_options['accelerator'] = 'ddp'
+            other_options['strategy'] = 'ddp'
         else:
             pass
         if ag.clip > 0.0:

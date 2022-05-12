@@ -15,11 +15,14 @@ limitations under the License.
 '''
 
 # pylint: disable=no-member
+from packaging import version
 import torch as th
 import torchvision as vision
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
 import pytorch_lightning as thl
+if version.parse(thl.__version__) >= version.parse('1.6.0'):
+    import pytorch_lightning.strategies as thlstra
 from pytorch_lightning.utilities.enums import DistributedType
 import os
 import re
@@ -138,12 +141,21 @@ class ClassifierTemplate(object):
         return {'loss': loss.item(), 'accuracy': accuracy}
 
     def validation_epoch_end(self, outputs: list):
-        if str(self._distrib_type) in (
-                'DistributedType.DDP', 'DistributedType.DDP2'):
-            if th.distributed.get_rank() != 0:
-                return
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
+        if version.parse(thl.__version__) >= version.parse('1.6.0') and \
+                hasattr(self.trainer, 'strategy') and \
+                isinstance(self.trainer.strategy, thlstra.DDPStrategy):
+            for key in summary.keys():
+                tmp = th.tensor(summary[key]).to(self.device)
+                th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
+                summary[key] = tmp.item() / th.distributed.get_world_size()
+            if th.distributed.get_rank() != 0:
+                return
+        elif hasattr(self, '_distrib_type') and \
+                str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+            if th.distributed.get_rank() != 0:
+                return
         c.print(f'[yellow]\nValidation |  loss= {summary["loss"]:.5f} '
                 + f'accuracy= {summary["accuracy"]:.5f}')
 

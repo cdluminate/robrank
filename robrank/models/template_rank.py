@@ -16,10 +16,14 @@ limitations under the License.
 '''
 
 # pylint: disable=no-member
+from packaging import version
 import torch as th
 import torchvision as vision
 from torch.utils.data import DataLoader
 import pytorch_lightning as thl
+if version.parse(thl.__version__) >= version.parse("1.6.0"):
+    import pytorch_lightning.strategies as thlstra
+import pytorch_lightning
 from pytorch_lightning.utilities.enums import DistributedType
 import os
 import re
@@ -359,8 +363,25 @@ class MetricBase(thl.LightningModule):
         # reduce:mean the summary of every process
         summary = {key: np.mean(tuple(
             x[key] for x in outputs)) for key in outputs[0].keys()}
-        if str(self._distrib_type) in (
-                'DistributedType.DDP', 'DistributedType.DDP2'):
+        if version.parse(thl.__version__) >= version.parse('1.6.0') and \
+                hasattr(self.trainer, 'strategy') and \
+                isinstance(self.trainer.strategy, thlstra.DDPStrategy):
+            '''
+            This branch is for pytorch-lightining >= 1.6.0
+            '''
+            #th.distributed.barrier()
+            for key in summary.keys():
+                tmp = th.tensor(summary[key]).to(self.device)
+                th.distributed.all_reduce(tmp, op=th.distributed.ReduceOp.SUM)
+                summary[key] = tmp.item() / th.distributed.get_world_size()
+            #th.distributed.barrier()  # rank specific operation needs a barrier
+            #if th.distributed.get_rank() != 0:
+            #    return None
+        elif hasattr(self, '_distrib_type') and \
+                str(self._distrib_type) in ('DistributedType.DDP', 'DistributedType.DDP2'):
+            '''
+            This branch is for pytorch-lightining < 1.6.0, e.g. 1.5.9
+            '''
             th.distributed.barrier()
             for key in summary.keys():
                 tmp = th.tensor(summary[key]).to(self.device)
