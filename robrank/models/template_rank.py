@@ -494,7 +494,7 @@ class MetricTemplate224(MetricBase):
     do_svd = False
     is_inceptionbn = False
 
-    def __create_config_backbone(self, name: str):
+    def __create_config_backbone(self, name: str, dataset: str, loss: str):
         '''
         input: specified backbone name
         result: populate self.config and self.backbone instances
@@ -607,7 +607,7 @@ class MetricTemplate224(MetricBase):
 
     def __init__(self, *, dataset: str, loss: str):
         super().__init__()
-        self.__create_config_backbone(self.BACKBONE)
+        self.__create_config_backbone(self.BACKBONE, dataset, loss)
 
         # add attributes
         assert(dataset in self.config.allowed_datasets)
