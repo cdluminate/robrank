@@ -103,6 +103,7 @@ from . import ribnp
 
 # [group transformers]
 from . import rswint  # swin tiny  16GB
+from . import rswintp
 from . import rswins  # swin small 24GB
 from . import rswinb  # swin base  32GB
 from . import rswinl  # swin large 45GB
