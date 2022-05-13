@@ -494,73 +494,76 @@ class MetricTemplate224(MetricBase):
     do_svd = False
     is_inceptionbn = False
 
-    def __init__(self, *, dataset: str, loss: str):
-        super().__init__()
-        # configuration and backbone
-        if self.BACKBONE == 'rres18':
+    def __create_config_backbone(self, name: str):
+        '''
+        input: specified backbone name
+        result: populate self.config and self.backbone instances
+        '''
+        if name == 'rres18':
             self.config = configs.rres18(dataset, loss)
             self.backbone = vision.models.resnet18(pretrained=True)
-        elif self.BACKBONE == 'rres50':
+        elif name == 'rres50':
             self.config = configs.rres50(dataset, loss)
             self.backbone = vision.models.resnet50(pretrained=True)
-        elif self.BACKBONE == 'rres101':
+        elif name == 'rres101':
             self.config = configs.rres50(dataset, loss)
             self.backbone = vision.models.resnet101(pretrained=True)
-        elif self.BACKBONE == 'rres152':
+        elif name == 'rres152':
             self.config = configs.rres50(dataset, loss)
             self.backbone = vision.models.resnet152(pretrained=True)
-        elif self.BACKBONE == 'rmnas05':
+        elif name == 'rmnas05':
             self.config = configs.rmnas(dataset, loss)
             self.backbone = vision.models.mnasnet0_5(pretrained=True)
-        elif self.BACKBONE == 'rmnas10':
+        elif name == 'rmnas10':
             self.config = configs.rmnas(dataset, loss)
             self.backbone = vision.models.mnasnet1_0(pretrained=True)
-        elif self.BACKBONE == 'rmnas13':
+        elif name == 'rmnas13':
             self.config = configs.rmnas(dataset, loss)
             self.backbone = vision.models.mnasnet1_3(pretrained=True)
-        elif self.BACKBONE == 'reffb0':
+        elif name == 'reffb0':
             self.config = configs.reffb0(dataset, loss)
             self.backbone = EfficientNet.from_pretrained('efficientnet-b0')
-        elif self.BACKBONE == 'reffb4':
+        elif name == 'reffb4':
             self.config = configs.reffb4(dataset, loss)
             self.backbone = EfficientNet.from_pretrained('efficientnet-b4')
-        elif self.BACKBONE == 'ribn':
+        elif name == 'ribn':
             self.config = configs.ribn(dataset, loss)
-            self.backbone = ptm.__dict__['bninception'](num_classes=1000,
-                                                        pretrained='imagenet')
-        elif self.BACKBONE == 'rswint':
+            self.backbone = ptm.__dict__['bninception'](
+                    num_classes=1000, pretrained='imagenet')
+        elif name == 'rswint':
             # SwinT-Tiny 224 ImageNet1k
             self.config = configs.rswint(dataset, loss)
             self.backbone = timm.create_model(
                     'swin_tiny_patch4_window7_224', pretrained=True)
         else:
-            raise ValueError()
-        assert(dataset in self.config.allowed_datasets)
-        self.dataset = dataset
-        assert(loss in self.config.allowed_losses)
-        self.loss = loss
-        self.lossfunc = getattr(losses, loss)()
-        self.metric = self.lossfunc.determine_metric()
-        self.datasetspec = self.lossfunc.datasetspec()
-        # surgery
-        if re.match(r'rres.*', self.BACKBONE):
-            emb_dim = 512 if '18' in self.BACKBONE else 2048
+            raise ValueError(f'unrecognized backbone {name}')
+
+
+    def __perform_backbone_surgery(self, name: str):
+        '''
+        perform surgery for deep metric learning
+        because the networks are originally for classification
+
+        needs self.config to be populated
+        '''
+        if re.match(r'rres.*', name):
+            emb_dim = 512 if '18' in name else 2048
             if self.config.embedding_dim > 0:
                 self.backbone.fc = th.nn.Linear(
                     emb_dim, self.config.embedding_dim)
             else:
                 self.backbone.fc = th.nn.Identity()
-        elif re.match(r'rmnas.*', self.BACKBONE):
+        elif re.match(r'rmnas.*', name):
             if self.config.embedding_dim > 0:
                 self.backbone.classifier = th.nn.Linear(
                     1280, self.config.embedding_dim)
             else:
                 self.backbone.classifier = th.nn.Identity()
-        elif re.match(r'reff.*', self.BACKBONE):
+        elif re.match(r'reff.*', name):
             if self.config.embedding_dim > 0:
-                if 'b0' in self.BACKBONE:
+                if 'b0' in name:
                     emb_dim = 1280
-                elif 'b7' in self.BACKBONE:
+                elif 'b7' in name:
                     emb_dim = 2560
                 self.backbone._modules['_dropout'] = th.nn.Identity()
                 self.backbone._modules['_fc'] = th.nn.Linear(
@@ -570,13 +573,13 @@ class MetricTemplate224(MetricBase):
             else:
                 self.backbone._modules['_dropout'] = th.nn.Identity()
                 self.backbone._modules['_fc'] = th.nn.Identity()
-        elif re.match(r'ribn.*', self.BACKBONE):
+        elif re.match(r'ribn.*', name):
             assert(self.config.embedding_dim > 0)
             self.backbone.global_pool = th.nn.AdaptiveAvgPool2d(1)
             self.backbone.last_linear = th.nn.Linear(
                 self.backbone.last_linear.in_features,
                 self.config.embedding_dim)
-        elif re.match(r'rswint.*', self.BACKBONE):
+        elif re.match(r'rswint.*', name):
             assert(self.config.embedding_dim > 0)
             self.backbone.head = th.nn.Linear(768, self.config.embedding_dim)
         else:
@@ -590,6 +593,24 @@ class MetricTemplate224(MetricBase):
             # self.backbone.apply(__freeze)
             for mod in self.backbone.modules():
                 __freeze(mod)
+
+
+    def __init__(self, *, dataset: str, loss: str):
+        super().__init__()
+        self.__create_config_backbone(self.BACKBONE)
+
+        # add attributes
+        assert(dataset in self.config.allowed_datasets)
+        self.dataset = dataset
+        assert(loss in self.config.allowed_losses)
+        self.loss = loss
+        self.lossfunc = getattr(losses, loss)()
+        self.metric = self.lossfunc.determine_metric()
+        self.datasetspec = self.lossfunc.datasetspec()
+
+        # perform surgery for deep metric learning
+        self.__perform_backbone_surgery(self.BACKBONE)
+
         # for adversarial attack
         self.wantsgrad = False
         # Dump configurations
