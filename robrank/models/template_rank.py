@@ -38,6 +38,7 @@ from ..attacks import AdvRank
 from .svdreg import svdreg
 from tqdm import tqdm
 import functools
+import timm
 from .. import losses
 from .. import defenses
 #
