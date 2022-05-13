@@ -1,0 +1,21 @@
+format:
+rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
+              robXXX | CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
+===============================================================================
+ Stanford Online Product Ranking 224x224 (sop:.*)
+===============================================================================
+
+! Adversarial training on this dataset can be very time-consuming. It may take
+  ~3 days to train an ResNet50 with ACT defense with 4* RTX3090.
+
+rmnas10:ptripletN    │ r@M= 286.5 r@1= 0.607 r@2= 0.658 mAP= 0.361 mAP@R = 0.184 NMI= 0.869
+rmnas10:ptripletE    │ r@M= 116.6 r@1= 0.706 r@2= 0.755 mAP= 0.466 mAP@R = 0.241 NMI= 0.883
+rmnas10:ptripletC    │ r@M= 173.1 r@1= 0.668 r@2= 0.720 mAP= 0.422 mAP@R = 0.216 NMI= 0.875
+
+rmnas10d:ptripletN
+rmnas10d:ptripletE
+rmnas10d:ptripletC
+
+rmnas10p:ptripletN
+rmnas10p:ptripletE
+rmnas10p:ptripletC

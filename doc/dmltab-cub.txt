@@ -1,0 +1,41 @@
+robXXX columns: CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
+
+format:
+rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800 NMI= 0.775
+              robXXX | CA+  CA-  QA+  QA-  TMA  ESD  ESR  LTM  GTM  GTT
+===============================================================================
+ CUB-200-2011 Ranking 224x224 (cub:.*)
+===============================================================================
+
+! We use MnasNet-1.0 because it is more computationally efficient than ResNet18.
+  This allows faster pace of experiment.
+
+rmnas10:pcontrastN   │ r@M= 5.0 r@1= 0.637 r@2= 0.747 mAP= 0.339 mAP@R = 0.449 NMI= 0.667
+rmnas10:pdcontrastN *│ r@M= 5.1 r@1= 0.659 r@2= 0.762 mAP= 0.343 mAP@R = 0.461 NMI= 0.682
+rmnas10:pmtripletN   │ r@M= 6.6 r@1= 0.625 r@2= 0.736 mAP= 0.332 mAP@R = 0.435 NMI= 0.656
+rmnas10:pstripletN   │ r@M= 4.4 r@1= 0.641 r@2= 0.751 mAP= 0.331 mAP@R = 0.440 NMI= 0.685
+rmnas10:pdtripletN  *│ r@M= 4.8 r@1= 0.655 r@2= 0.759 mAP= 0.354 mAP@R = 0.469 NMI= 0.693
+rmnas10:pDtripletN  *│ r@M= 5.3 r@1= 0.659 r@2= 0.767 mAP= 0.354 mAP@R = 0.471 NMI= 0.697
+rmnas10:pquadN       │ r@M= 5.4 r@1= 0.606 r@2= 0.725 mAP= 0.311 mAP@R = 0.411 NMI= 0.643
+rmnas10:pdquadN     *│ r@M= 4.8 r@1= 0.650 r@2= 0.759 mAP= 0.351 mAP@R = 0.463 NMI= 0.691
+rmnas10:pmsN        *│ r@M= 4.9 r@1= 0.653 r@2= 0.755 mAP= 0.345 mAP@R = 0.460 NMI= 0.688
+rmnas10:pmarginN     │ r@M= 5.2 r@1= 0.638 r@2= 0.748 mAP= 0.343 mAP@R = 0.453 NMI= 0.668
+rmnas10:pdmarginN   *│ r@M= 5.3 r@1= 0.656 r@2= 0.760 mAP= 0.340 mAP@R = 0.460 NMI= 0.679
+rmnas10:pangularN    │ r@M= 6.8 r@1= 0.623 r@2= 0.728 mAP= 0.324 mAP@R = 0.425 NMI= 0.657
+rmnas10:pncaN          Collapse.
+rmnas10:psnrN        │ r@M= 6.3 r@1= 0.622 r@2= 0.737 mAP= 0.321 mAP@R = 0.420 NMI= 0.665
+rmnas10:pgliftE      │ r@M= 4.9 r@1= 0.629 r@2= 0.741 mAP= 0.328 mAP@R = 0.430 NMI= 0.674
+rmnas10:pnpairE      │ r@M= 4.2 r@1= 0.635 r@2= 0.747 mAP= 0.327 mAP@R = 0.435 NMI= 0.688
+rmnas10:pmsC         │ r@M= 5.1 r@1= 0.647 r@2= 0.758 mAP= 0.347 mAP@R = 0.462 NMI= 0.680
+
+rmnas10:ptripletN    │ r@M= 5.6 r@1= 0.599 r@2= 0.715 mAP= 0.303 mAP@R = 0.405 NMI= 0.634
+rmnas10:ptripletE    │ r@M= 4.4 r@1= 0.607 r@2= 0.722 mAP= 0.303 mAP@R = 0.407 NMI= 0.653
+rmnas10:ptripletC    │ r@M= 5.3 r@1= 0.606 r@2= 0.719 mAP= 0.300 mAP@R = 0.401 NMI= 0.652
+
+rmnas10d:ptripletN
+rmnas10d:ptripletE
+rmnas10d:ptripletC
+
+rmnas10p:ptripletN
+rmnas10p:ptripletE
+rmnas10p:ptripletC
