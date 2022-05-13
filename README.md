@@ -399,7 +399,7 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | `cub:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 10 min         |
 | `cub:rres18:ptripletN`              | N/A | RTX A6000 | 2 (DDP)        | 14 min         |
 | `cub:rres18p:ptripletN`             | 8   | Titan Xp  | 2 (DDP)        | 130 min        |
-| `cub:rres18p:ptripletN`             | 8   | RTX A5000 | 2 (DDP)        |     min        |
+| `cub:rres18p:ptripletN`             | 8   | RTX A5000 | 2 (DDP)        | 70 min         |
 | `cub:rres18p:ptripletN`             | 8   | RTX A6000 | 2 (DDP)        | 60 min         |
 | `cub:rres18p:ptripletN`             | 32  | Titan Xp  | 2 (DDP)        | 420 min        |
 | `cub:rres18p:ptripletN`             | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
