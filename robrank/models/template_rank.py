@@ -535,6 +535,10 @@ class MetricTemplate224(MetricBase):
             self.config = configs.rswint(dataset, loss)
             self.backbone = timm.create_model(
                     'swin_tiny_patch4_window7_224', pretrained=True)
+        elif name == 'rswins':
+            self.config = configs.rswint(dataset, loss)
+            self.backbone = timm.create_model(
+                    'swin_small_patch4_window7_224', pretrained=True)
         elif name == 'rswinb':
             self.config = configs.rswint(dataset, loss)
             self.backbone = timm.create_model(
