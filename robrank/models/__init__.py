@@ -102,7 +102,9 @@ from . import ribnd
 from . import ribnp
 
 # [group transformers]
-from . import rswint
+from . import rswint  # swin tiny 16GB
+from . import rswinb  # swin base
+from . import rswinl  # swin large
 
 ###############################################################################
 # Hybrid Metric+Classification models

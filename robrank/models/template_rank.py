@@ -535,6 +535,14 @@ class MetricTemplate224(MetricBase):
             self.config = configs.rswint(dataset, loss)
             self.backbone = timm.create_model(
                     'swin_tiny_patch4_window7_224', pretrained=True)
+        elif name == 'rswinb':
+            self.config = configs.rswint(dataset, loss)
+            self.backbone = timm.create_model(
+                    'swin_base_patch4_window7_224', pretrianed=True)
+        elif name == 'rswinl':
+            self.config = configs.rswint(dataset, loss)
+            self.backbone = timm.create_model(
+                    'swin_large_patch4_window7_224', pretrained=True)
         else:
             raise ValueError(f'unrecognized backbone {name}')
 
@@ -579,9 +587,11 @@ class MetricTemplate224(MetricBase):
             self.backbone.last_linear = th.nn.Linear(
                 self.backbone.last_linear.in_features,
                 self.config.embedding_dim)
-        elif re.match(r'rswint.*', name):
+        elif re.match(r'rswin.*', name):
+            # swin transformer family
             assert(self.config.embedding_dim > 0)
-            self.backbone.head = th.nn.Linear(768, self.config.embedding_dim)
+            self.backbone.head = th.nn.Linear(self.backbone.head.in_features,
+                    self.config.embedding_dim)
         else:
             raise NotImplementedError('how to perform surgery for such net?')
         # Freeze BatchNorm2d (ICML20: revisiting ... in DML)
