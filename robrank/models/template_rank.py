@@ -527,6 +527,11 @@ class MetricTemplate224(MetricBase):
             self.config = configs.ribn(dataset, loss)
             self.backbone = ptm.__dict__['bninception'](num_classes=1000,
                                                         pretrained='imagenet')
+        elif self.BACKBONE == 'rswint':
+            # SwinT-Tiny 224 ImageNet1k
+            self.config = configs.rswint(dataset, loss)
+            self.backbone = timm.create_model(
+                    'swin_tiny_patch4_window7_224', pretrained=True)
         else:
             raise ValueError()
         assert(dataset in self.config.allowed_datasets)
@@ -570,6 +575,9 @@ class MetricTemplate224(MetricBase):
             self.backbone.last_linear = th.nn.Linear(
                 self.backbone.last_linear.in_features,
                 self.config.embedding_dim)
+        elif re.match(r'rswint.*', self.BACKBONE):
+            assert(self.config.embedding_dim > 0)
+            self.backbone.head = th.nn.Linear(768, self.config.embedding_dim)
         else:
             raise NotImplementedError('how to perform surgery for such net?')
         # Freeze BatchNorm2d (ICML20: revisiting ... in DML)

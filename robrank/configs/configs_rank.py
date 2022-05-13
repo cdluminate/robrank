@@ -222,6 +222,20 @@ class rmnas(__ranking_model_224x224_icml):
 
 
 @dataclass
+class rswint(__ranking_model_224x224_icml):
+    maxepoch: int = 150
+    loader_num_workers: int = min(8, mp.cpu_count())
+    lr: float = 1e-5  # [lock]
+    weight_decay: float = 4e-4  # [lock] 2002.08473
+    embedding_dim: int = 512
+    freeze_bn: bool = True
+    valbatchsize: int = 112
+
+    def __init__(self, dataset, loss):
+        super().__init__(dataset, loss)
+
+
+@dataclass
 class ribn(__ranking_model_224x224_icml):
     maxepoch: int = 150
     loader_num_workers: int = min(8, mp.cpu_count())

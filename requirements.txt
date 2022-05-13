@@ -16,6 +16,7 @@ rich
 scikit-learn
 scipy
 termcolor
+timm
 torch (>= 1.7.0)
 torchvision
 tqdm

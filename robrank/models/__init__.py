@@ -101,6 +101,9 @@ from . import ribn
 from . import ribnd
 from . import ribnp
 
+# [group transformers]
+from . import rswint
+
 ###############################################################################
 # Hybrid Metric+Classification models
 ###############################################################################
