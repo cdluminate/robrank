@@ -52,6 +52,14 @@ rswint:pstripletN    │ r@M= 3.4 r@1= 0.763 r@2= 0.851 mAP= 0.453 mAP@R = 0.595
 rswint:pdtripletN    │ r@M= 3.8 r@1= 0.766 r@2= 0.846 mAP= 0.461 mAP@R = 0.604 NMI= 0.773
 rswint:phtripletN    │ r@M= 3.9 r@1= 0.762 r@2= 0.845 mAP= 0.457 mAP@R = 0.599 NMI= 0.777
 
+rswintp:ptripletN            │ r@1= 0.372 r@2= 0.489 mAP= 0.167 mAP@R = 0.210 NMI= 0.487
+eta=8                 rob224 │ CA+  CA-  QA+  QA-  TMA   ESD   ESR  LTM  GTM  GTT  ERS
+                               19.9 35.1 20.0 25.9 0.485 0.779 15.4 13.7 20.7 1.4  38.3
+
+rswintghmetsmi:ptripletN     | r@1 49.6   r@2 62.2   mAP 23.5   mAP@R 31.2    NMI 58.2
+eta=8                 rob224 │ CA+  CA-  QA+  QA-  TMA   ESD   ESR  LTM  GTM  GTT  ERS
+                               22.7 36.3 22.3 26.0 0.541 0.818 11.4 9.2 24.1 2.0 37.9
+
 --- Backbone: SwinT-Small -----------------------------------------------------
 
 rswins:pstripletN    │ r@M= 3.0 r@1= 0.766 r@2= 0.859 mAP= 0.462 mAP@R = 0.604 NMI= 0.762
