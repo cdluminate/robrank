@@ -5,6 +5,11 @@ rc2f2:pcontrastN     │ r@M= 4.5 r@1= 0.858 r@2= 0.915 mAP= 0.752 mAP@R = 0.800
  Stanford Cars 196 Dataset 224x224 (sop:.*)
 ===============================================================================
 
-rswintp:ptripletN    | r@1 56.6 r@2 67.3 mAP 18.3 mAP@R 31.8 NMI 51.0 
-              rob224 | CA+  CA-  QA+  QA-  TMA   ESD   ESR  LTM  GTM  GTT  ERS
-                       20.8 25.0 21.1 22.4 0.410 0.709 24.4 19.8 26.8 1.6  43.3
+rswintp:ptripletN         | r@1 56.6 r@2 67.3 mAP 18.3 mAP@R 31.8 NMI 51.0 
+ eta=8             rob224 | CA+  CA-  QA+  QA-  TMA   ESD   ESR  LTM  GTM  GTT  ERS
+                            20.8 25.0 21.1 22.4 0.410 0.709 24.4 19.8 26.8 1.6  43.3
+
+rswintghmetsmi:ptripletN  | r@1 78.8 r@2 87.4 mAP 32.0 mAP@R 55.3 NMI 67.1 
+ eta=8             rob224 | CA+  CA-  QA+  QA-  TMA   ESD   ESR  LTM  GTM  GTT  ERS
+                            23.1 46.0 23.0 42.4 0.753 0.676 5.0  4.4  19.3 0.6  32.4
+                         * looks like we need some parameter tuning in this setting
