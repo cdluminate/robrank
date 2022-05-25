@@ -413,7 +413,9 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | `cars:rres18p:ptripletN`            | 32  | RTX A5000 | 4 (DDP)        | 150 min        |
 | `cars:rres18ghmetsmi:ptripletN`     | 32  | Titan Xp  | 2 (DDP)        | 530 min        |
 | `sop:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 60 min         |
+| `sop:rres18:ptripletN`              | N/A | RTX A6000 | 2 (DDP)        | 120 min        |
 | `sop:rres18p:ptripletN`             | 8   | RTX A6000 | 2 (DDP)        | 560 min        |
+| `sop:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        |                |
 
 
 ### Copyright and License
