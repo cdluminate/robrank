@@ -416,20 +416,6 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | `sop:rres18p:ptripletN`             | 8   | RTX A6000 | 2 (DDP)        | 560 min        |
 
 
-* Q: Pretrained Weights?
-
-Indeed that will be very useful for comparison.
-This is under preparation.
-
-| Config                                 | Download |
-| ---                                    | ---      |
-| `cub:rres18p:ptripletN`                | TODO     |
-| `cub:rres18ghmetsmi:ptripletN`         | TODO     |
-| `cars:rres18p:ptripletN`               | TODO     |
-| `cars:rres18ghmetsmi:ptripletN`        | TODO     |
-| `sop:rres18p:ptripletN`                | TODO     |
-| `sop:rres18ghmetsmi:ptripletN`         | TODO     |
-
 ### Copyright and License
 
 ```
