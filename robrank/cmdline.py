@@ -421,13 +421,11 @@ class Train:
             other_options['gradient_clip_val'] = ag.clip
         else:
             pass
-        # checkpoint_callback = thl.callbacks.ModelCheckpoint(
-        #        monitor=ag.monitor,
-        #        mode='max')
         if ag.trail:
             checkpoint_callback = thl.callbacks.ModelCheckpoint(
+                monitor=ag.monitor,
                 save_top_k=-1)
-            other_options['checkpoint_callback'] = checkpoint_callback
+            other_options['callbacks'] = [checkpoint_callback]
         trainer = thl.Trainer(
             max_epochs=model.config.maxepoch,
             gpus=ag.gpus,
