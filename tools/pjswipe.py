@@ -25,6 +25,7 @@ import os
 import re
 import sys
 import rich
+from rich.table import Table
 c = rich.get_console()
 
 
@@ -78,6 +79,7 @@ class TFdump:
     Dump a tensorboard tfevent binary file
     '''
     best = {}
+    debug = False
 
     def __init__(self, *args):
         ag = argparse.ArgumentParser()
@@ -86,14 +88,23 @@ class TFdump:
 
         from tensorflow.python.summary.summary_iterator import summary_iterator
         last = dict()
+        table = Table(title='TF Dump')
+        table.add_column('Epoch', justify='right')
+        table.add_column('r@1', justify='right')
+        table.add_column('r@2', justify='right')
+        table.add_column('mAP', justify='right')
+        table.add_column('mAP@R', justify='right')
+        table.add_column('NMI', justify='right')
+
         for s in summary_iterator(ag.file):
             # print(s)
             if len(s.summary.value) > 0:
                 tag = s.summary.value[0].tag
                 if 'Valid' in tag:
-                    cprint(s.summary.value[0].tag, 'red', end=' ')
-                    cprint(f'{s.step}', 'yellow', end=' ')
-                    cprint(s.summary.value[0].simple_value, 'blue')
+                    if self.debug:
+                        cprint(s.summary.value[0].tag, 'red', end=' ')
+                        cprint(f'{s.step}', 'yellow', end=' ')
+                        cprint(s.summary.value[0].simple_value, 'blue')
                     value = s.summary.value[0].simple_value
                     if 'NMI' in tag:
                         last['NMI'] = f'{100*value:.1f}'
@@ -105,6 +116,8 @@ class TFdump:
                         last['mAP@R'] = f'{100*value:.1f}'
                     elif ('mAP' in tag) and not ('@R' in tag):
                         last['mAP'] = f'{100*value:.1f}'
+                    elif 'r@M' in tag:
+                        last['r@M'] = f'{100*value:.1f}'
                     else:
                         pass
                     for k in ('r@1', 'r@2', 'mAP@R', 'mAP', 'NMI'):
@@ -116,11 +129,20 @@ class TFdump:
                             # NOTE: we should use the last value instead of the
                             # best value, because the adversarial attack is evaluated
                             # on the last checkpoint.
-                            self.best[k] = float(value)
+                            #self.best[k] = float(value) # this makes "best"=last
                             if float(value) > self.best[k]:
                                 self.best[k] = float(value)
-        for (k, v) in last.items():
-            print('LAST', k, v, f'(BEST is {100*self.best[k]:.1f}')
+            if len(last) == 6:
+                if self.debug:
+                    c.print('%d'%s.step, last['r@1'], last['r@2'],
+                        last['mAP'], last['mAP@R'], last['NMI'])
+                table.add_row('%d'%(s.step+1), last['r@1'], last['r@2'],
+                    last['mAP'], last['mAP@R'], last['NMI'])
+                last = dict()
+        c.print('BEST', self.best)
+        #print(k, v, f'(BEST is {100*self.best[k]:.1f}')
+
+        c.print(table)
 
 
 def kfind(L: list, *args):
