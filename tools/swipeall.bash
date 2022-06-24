@@ -87,3 +87,10 @@ for ckpt in ${CKPT[@]}; do
 		"CUDA_VISIBLE_DEVICES=${dev} python3 bin/swipe.py -p ${PROFILE} -C ${ckpt} ${ARGS}; sh"
 	true $((counter++))
 done
+
+cat << EOF
+After finishing swipe, you may close all relevant tmux windows and use
+swipeall-summary.py to summarize the performance metrics.
+For instance,
+$ python3 tools/swipeall-summary.py -d logs_cub-rres18p-ptripletN/lightning_logs/version_0/
+EOF
