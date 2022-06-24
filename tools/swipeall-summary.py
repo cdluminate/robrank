@@ -75,11 +75,11 @@ for (_, jf) in ejsons:
     dots.append(entry)
 print(dots)  # raw
 
-T = rich.table.Table(title='SwAll results')
-for c in ('R@1',
-        'CA+', 'CA-', 'QA+', 'QA-', 'LTM',
-        'ESD', 'ESR', 'LTM', 'GTM', 'GTT'):
-    T.add_column(c)
+T = rich.table.Table(title=f'SwAll results @ {ag.directory}')
+for col in ('R@1 ↑',
+        'CA+ ↑', 'CA- ↓', 'QA+ ↑', 'QA- ↓', 'TMA ↓',
+        'ESD ↓', 'ESR ↑', 'LTM ↑', 'GTM ↑', 'GTT ↑'):
+    T.add_column(col)
 for entry in dots:
     row = ['%.2f'%x for x in entry]
     T.add_row(*row)
