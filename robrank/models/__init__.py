@@ -103,7 +103,7 @@ from . import ribnp
 
 # [group transformers]
 from . import rswint  # swin tiny  16GB for training
-from . import rswintp # swin tiny + ACT needs ~ 24GB for training per card
+from . import rswintp # swin tiny + ACT needs ~ 21GB for training per card
 from . import rswins  # swin small 24GB
 from . import rswinsp
 from . import rswinb  # swin base  32GB
