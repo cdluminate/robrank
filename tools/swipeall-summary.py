@@ -73,4 +73,14 @@ for (_, jf) in ejsons:
         else:
             print('warning: unknown key', k)
     dots.append(entry)
-c.print(dots)
+print(dots)  # raw
+
+T = rich.table.Table(title='SwAll results')
+for c in ('R@1',
+        'CA+', 'CA-', 'QA+', 'QA-', 'LTM',
+        'ESD', 'ESR', 'LTM', 'GTM', 'GTT'):
+    T.add_column(c)
+for entry in dots:
+    row = ['%.2f'%x for x in entry]
+    T.add_row(*row)
+c.print(T)
