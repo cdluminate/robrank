@@ -607,6 +607,14 @@ class MetricTemplate224(MetricBase):
             # self.backbone.apply(__freeze)
             for mod in self.backbone.modules():
                 __freeze(mod)
+        # directly remove BatchNorm2d instead
+        if hasattr(self, 'remove_bn') and self.remove_bn:
+            # Removing Batch Normalization Boosts Adversarial Training
+            def __remove_bn(mod):
+                if isinstance(mod, th.nn.BatchNorm2d):
+                    mod = th.nn.Identity()
+            for mod in self.backbone.modules():
+                __remove_bn(mod)
 
 
     def __init__(self, *, dataset: str, loss: str):
