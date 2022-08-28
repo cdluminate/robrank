@@ -61,3 +61,28 @@ runtest:
 legion:
 	#rsync -rvlz . 169.254.169.219:~/Git/2021-robrank/ $(RSYNC_FLAGS)
 	rsync -rvlz . 192.168.1.106:$(RSYNC_DEST) $(RSYNC_FLAGS)
+
+train-mnist:
+	python3 bin/train.py -C mnist:rc2f2:ptripletN   # Vanilla
+	python3 bin/train.py -C mnist:rc2f2d:ptripletN  # EST
+	python3 bin/train.py -C mnist:rc2f2p:ptripletN  # ACT
+
+train-fashion:
+	python3 bin/train.py -C fashion:rc2f2:ptripletN   # Vanilla
+	python3 bin/train.py -C fashion:rc2f2d:ptripletN  # EST
+	python3 bin/train.py -C fashion:rc2f2p:ptripletN  # ACT
+
+train-cub:
+	python3 bin/train.py -C cub:rres18:ptripletN   # Vanilla
+	python3 bin/train.py -C cub:rres18d:ptripletN  # EST
+	python3 bin/train.py -C cub:rres18p:ptripletN  # ACT
+
+train-cars:
+	python3 bin/train.py -C cars:rres18:ptripletN   # Vanilla
+	python3 bin/train.py -C cars:rres18d:ptripletN  # EST
+	python3 bin/train.py -C cars:rres18p:ptripletN  # ACT
+
+train-sop:
+	python3 bin/train.py -C sop:rres18:ptripletN   # Vanilla
+	python3 bin/train.py -C sop:rres18d:ptripletN  # EST
+	python3 bin/train.py -C sop:rres18p:ptripletN  # ACT
