@@ -43,6 +43,7 @@ from . import rc2f2p
 from . import rc2f2px
 from . import rc2f2pa
 from . import rc2f2pf
+from . import rc2f2pco
 from . import rc2f2t
 from . import rc2f2a
 from . import rc2f2r

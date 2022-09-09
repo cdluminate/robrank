@@ -114,30 +114,45 @@ class ptriplet(th.nn.Module):
         '''
         assert self._metric == 'N', 'this function only supports metric N'
         assert self._datasetspec == 'SPC-2', 'this function only supports SPC-2'
-        repres = F.normalize(repres, p=2, dim=-1)
-        # spc-2 random sampling
-        ianc = th.arange(0, len(labels), 2)
-        ipos = th.arange(1, len(labels), 2)
-        ineg = []
-        for i in range(labels.nelement() // 2):
-            mask_neg = (labels != labels[2*i])
-            if mask_neg.sum() > 0:
-                ineg.append(random.choice(th.where(mask_neg)[0]).item())
-            else:
-                ineg.append(np.random.choice(len(labels)))
-        ineg = th.tensor(ineg, dtype=th.long, device=repres.device)
+
+        if isinstance(repres, th.Tensor):
+            '''
+            before triplet sampling: repres is spc-2 batch
+            '''
+            repres = F.normalize(repres, p=2, dim=-1)
+            # spc-2 random sampling
+            ianc = th.arange(0, len(labels), 2)
+            ipos = th.arange(1, len(labels), 2)
+            ineg = []
+            for i in range(labels.nelement() // 2):
+                mask_neg = (labels != labels[2*i])
+                if mask_neg.sum() > 0:
+                    ineg.append(random.choice(th.where(mask_neg)[0]).item())
+                else:
+                    ineg.append(np.random.choice(len(labels)))
+            ineg = th.tensor(ineg, dtype=th.long, device=repres.device)
+
+            benign_vq = repres_orig[ianc]
+            advers_vq = repres[ianc]
+            benign_vp = repres_orig[ipos]
+            advers_vp = repres[ipos]
+            benign_vn = repres_orig[ineg]
+            advers_vn = repres[ineg]
+
+        elif isinstance(repres, list):
+            '''
+            after triplet sampling: [anc repres, pos repres, neg reprs]
+            '''
+            benign_vq, benign_vp, benign_vn = repres_orig
+            advers_vq, advers_vp, advers_vn = repres
+        else:
+            raise TypeError(repres)
+
         # calculate grad direction
         def ndiff__(a__, b__):
             tmp__ = a__ - b__
             norm__ = tmp__.norm()
             return tmp__ / norm__
-
-        benign_vq = repres_orig[ianc]
-        advers_vq = repres[ianc]
-        benign_vp = repres_orig[ipos]
-        advers_vp = repres[ipos]
-        benign_vn = repres_orig[ineg]
-        advers_vn = repres[ineg]
 
         benign_pl_pvq = ndiff__(benign_vq, benign_vp) - ndiff__(benign_vq, benign_vn)
         advers_pl_pvq = ndiff__(advers_vq, advers_vp) - ndiff__(advers_vq, advers_vn)

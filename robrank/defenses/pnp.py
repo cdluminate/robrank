@@ -563,6 +563,77 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
     return loss
 
 
+def pnp_training_step_cosine_only(model: th.nn.Module, batch, batch_idx, *,
+                      pgditer: int = None):
+    '''
+    do not train the model. only measure the cosine similarity to reflect misleading
+    gradients for figure 2 in pami.
+    '''
+    # check loss function
+    if not re.match(r'p.?triplet.*', model.loss) and \
+            not re.match(r'psnr.*', model.loss) and \
+            not re.match(r'pmargin.*', model.loss) and \
+            not re.match(r'pcontrast.*', model.loss):
+        raise ValueError(f'ACT defense is not implemented for {model.loss}!')
+
+    # prepare data batch in a proper shape
+    images = batch[0].to(model.device)
+    labels = batch[1].view(-1).to(model.device)
+    if model.dataset in ('sop', 'cub', 'cars'):
+        images = images.view(-1, 3, 224, 224)
+    elif model.dataset in ('mnist', 'fashion'):
+        images = images.view(-1, 1, 28, 28)
+    else:
+        raise ValueError(f'possibly illegal dataset {model.dataset}?')
+    # evaluate original benign sample
+    model.eval()
+    with th.no_grad():
+        output_orig = model.forward(images)
+        model.train()
+        loss_orig = model.lossfunc(output_orig, labels)
+    # generate adversarial examples
+    triplets = miner(output_orig, labels, method=model.lossfunc._minermethod,
+                     metric=model.lossfunc._metric,
+                     margin=configs.triplet.margin_euclidean if model.lossfunc._metric in ('E', 'N')
+                     else configs.triplet.margin_cosine)
+    anc, pos, neg = triplets
+    model.eval()
+    pnp = PositiveNegativePerplexing(model, eps=model.config.advtrain_eps,
+                                     alpha=model.config.advtrain_alpha,
+                                     pgditer=model.config.advtrain_pgditer if pgditer is None else pgditer,
+                                     device=model.device, metric=model.metric,
+                                     verbose=False)
+    # Collapsing positive and negative -- Anti-Collapse Triplet (ACT) defense.
+    model.eval()
+    model.wantsgrad = True
+    images_pnp = pnp.pncollapse(images, triplets)
+    # Adversarial Training
+    model.train()
+    pnemb = model.forward(images_pnp)
+    aemb = model.forward(images[anc, :, :, :])
+    if model.lossfunc._metric in ('C', 'N'):
+        pnemb = F.normalize(pnemb)
+        aemb = F.normalize(aemb)
+    model.wantsgrad = False
+    # compute cosine similarity
+    with th.no_grad():
+        # aemb and pnemb are already normalized
+        output_orig = th.nn.functional.normalize(output_orig)
+        cosine = model.lossfunc.cosine_only(
+                [aemb, pnemb[:len(pnemb)//2], pnemb[len(pnemb)//2:]],
+                [output_orig[anc], output_orig[pos], output_orig[neg]],
+                labels.view(-1))
+        if not hasattr(model, 'cosine_only_stat'):
+            model.cosine_only_stat = []
+        model.cosine_only_stat.extend(cosine)
+    # compute **fake** adversarial loss
+    loss = th.tensor(0.0, requires_grad=True, device=model.device)
+    # logging
+    model.log('Train/loss_orig', loss_orig.item())
+    model.log('Train/loss_adv', loss.item())
+    return loss
+
+
 def mmt_training_step(model: th.nn.Module, batch, batch_idx):
     '''
     min-max triplet

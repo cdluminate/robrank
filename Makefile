@@ -94,3 +94,11 @@ fig2real-est:
 	mv fig2real.svg fig2real-est.svg
 	inkscape -o fig2real-est.pdf fig2real-est.svg
 	pdfcrop fig2real-est.pdf fig2real-est.pdf
+
+fig2real-act:
+	python3 bin/train.py -C fashion:rc2f2pco:ptripletN
+	mv cosine_only_stat.json cosine_only_stat-act.json
+	python3 tools/curve.py fig2real --file cosine_only_stat-act.json
+	mv fig2real.svg fig2real-act.svg
+	inkscape -o fig2real-act.pdf fig2real-act.svg
+	pdfcrop fig2real-act.pdf fig2real-act.pdf
