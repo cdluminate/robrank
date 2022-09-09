@@ -334,7 +334,7 @@ class MetricBase(thl.LightningModule):
         fname = 'cosine_only_stat.json'
         with open(fname, 'wt') as f:
             json.dump(self.cosine_only_stat, f)
-        print(f'>_< self.cosine_only_stat has been dumped into {fpath}')
+        print(f'>_< self.cosine_only_stat has been dumped into {fname}')
         exit()
 
 
