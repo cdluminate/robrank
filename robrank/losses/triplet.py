@@ -26,6 +26,7 @@ import functools as ft
 import itertools as it
 import pytest
 import torch.nn.functional as F
+import random
 import rich
 c = rich.get_console()
 
@@ -106,6 +107,54 @@ class ptriplet(th.nn.Module):
         loss = fn_ptriplet_kernel(repA, repP, repN,
                                   metric=self._metric, margin=margin)
         return loss
+
+    def cosine_only(self, repres, repres_orig, labels):
+        '''
+        pami figure 2
+        '''
+        assert self._metric == 'N', 'this function only supports metric N'
+        assert self._datasetspec == 'SPC-2', 'this function only supports SPC-2'
+        repres = F.normalize(repres, p=2, dim=-1)
+        # spc-2 random sampling
+        ianc = th.arange(0, len(labels), 2)
+        ipos = th.arange(1, len(labels), 2)
+        ineg = []
+        for i in range(labels.nelement() // 2):
+            mask_neg = (labels != labels[2*i])
+            if mask_neg.sum() > 0:
+                ineg.append(random.choice(th.where(mask_neg)[0]).item())
+            else:
+                ineg.append(np.random.choice(len(labels)))
+        ineg = th.tensor(ineg, dtype=th.long, device=repres.device)
+        # calculate grad direction
+        def ndiff__(a__, b__):
+            tmp__ = a__ - b__
+            norm__ = tmp__.norm()
+            return tmp__ / norm__
+
+        benign_vq = repres_orig[ianc]
+        advers_vq = repres[ianc]
+        benign_vp = repres_orig[ipos]
+        advers_vp = repres[ipos]
+        benign_vn = repres_orig[ineg]
+        advers_vn = repres[ineg]
+
+        benign_pl_pvq = ndiff__(benign_vq, benign_vp) - ndiff__(benign_vq, benign_vn)
+        advers_pl_pvq = ndiff__(advers_vq, advers_vp) - ndiff__(advers_vq, advers_vn)
+        cos1 = th.nn.functional.cosine_similarity(advers_pl_pvq, benign_pl_pvq).view(-1)
+        cos1 = cos1.cpu().detach().tolist()
+
+        benign_pl_pvp = ndiff__(benign_vp, benign_vq)
+        advers_pl_pvp = ndiff__(advers_vp, advers_vq)
+        cos2 = th.nn.functional.cosine_similarity(advers_pl_pvp, benign_pl_pvp).view(-1)
+        cos2 = cos2.cpu().detach().tolist()
+
+        benign_pl_pvn = ndiff__(benign_vq, benign_vn)
+        advers_pl_pvn = ndiff__(advers_vq, advers_vn)
+        cos3 = th.nn.functional.cosine_similarity(advers_pl_pvn, benign_pl_pvn).view(-1)
+        cos3 = cos3.cpu().detach().tolist()
+
+        return cos1 + cos2 + cos3
 
 
 class ptripletC(ptriplet):

@@ -73,3 +73,49 @@ def est_training_step(model, batch, batch_idx, *, pgditer: int = None):
     model.log('Train/OriLoss', loss_orig.item())
     model.log('Train/AdvLoss', loss.item())
     return loss
+
+
+def est_training_step_cosine_only(model, batch, batch_idx, *, pgditer:int = None):
+    '''
+    do not train the model. only measure the cosine similarty to reflect
+    misleading gradients for figure 2 in pami
+    '''
+    images, labels = (batch[0].to(model.device), batch[1].to(model.device))
+    advrank = AdvRank(model, eps=model.config.advtrain_eps,
+                      alpha=model.config.advtrain_alpha,
+                      pgditer=model.config.advtrain_pgditer if pgditer is None else pgditer,
+                      device=model.device,
+                      metric=model.metric, verbose=False)
+    # set shape
+    if any(x in model.dataset for x in ('sop', 'cub', 'cars')):
+        shape = (-1, 3, 224, 224)
+    elif any(x in model.dataset for x in ('mnist', 'fashion')):
+        shape = (-1, 1, 28, 28)
+    else:
+        raise ValueError(f'does not recognize dataset {model.dataset}')
+    # eval orig
+    with th.no_grad():
+        output_orig = model.forward(images.view(*shape))
+        loss_orig = model.lossfunc(output_orig, labels)
+    # generate adv examples
+    model.wantsgrad = True
+    model.eval()
+    advimgs = advrank.embShift(images.view(*shape))
+    model.train()
+    output = model.forward(advimgs.view(*shape))
+    model.wantsgrad = False
+    # compute cosine similarty
+    with th.no_grad():
+        cosine = model.lossfunc.cosine_only(output, output_orig, labels.view(-1))
+        #print(cosine)
+        if not hasattr(model, 'cosine_only_stat'):
+            model.cosine_only_stat = []
+        model.cosine_only_stat.extend(cosine)
+        #print(len(model.cosine_only_stat))
+    # compute fake loss
+    loss = th.tensor(0.0, requires_grad=True, device=model.device)
+    model.log('Train/loss', loss)
+    #tqdm.write(f'* OriLoss {loss_orig.item():.3f} | [AdvLoss] {loss.item():.3f}')
+    model.log('Train/OriLoss', loss_orig.item())
+    model.log('Train/AdvLoss', loss.item())
+    return loss

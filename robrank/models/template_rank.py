@@ -58,6 +58,11 @@ try:
 except ImportError:
     pass
 #
+try:
+    import ujson as json
+except ModuleNotFoundError:
+    import json
+#
 import rich
 c = rich.get_console()
 
@@ -214,6 +219,8 @@ class MetricBase(thl.LightningModule):
             return defenses.est_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_est', False):
             return defenses.est_training_step(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_est_cosine_only', False):
+            return defenses.est_training_step_cosine_only(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_estf', False):
             return defenses.est_training_step(
                 self, batch, batch_idx, pgditer=1)
@@ -221,6 +228,8 @@ class MetricBase(thl.LightningModule):
             return defenses.ses_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_pnp', False):
             return defenses.pnp_training_step(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_pnp_cosine_only'):
+            return defenses.pnp_training_step_cosine_only(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_pnpf', False):
             return defenses.pnp_training_step(
                 self, batch, batch_idx, pgditer=1)
@@ -306,6 +315,22 @@ class MetricBase(thl.LightningModule):
         #tqdm.write(f'* OriLoss {loss.item():.3f}')
         self.log('Train/OriLoss', loss.item())
         return loss
+
+    def training_epoch_end(self, training_step_outputs):
+        '''
+        dump cosine stat for tpami figure 2.
+        '''
+        dump_cosine_stat = False
+        if getattr(self, 'is_advtrain_pnp_cosine_only'):
+            dump_cosine_stat = True
+        elif getattr(self, 'is_advtrain_est_cosine_only'):
+            dump_cosine_stat = True
+        fname = 'cosine_only_stat.json'
+        with open(fname, 'wt') as f:
+            json.dump(self.cosine_only_stat, f)
+        print(f'>_< self.cosine_only_stat has been dumped into {fpath}')
+        exit()
+
 
     def validation_step(self, batch, batch_idx):
         '''

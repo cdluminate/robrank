@@ -36,6 +36,7 @@ from . import cres50
 # [group C2F2]
 from . import rc2f2
 from . import rc2f2d
+from . import rc2f2dco
 from . import rc2f2df
 from . import rc2f2e
 from . import rc2f2p
