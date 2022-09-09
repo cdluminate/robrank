@@ -20,6 +20,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import functools as ft
+import json
 from matplotlib import rcParams
 rcParams['font.family'] = 'serif'
 #rcParams['font.serif'] = 'Times New Roman'
@@ -350,10 +351,21 @@ class Mnist4AttackCurve(Curve):
         ax.tick_params(axis='y', labelsize=17)
 
 
+class Fig2RealCosHist:
+    def __init__(self, jsonpath: str):
+        with open(jsonpath, 'rt') as f:
+            j = json.load(f)
+        print(f'>_< loaded json array with {len(self.j)} numbers.')
+        self.j = np.array(j)
+        print('min', self.j.min(), 'mean', self.j.mean(), 'max', self.j.max())
+
+
+
 if __name__ == '__main__':
 
     ag = argparse.ArgumentParser()
     ag.add_argument('spec', help='specification')
+    ag.add_argument('--file', '-f', type=str, default='', help='optional data file')
     ag = ag.parse_args()
 
     if ag.spec == 'expr1':
@@ -368,3 +380,6 @@ if __name__ == '__main__':
     elif ag.spec == 'mn4atk':
         p = Mnist4AttackCurve()
         p.svg('mn4atk.svg')
+    elif ag.spec == 'fig2real':
+        p = Fig2RealCosHist()
+        p.svg('fig2real.svg')
