@@ -86,3 +86,9 @@ train-sop:
 	python3 bin/train.py -C sop:rres18:ptripletN   # Vanilla
 	python3 bin/train.py -C sop:rres18d:ptripletN  # EST
 	python3 bin/train.py -C sop:rres18p:ptripletN  # ACT
+
+fig2real-est:
+	python3 bin/train.py -C fashion:rc2f2dco:ptripletN
+	python3 tools/curve.py fig2real --file cosine_only_stat.json
+	mv fig2real.svg fig2real-est.svg
+	mv cosine_only_stat.json cosine_only_stat-est.json
