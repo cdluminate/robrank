@@ -321,9 +321,9 @@ class MetricBase(thl.LightningModule):
         dump cosine stat for tpami figure 2.
         '''
         dump_cosine_stat = False
-        if getattr(self, 'is_advtrain_pnp_cosine_only'):
+        if getattr(self, 'is_advtrain_pnp_cosine_only', False):
             dump_cosine_stat = True
-        elif getattr(self, 'is_advtrain_est_cosine_only'):
+        elif getattr(self, 'is_advtrain_est_cosine_only', False):
             dump_cosine_stat = True
         fname = 'cosine_only_stat.json'
         with open(fname, 'wt') as f:
