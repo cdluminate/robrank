@@ -351,13 +351,27 @@ class Mnist4AttackCurve(Curve):
         ax.tick_params(axis='y', labelsize=17)
 
 
-class Fig2RealCosHist:
+class Fig2RealCosHist(Curve):
     def __init__(self, jsonpath: str):
         with open(jsonpath, 'rt') as f:
             j = json.load(f)
         print(f'>_< loaded json array with {len(j)} numbers.')
         self.j = np.array(j)
         print('min', self.j.min(), 'mean', self.j.mean(), 'max', self.j.max())
+
+        plt.figure(figsize=(6.4, 2.4), tight_layout=True)
+        n, bins, patches = plt.hist(self.j, range=(-1.0, 1.0), bins=40, density=True)
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        col = bin_centers - min(bin_centers)
+        col /= max(col)
+        col = np.sqrt(1 - col)  # slightly change colormap
+        for c, p in zip(col, patches):
+            plt.setp(p, 'facecolor', plt.cm.get_cmap('Blues')(c))
+        plt.ylabel('Density')
+        plt.xlabel('Cosine Similarity')
+        plt.grid(True, linestyle=':')
+        #plt.title('Gradient Consistency after EST Attack', y=-1.01)
+        #plt.show()
 
 
 
