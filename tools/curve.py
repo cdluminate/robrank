@@ -355,7 +355,7 @@ class Fig2RealCosHist:
     def __init__(self, jsonpath: str):
         with open(jsonpath, 'rt') as f:
             j = json.load(f)
-        print(f'>_< loaded json array with {len(self.j)} numbers.')
+        print(f'>_< loaded json array with {len(j)} numbers.')
         self.j = np.array(j)
         print('min', self.j.min(), 'mean', self.j.mean(), 'max', self.j.max())
 
@@ -381,5 +381,6 @@ if __name__ == '__main__':
         p = Mnist4AttackCurve()
         p.svg('mn4atk.svg')
     elif ag.spec == 'fig2real':
-        p = Fig2RealCosHist()
+        assert ag.file, 'please specify json path using --file'
+        p = Fig2RealCosHist(ag.file)
         p.svg('fig2real.svg')

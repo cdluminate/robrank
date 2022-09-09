@@ -199,6 +199,12 @@ class MetricBase(thl.LightningModule):
         if hasattr(self.lossfunc, 'getOptim'):
             optim2 = self.lossfunc.getOptim()
             return optim, optim2
+        '''
+        if we draw figures, don't change the parameters at all
+        '''
+        if hasattr(self, 'is_advtrain_est_cosine_only') or hasattr(self,
+                'is_advtrain_pnp_cosine_only'):
+            optim = th.optim.SGD(self.backbone.parameters(), lr=0.0, weight_decay=0.0)
         return optim
 
     def training_step(self, batch, batch_idx, optimizer_idx=None):
