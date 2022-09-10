@@ -374,6 +374,30 @@ class Fig2RealCosHist(Curve):
         #plt.show()
 
 
+class Fig3RealBatchEff(Curve):
+    def __init__(self, jsonpath: str):
+        with open(jsonpath, 'rt') as f:
+            j = json.load(f)
+        print(f'>_< loaded json array with {len(j)} numbers.')
+        self.j = np.array(j)
+        print('min', self.j.min(), 'mean', self.j.mean(), 'max', self.j.max())
+
+        plt.figure(figsize=(6.4, 2.4), tight_layout=True)
+        n, bins, patches = plt.hist(self.j, bins=40, density=True)
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        col = bin_centers - min(bin_centers)
+        col /= max(col)
+        #col = np.sqrt(1 - col)  # slightly change colormap
+        col = np.sqrt(col)
+        for c, p in zip(col, patches):
+            plt.setp(p, 'facecolor', plt.cm.get_cmap('Blues')(c))
+        plt.ylabel('Density')
+        plt.xlabel('s s rho')
+        plt.grid(True, linestyle=':')
+        #plt.title('Gradient Consistency after EST Attack', y=-1.01)
+        plt.show()
+
+
 
 if __name__ == '__main__':
 
@@ -398,3 +422,7 @@ if __name__ == '__main__':
         assert ag.file, 'please specify json path using --file'
         p = Fig2RealCosHist(ag.file)
         p.svg('fig2real.svg')
+    elif ag.spec == 'fig3real':
+        assert ag.file, 'please specify json path using --file'
+        p = Fig3RealBatchEff(ag.file)
+        p.svg('fig3real.svg')
