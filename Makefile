@@ -105,3 +105,16 @@ fig2real-act:
 
 fig3real-est:
 	python3 bin/train.py -C fashion:rc2f2dbe:ptripletN
+	mv batcheff_only_stat.json batcheff_only_stat-est.json
+	python3 tools/curve.py fig3real --file batcheff_only_stat-est.json
+	mv fig3real.svg fig3real-est.svg
+	inkscape -o fig3real-est.pdf fig3real-est.svg
+	pdfcrop fig3real-est.pdf fig3real-est.pdf
+
+fig3real-act:
+	python3 bin/train.py -C fashion:rc2f2pbe:ptripletN
+	mv batcheff_only_stat.json batcheff_only_stat-act.json
+	python3 tools/curve.py fig3real --file batcheff_only_stat-act.json
+	mv fig3real.svg fig3real-act.svg
+	inkscape -o fig3real-act.pdf fig3real-act.svg
+	pdfcrop fig3real-act.pdf fig3real-act.pdf

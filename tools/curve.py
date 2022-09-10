@@ -26,6 +26,7 @@ rcParams['font.family'] = 'serif'
 #rcParams['font.serif'] = 'Times New Roman'
 rcParams['font.serif'] = 'Linux Libertine O'
 rcParams['font.size'] = 14
+rcParams['mathtext.fontset'] = 'cm'
 
 
 def readr1(path: str) -> np.array:
@@ -383,19 +384,21 @@ class Fig3RealBatchEff(Curve):
         print('min', self.j.min(), 'mean', self.j.mean(), 'max', self.j.max())
 
         plt.figure(figsize=(6.4, 2.4), tight_layout=True)
-        n, bins, patches = plt.hist(self.j, bins=40, density=True)
+        n, bins, patches = plt.hist(self.j, range=(-0.21,0.21), bins=40, density=True)
         bin_centers = 0.5 * (bins[:-1] + bins[1:])
-        col = bin_centers - min(bin_centers)
-        col /= max(col)
+        #col = bin_centers - min(bin_centers)
+        #col /= max(col)
+        col = bin_centers
+        col = col / 0.21
         #col = np.sqrt(1 - col)  # slightly change colormap
-        col = np.sqrt(col)
+        col = np.sqrt(np.abs(col))
         for c, p in zip(col, patches):
-            plt.setp(p, 'facecolor', plt.cm.get_cmap('Blues')(c))
+            plt.setp(p, 'facecolor', plt.cm.get_cmap('Reds')(c))
         plt.ylabel('Density')
-        plt.xlabel('s s rho')
+        plt.xlabel('Change in $\\beta+d(q,c_p)-d(q,c_n)$')
         plt.grid(True, linestyle=':')
         #plt.title('Gradient Consistency after EST Attack', y=-1.01)
-        plt.show()
+        #plt.show()
 
 
 

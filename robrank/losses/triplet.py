@@ -217,15 +217,13 @@ class ptriplet(th.nn.Module):
             return 1 - th.nn.functional.cosine_similarity(a__, b__)
         margin = configs.triplet.margin_cosine
         def rho__(a__, p__, n__):
-            return margin + dist__(a__, p__) - dist__(a__, n__)
+            return dist__(a__, p__) - dist__(a__, n__)
 
         rho1 = rho__(benign_vq, benign_vp, benign_vn).view(-1)
         rho2 = rho__(advers_vq, advers_vp, advers_vn).view(-1)
-        sign_rho1 = th.sign(rho1)
-        sign_rho2 = th.sign(rho2)
-        abs_rho_diff = th.abs(rho1 - rho2)
-        batcheff = sign_rho1 * sign_rho2 * abs_rho_diff
+        batcheff = rho2 - rho1  # after - before
         batcheff = batcheff.cpu().detach().tolist()
+        #print(sign_rho1 * sign_rho2)
 
         return batcheff
 

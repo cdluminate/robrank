@@ -238,9 +238,9 @@ class MetricBase(thl.LightningModule):
             return defenses.ses_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_pnp', False):
             return defenses.pnp_training_step(self, batch, batch_idx)
-        elif getattr(self, 'is_advtrain_pnp_cosine_only'):
+        elif getattr(self, 'is_advtrain_pnp_cosine_only', False):
             return defenses.pnp_training_step_cosine_only(self, batch, batch_idx)
-        elif getattr(self, 'is_advtrain_pnp_batcheff_only'):
+        elif getattr(self, 'is_advtrain_pnp_batcheff_only', False):
             return defenses.pnp_training_step_cosine_only(self, batch, batch_idx, do_batcheff=True)
         elif getattr(self, 'is_advtrain_pnpf', False):
             return defenses.pnp_training_step(
