@@ -102,3 +102,6 @@ fig2real-act:
 	mv fig2real.svg fig2real-act.svg
 	inkscape -o fig2real-act.pdf fig2real-act.svg
 	pdfcrop fig2real-act.pdf fig2real-act.pdf
+
+fig3real-est:
+	python3 bin/train.py -C fashion:rc2f2dbe:ptripletN

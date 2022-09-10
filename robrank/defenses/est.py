@@ -75,7 +75,8 @@ def est_training_step(model, batch, batch_idx, *, pgditer: int = None):
     return loss
 
 
-def est_training_step_cosine_only(model, batch, batch_idx, *, pgditer:int = None):
+def est_training_step_cosine_only(model, batch, batch_idx, *, pgditer:int = None,
+        do_batcheff: bool = False):
     '''
     do not train the model. only measure the cosine similarty to reflect
     misleading gradients for figure 2 in pami
@@ -106,7 +107,10 @@ def est_training_step_cosine_only(model, batch, batch_idx, *, pgditer:int = None
     model.wantsgrad = False
     # compute cosine similarty
     with th.no_grad():
-        cosine = model.lossfunc.cosine_only(output, output_orig, labels.view(-1))
+        if not do_batcheff:
+            cosine = model.lossfunc.cosine_only(output, output_orig, labels.view(-1))
+        else:
+            cosine = model.lossfunc.batcheff_only(output, output_orig, labels.view(-1))
         #print(cosine)
         if not hasattr(model, 'cosine_only_stat'):
             model.cosine_only_stat = []

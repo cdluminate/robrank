@@ -37,6 +37,7 @@ from . import cres50
 from . import rc2f2
 from . import rc2f2d
 from . import rc2f2dco
+from . import rc2f2dbe
 from . import rc2f2df
 from . import rc2f2e
 from . import rc2f2p
@@ -44,6 +45,7 @@ from . import rc2f2px
 from . import rc2f2pa
 from . import rc2f2pf
 from . import rc2f2pco
+from . import rc2f2pbe
 from . import rc2f2t
 from . import rc2f2a
 from . import rc2f2r

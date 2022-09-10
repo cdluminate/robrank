@@ -172,6 +172,65 @@ class ptriplet(th.nn.Module):
         return cos1 + cos2 + cos3
 
 
+    def batcheff_only(self, repres, repres_orig, labels):
+        '''
+        pami figure 3
+        '''
+        assert self._metric == 'N'
+        assert self._datasetspec == 'SPC-2'
+
+        if isinstance(repres, th.Tensor):
+            '''
+            before triplet sampling: repres is spc-2 batch
+            '''
+            repres = F.normalize(repres, p=2, dim=-1)
+            # spc-2 random sampling
+            ianc = th.arange(0, len(labels), 2)
+            ipos = th.arange(1, len(labels), 2)
+            ineg = []
+            for i in range(labels.nelement() // 2):
+                mask_neg = (labels != labels[2*i])
+                if mask_neg.sum() > 0:
+                    ineg.append(random.choice(th.where(mask_neg)[0]).item())
+                else:
+                    ineg.append(np.random.choice(len(labels)))
+            ineg = th.tensor(ineg, dtype=th.long, device=repres.device)
+
+            benign_vq = repres_orig[ianc]
+            advers_vq = repres[ianc]
+            benign_vp = repres_orig[ipos]
+            advers_vp = repres[ipos]
+            benign_vn = repres_orig[ineg]
+            advers_vn = repres[ineg]
+
+        elif isinstance(repres, list):
+            '''
+            after triplet sampling: [anc repres, pos repres, neg reprs]
+            '''
+            benign_vq, benign_vp, benign_vn = repres_orig
+            advers_vq, advers_vp, advers_vn = repres
+        else:
+            raise TypeError(repres)
+
+        # calculate efficiency of mini-batch exploitation
+        def dist__(a__, b__):
+            return 1 - th.nn.functional.cosine_similarity(a__, b__)
+        margin = configs.triplet.margin_cosine
+        def rho__(a__, p__, n__):
+            return margin + dist__(a__, p__) - dist__(a__, n__)
+
+        rho1 = rho__(benign_vq, benign_vp, benign_vn).view(-1)
+        rho2 = rho__(advers_vq, advers_vp, advers_vn).view(-1)
+        sign_rho1 = th.sign(rho1)
+        sign_rho2 = th.sign(rho2)
+        abs_rho_diff = th.abs(rho1 - rho2)
+        batcheff = sign_rho1 * sign_rho2 * abs_rho_diff
+        batcheff = batcheff.cpu().detach().tolist()
+
+        return batcheff
+
+
+
 class ptripletC(ptriplet):
     _metric = 'C'
 

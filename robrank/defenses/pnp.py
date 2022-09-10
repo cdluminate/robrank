@@ -564,7 +564,7 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
 
 
 def pnp_training_step_cosine_only(model: th.nn.Module, batch, batch_idx, *,
-                      pgditer: int = None):
+        pgditer: int = None, do_batcheff: bool = False):
     '''
     do not train the model. only measure the cosine similarity to reflect misleading
     gradients for figure 2 in pami.
@@ -619,10 +619,16 @@ def pnp_training_step_cosine_only(model: th.nn.Module, batch, batch_idx, *,
     with th.no_grad():
         # aemb and pnemb are already normalized
         output_orig = th.nn.functional.normalize(output_orig)
-        cosine = model.lossfunc.cosine_only(
-                [aemb, pnemb[:len(pnemb)//2], pnemb[len(pnemb)//2:]],
-                [output_orig[anc], output_orig[pos], output_orig[neg]],
-                labels.view(-1))
+        if not do_batcheff:
+            cosine = model.lossfunc.cosine_only(
+                    [aemb, pnemb[:len(pnemb)//2], pnemb[len(pnemb)//2:]],
+                    [output_orig[anc], output_orig[pos], output_orig[neg]],
+                    labels.view(-1))
+        else:
+            cosine = model.lossfunc.batcheff_only(
+                    [aemb, pnemb[:len(pnemb)//2], pnemb[len(pnemb)//2:]],
+                    [output_orig[anc], output_orig[pos], output_orig[neg]],
+                    labels.view(-1))
         if not hasattr(model, 'cosine_only_stat'):
             model.cosine_only_stat = []
         model.cosine_only_stat.extend(cosine)

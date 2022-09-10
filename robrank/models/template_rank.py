@@ -203,7 +203,9 @@ class MetricBase(thl.LightningModule):
         if we draw figures, don't change the parameters at all
         '''
         if hasattr(self, 'is_advtrain_est_cosine_only') or hasattr(self,
-                'is_advtrain_pnp_cosine_only'):
+                'is_advtrain_pnp_cosine_only') or hasattr(self,
+                'is_advtrain_est_batcheff_only') or hasattr(self,
+                'is_advtrain_pnp_batcheff_only'):
             optim = th.optim.SGD(self.backbone.parameters(), lr=0.0, weight_decay=0.0)
         return optim
 
@@ -227,6 +229,8 @@ class MetricBase(thl.LightningModule):
             return defenses.est_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_est_cosine_only', False):
             return defenses.est_training_step_cosine_only(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_est_batcheff_only', False):
+            return defenses.est_training_step_cosine_only(self, batch, batch_idx, do_batcheff=True)
         elif getattr(self, 'is_advtrain_estf', False):
             return defenses.est_training_step(
                 self, batch, batch_idx, pgditer=1)
@@ -236,6 +240,8 @@ class MetricBase(thl.LightningModule):
             return defenses.pnp_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_pnp_cosine_only'):
             return defenses.pnp_training_step_cosine_only(self, batch, batch_idx)
+        elif getattr(self, 'is_advtrain_pnp_batcheff_only'):
+            return defenses.pnp_training_step_cosine_only(self, batch, batch_idx, do_batcheff=True)
         elif getattr(self, 'is_advtrain_pnpf', False):
             return defenses.pnp_training_step(
                 self, batch, batch_idx, pgditer=1)
@@ -326,15 +332,30 @@ class MetricBase(thl.LightningModule):
         '''
         dump cosine stat for tpami figure 2.
         '''
+        # process flags
         dump_cosine_stat = False
+        dump_batcheff_stat = False
         if getattr(self, 'is_advtrain_pnp_cosine_only', False):
             dump_cosine_stat = True
         elif getattr(self, 'is_advtrain_est_cosine_only', False):
             dump_cosine_stat = True
-        fname = 'cosine_only_stat.json'
-        with open(fname, 'wt') as f:
-            json.dump(self.cosine_only_stat, f)
-        print(f'>_< self.cosine_only_stat has been dumped into {fname}')
+        elif getattr(self, 'is_advtrain_pnp_batcheff_only', False):
+            dump_batcheff_stat = True
+        elif getattr(self, 'is_advtrain_est_batcheff_only', False):
+            dump_batcheff_stat = True
+        # cosine only stat
+        if dump_cosine_stat:
+            fname = 'cosine_only_stat.json'
+            with open(fname, 'wt') as f:
+                json.dump(self.cosine_only_stat, f)
+            print(f'>_< self.cosine_only_stat has been dumped into {fname}')
+        if dump_batcheff_stat:
+            fname = 'batcheff_only_stat.json'
+            with open(fname, 'wt') as f:
+                # this is not bug. we re-use the list cosine_only_stat
+                json.dump(self.cosine_only_stat, f)
+            print(f'>_< self.batcheff_only_stat has been dumped into {fname}')
+        # just exit after one epoch
         exit()
 
 
