@@ -59,6 +59,14 @@ class AdvRank(object):
         self.device = device
         self.metric = metric
         self.XI = 1.
+        self.__mode = 'PGD'
+
+    def set_mode(self, mode: str):
+        assert mode in ('PGD', 'NES')
+        print(f'>_< setting AdvRank class into {mode} mode.')
+        self.__mode = mode
+        if mode == 'NES':
+            raise NotImplementedError
 
     def __call__(self, images, labels, candi) -> tuple:
         '''
