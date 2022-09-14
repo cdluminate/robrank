@@ -356,7 +356,8 @@ class MetricBase(thl.LightningModule):
                 json.dump(self.cosine_only_stat, f)
             print(f'>_< self.batcheff_only_stat has been dumped into {fname}')
         # just exit after one epoch
-        exit()
+        if dump_cosine_stat or dump_batcheff_stat:
+            exit()
 
 
     def validation_step(self, batch, batch_idx):
