@@ -59,7 +59,16 @@ class AdvRank(object):
         self.device = device
         self.metric = metric
         self.XI = 1.
+        # default mode is PGD. Any specified attack will be optimized using
+        # PGD. Alternative option is NES. This attribute should be set
+        # using the set_mode(...) method after instantiation.
         self.__mode = 'PGD'
+        # NES parameters. not used in PGD mode
+        self.__nes_params = {
+                'Npop': 100,
+                'lr': 2./255.,
+                'sigma': eps / 0.5,
+                }
 
     def set_mode(self, mode: str):
         assert mode in ('PGD', 'NES')
@@ -363,6 +372,7 @@ class AdvRank(object):
 
         Returns the adversarial example.
         '''
+        assert self.__mode == 'PGD', 'AdvRank.embShift is only used for adversarial training'
         assert(isinstance(images, th.Tensor))
         images = images.clone().detach().to(self.device)
         images_orig = images.clone().detach()
