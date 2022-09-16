@@ -46,6 +46,13 @@ class AdvRank(object):
                  M: int = None, W: int = None, pm: str = None,
                  verbose: bool = False, device: str = 'cpu',
                  metric: str = None):
+        '''
+        different attributes are used by different attacks.
+
+        verbose is the first level of verboseness.
+        If you would like higher verboseness (e.g. print PGD iterations),
+        you may export the environment variable `export PGD=1`.
+        '''
 
         self.model = model
         self.eps = eps
@@ -69,6 +76,12 @@ class AdvRank(object):
                 'lr': 2./255.,
                 'sigma': eps / 0.5,
                 }
+
+    def __str__(self):
+        if self.attack_type in ('ES',):
+            return f'>_< AdvRank[{self.attack_type}] metric={self.metric} eps={self.eps} alpha={self.alpha}'
+        else:
+            return f"AdvRank (don't know how to deal with {self.attack_type}"
 
     def set_mode(self, mode: str):
         assert mode in ('PGD', 'NES')
@@ -457,11 +470,34 @@ class AdvRank(object):
                                'blue'))
         return xr
 
+
+    def __attack_NES(self,
+            images: th.Tensor,
+            labels: th.Tensor,
+            candi: tuple):
+        '''
+        This is the NES variant of the default self.attack method (PGD).
+        We use the same function signature. This method should only be
+        called from the dispatching part of self.attack(...)
+        '''
+        raise NotImplementedError
+
+
     def attack(self, images: th.Tensor, labels: th.Tensor,
                candi: tuple) -> tuple:
         '''
         Note, all images must lie in [0,1]^D
+        This attack method is a PGD engine.
+
+        Note, when self.__mode == 'NES', we will dispatch the function
+        call to self.__attack_NES with the same function signature.
+        This function should not be called outside the class, or there
+        will be more than one way to use NES mode, introducing additional
+        complexity.
         '''
+        # dispatch special mode
+        if self.__mode == 'NES':
+            return self.__attack_NES(images, labels, candi)
         # prepare the current batch of data
         assert(isinstance(images, th.Tensor))
         images = images.clone().detach().to(self.device)
@@ -691,8 +727,17 @@ class AdvRank(object):
 
 
 @pytest.mark.parametrize('metric, pgditer, eps',
+                         it.product('CEN', (1,4), (0., 0.1)))
+def test_es_nes(metric, pgditer, eps):
+    '''
+    additional tests in NES mode instead of PGD mode
+    '''
+    return test_es(metric, pgditer, eps, mode_nes=True)
+
+
+@pytest.mark.parametrize('metric, pgditer, eps',
                          it.product(('C', 'E', 'N'), (1, 4), (0., 0.1)))
-def test_es(metric, pgditer, eps):
+def test_es(metric, pgditer, eps, *, mode_nes: bool=False):
     # pylint: disable=unused-variable
     model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
@@ -702,12 +747,14 @@ def test_es(metric, pgditer, eps):
             candi = (F.normalize(model(dataset[0])), dataset[1])
         else:
             candi = (model(dataset[0]), dataset[1])
-    print(candi)
+    #print(candi)
     # select first 8 to perturb
     images, labels = dataset[0][:8], dataset[1][:8]
 
     advrank = AdvRank(model, attack_type='ES', eps=eps,
                       metric=metric, pgditer=pgditer, verbose=True)
+    if mode_nes:
+        advrank.set_mode('NES')
     print(advrank)
     xr, r, sumorig, sumadv = advrank(images, labels, candi)
     print('DEBUG: sumorig', sumorig)
@@ -802,3 +849,30 @@ def test_gtm(metric: str, pgditer: int, eps: float):
         assert(abs(sumorig['r@1'] - sumadv['r@1']) < 1e3)
     # else:
     #    assert(sumorig['r@1'] >= sumadv['r@1'])
+
+
+if __name__ == '__main__':
+    '''
+    call this using the following command:
+        python3 -m robrank.attacks.test_advrank
+    To enable more fine-grained verboseness, export PGD=1 before running test.
+    This is manual testing helper.
+    '''
+    import argparse
+    import rich
+    console = rich.get_console()
+    ag = argparse.ArgumentParser('manual tester for debugging')
+    ag.add_argument('--test', '-t', type=str, required=True,
+            choices=['es'])
+    ag.add_argument('--metric', '-m', type=str, default='N',
+            choices=['N', 'E', 'C'])
+    ag.add_argument('--pgditer', type=int, default=7)
+    ag.add_argument('--eps', '-e', type=float, default=0.1)
+    ag.add_argument('--nes', action='store_true', help='toggle NES mode instead of PGD mode')
+    ag = ag.parse_args()
+    console.print(ag)
+
+    if ag.test == 'es':
+        test_es(ag.metric, ag.pgditer, ag.eps, mode_nes=ag.nes)
+    else:
+        raise NotImplementedError
