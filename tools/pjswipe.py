@@ -245,7 +245,10 @@ def autodiscoverjsontf(logdir: str):
         print('cannot find any tfevent for the latest version')
         exit(1)
     cprint(f'* Automatically discovered latest tfevent .. {ntfe}', 'cyan')
-    tfe = TFdump(['-f', ntfe])
+    try:
+        tfe = TFdump(['-f', ntfe])
+    except:
+        print('tensorflow-cpu not installed. cannot dump tensorboard binary')
 
     JTYPE = str(os.getenv('JTYPE', ''))
     EPH = int(os.getenv('EPH', 0))
