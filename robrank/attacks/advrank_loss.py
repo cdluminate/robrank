@@ -28,6 +28,7 @@ import itertools as it
 class AdvRankLoss(object):
     '''
     Factory of all types of loss functions used in ranking attacks
+    All loss functions should be optimized in the minimization manner.
     '''
 
     def RankLossEmbShift(self, repv: th.Tensor, repv_orig: th.Tensor,

@@ -307,6 +307,8 @@ class AdvRank:
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag.add_argument('-b', '--batchsize', type=int, default=-1,
                         help='override batchsize')
+        ag.add_argument('--nes', action='store_true',
+                        help='toggle NES mode to replace PGD')
         ag.add_argument('-X', '--dumpaxd', type=str, default='',
                         help='path to dump the adversarial examples')
         ag = ag.parse_args(argv)
@@ -326,7 +328,7 @@ class AdvRank:
 
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
         atker = rr.attacks.AdvRankLauncher(
-            ag.attack, ag.device, ag.dumpaxd, ag.verbose)
+            ag.attack, ag.device, ag.dumpaxd, ag.verbose, nes_mode=ag.nes)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')

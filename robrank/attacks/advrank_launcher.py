@@ -40,12 +40,15 @@ class AdvRankLauncher(object):
 
     def __init__(self, attack: str, device: str = 'cpu',
                  dumpaxd: str = '',
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 *,
+                 nes_mode: bool = False):
         self.device = device
         self.verbose = verbose
         self.kw = {}
         self.dumpaxd: str = dumpaxd
         self.dumpax_counter: int = 0
+        self.nes_mode : bool = nes_mode
         # parse the attack
         self.kw['device'] = device
         self.kw['verbose'] = verbose
@@ -88,6 +91,8 @@ class AdvRankLauncher(object):
 
         # initialize attacker
         advrank = AdvRank(model, metric=model.metric, **self.kw)
+        if self.nes_mode:
+            advrank.set_mode('NES')
 
         # let's start!
         Sumorig, Sumadv = [], []

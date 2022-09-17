@@ -483,6 +483,7 @@ class AdvRank(object):
         # prepare the current batch of data
         assert(isinstance(images, th.Tensor))
         images = images.clone().detach().to(self.device)
+        #print(images)
         images_orig = images.clone().detach()
         images.requires_grad = True
         labels = labels.to(self.device).view(-1)
@@ -512,9 +513,13 @@ class AdvRank(object):
         bperts = [None for _ in range(batchsize)]
         qx = [None for _ in range(batchsize)]
         outputs = [None for _ in range(batchsize)]
+        losses_init = [None for _ in range(batchsize)]
+        losses_prev = [None for _ in range(batchsize)]
         losses = [None for _ in range(batchsize)]
         grads = [None for _ in range(batchsize)]
-        for iteration in range(self.pgditer):
+        candis = [None for _ in range(batchsize)]
+        # one more iteration for losses_init (initialization)
+        for iteration in range(self.pgditer + 1):
             # >> create population `qx` based on current state `nes`
             for i in range(batchsize):
                 if dimreduce:
@@ -524,15 +529,19 @@ class AdvRank(object):
                     perts = F.interpolate(_tmp, scale_factor=[7, 7])  # 224x224
                 else:
                     perts = self.__nes_params['sigma'] * th.randn(
-                            (self.__nes_params['Npop']//2, *nes[i].shape[1:]),
+                            (self.__nes_params['Npop']//2, *nes[i].shape),
                             device=images.device)
                 perts = th.cat([perts, -perts], dim=0).clamp(min=-self.eps, max=+self.eps)
+                assert len(perts.shape) == 4
                 bperts[i] = perts.clone().detach()
-                qx[i] = (nes[i] + perts).clamp(min=0., max=1.)
-                qx[i] = th.min(images_orig[i].expand(self.__nes_params['Npop'],
-                    *images_orig[i].shape[1:]) + self.eps, qx[i])
-                qx[i] = th.max(images_orig[i].expand(self.__nes_params['Npop'],
-                    *images_orig[i].shape[1:]) + self.eps, qx[i])
+                qx[i] = (nes[i].unsqueeze(0) + perts).clamp(min=0., max=1.)
+                #print(qx[i], qx[i].shape)
+                __reference__ = images_orig[i].expand(
+                        self.__nes_params['Npop'], *images_orig[i].shape)
+                #print(__reference__, __reference__.shape)
+                qx[i] = th.min(__reference__ + self.eps, qx[i])
+                qx[i] = th.max(__reference__ - self.eps, qx[i])
+                assert len(qx[i].shape) == 4
 
             # >> calculate score (scalar for each sample) for batch
             itermsg = defaultdict(list)
@@ -540,11 +549,13 @@ class AdvRank(object):
                 # >> prepare outputs
                 outputs[i] = self.forwardmetric(qx[i])
                 output = outputs[i]
+                assert len(output.shape) == 2
                 if attack_type in ('ES',):
                     output_orig = output_orig__[i].view(1, -1)
                     output_orig = output_orig.expand(
                             self.__nes_params['Npop'],
                             output_orig.shape[-1])
+                    assert len(output_orig.shape) == 2
                     #print('DEBUG:', output.shape, output_orig__.shape)
                 # calculate scores for a sample
                 if (attack_type == 'ES'):
@@ -555,6 +566,7 @@ class AdvRank(object):
                     else:
                         loss, _ = AdvRankLoss('ES', self.metric)(
                             output, output_orig, reduction='none')
+                    #print(loss.shape, loss)
                     itermsg['loss'].append(loss.mean().item())
                 elif (attack_type == 'FOA') and (self.M == 2):
                     # >> reverse the inequalities (ordinary: d1 < d2, adversary: d1 > d2)
@@ -601,7 +613,7 @@ class AdvRank(object):
                     embpairs, _ = self.qcsel
                     embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
                             self.__nes_params['Npop'], *embpairs.shape[1:])
-                    print('debug', output.shape, embpairs.shape, candi[0].shape)
+                    #print('debug', output.shape, embpairs.shape, candi[0].shape)
                     loss, _ = AdvRankLoss(f'CA{self.pm}', self.metric)(
                             output, embpairs, candi[0], reduction='none')
                     itermsg['loss'].append(loss.mean().item())
@@ -673,12 +685,18 @@ class AdvRank(object):
                 else:
                     raise Exception("Unknown attack")
                 assert loss.nelement() == self.__nes_params['Npop']
+                assert len(loss.shape) == 1
+                if iteration == 0:
+                    losses_init[i] = loss
+                losses_prev[i] = losses[i]
                 losses[i] = loss  # this is the scores used by NES
             for (k, v) in itermsg.items():
                 if isinstance(v, list):
-                    itermsg[k] = np.mean(v)  # yes, it is mean of min of scores
+                    itermsg[k] = np.mean(v)  # yes, it is mean of mean of scores
             if self.verbose and int(os.getenv('PGD', -1)) > 0:
                 tqdm.write(colored('(NES)>\t' + json.dumps(itermsg), 'yellow'))
+            if iteration == 0:
+                continue
             # here we finished the forward pass calculating the scores for qx
 
             # >> NES: estimate gradient
@@ -689,13 +707,22 @@ class AdvRank(object):
                 #print(grad.shape)
                 grads[i] = grad
 
-            # >> NES: apply gradient to current state
+            # >> NES: apply gradient to current state (gradient descent)
             for i in range(batchsize):
-                nes[i] += (self.__nes_params['lr'] * th.sign(grads[i]))
-                nes[i] = th.min(images_orig[i] + self.eps, nes[i])
-                nes[i] = th.max(images_orig[i] - self.eps, nes[i])
-                nes[i] = nes[i].clamp(min=0., max=1.)
-                nes[i] = nes[i].clone().detach()
+                candis[i] = nes[i] - (self.__nes_params['lr'] * th.sign(grads[i]))
+                candis[i] = th.min(images_orig[i] + self.eps, candis[i])
+                candis[i] = th.max(images_orig[i] - self.eps, candis[i])
+                candis[i] = candis[i].clamp(min=0., max=1.)
+                candis[i] = candis[i].clone().detach()
+                # XXX: if we filter results, performance gets worse
+                #if losses_prev[i] is None \
+                #        and losses_init[i].mean() > losses[i].mean():
+                #    nes[i] = candis[i]
+                #elif losses_prev[i] is not None \
+                #        and losses_init[i].mean() > losses[i].mean() \
+                #        and losses_prev[i].mean() > losses[i].mean():
+                #    nes[i] = candis[i]
+                nes[i] = candis[i]
             # finished one iteration of NES for a single sample
 
         # merge the per-sample results into a batch
@@ -716,19 +743,18 @@ class AdvRank(object):
                                'blue'))
         self.model.eval()
         with th.no_grad():
-            output = self.forwardmetric(nes)
             output_adv, dist_adv, summary_adv = self.eval_advrank(
                 xr, labels, candi, resample=False)
 
             # also calculate embedding shift
             if self.metric == 'C':
-                distance = 1 - th.mm(output, output_orig__.t())
+                distance = 1 - th.mm(output_adv, output_orig__.t())
                 # i.e. trace = diag.sum
                 embshift = distance.trace() / output.shape[0]
                 summary_adv['embshift'] = embshift.item()
             elif self.metric in ('E', 'N'):
                 distance = th.nn.functional.pairwise_distance(
-                    output, output_orig__, p=2)
+                    output_adv, output_orig__, p=2)
                 embshift = distance.sum() / output.shape[0]
                 summary_adv['embshift'] = embshift.item()
 
