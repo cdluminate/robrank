@@ -208,6 +208,7 @@ class Swipe:
         ag.add_argument('-b', '--batchsize', type=int, default=-1)
         ag.add_argument('-m', '--maxiter', type=int, default=None)
         ag.add_argument('-v', '--verbose', action='store_true')
+        ag.add_argument('--nes', action='store_true', help='toggle NES mode')
         ag = ag.parse_args(argv)
         print(ag)
         profile = getattr(self, 'profile_' + ag.profile)
@@ -232,6 +233,8 @@ class Swipe:
                 argv.extend(['-m', str(ag.maxiter)])
             if ag.verbose:
                 argv.append('-v')
+            if ag.nes:
+                argv.append('--nes')
             print('Calling AdvRank with', argv)
             instance = AdvRank(argv)
             instances[atk] = instance.stats
