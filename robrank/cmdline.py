@@ -251,7 +251,10 @@ class Swipe:
             '[white on red]=== Final Swipe Results ====================================')
         code = json.dumps(results, indent=2)
         print(rr.utils.rjson(code))
-        with open(ag.checkpoint + f'.{ag.profile}.json', 'wt') as f:
+        dumppath = ag.checkpoint + f'.{ag.profile}.json'
+        if ag.nes:
+            dumppath = dumppath.replace('.json', '-nes.json')
+        with open(dumppath, 'wt') as f:
             f.write(code)
 
 
