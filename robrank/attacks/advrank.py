@@ -74,7 +74,7 @@ class AdvRank(object):
         # NES parameters. not used in PGD mode
         self.__nes_params = {
                 'Npop': 100,
-                'lr': 2./255.,
+                'lr': 3./255., # alpha=3/255 in rob28/rob224 profile.
                 'sigma': eps / 0.5,
                 }
 
