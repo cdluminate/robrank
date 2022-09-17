@@ -23,6 +23,7 @@ import statistics
 import numpy as np
 import torch.nn.functional as F
 import functools as ft
+from collections import defaultdict
 try:
     from .advrank_qcselector import QCSelector
     from .advrank_loss import AdvRankLoss
@@ -78,10 +79,7 @@ class AdvRank(object):
                 }
 
     def __str__(self):
-        if self.attack_type in ('ES',):
-            return f'>_< AdvRank[{self.attack_type}/{self.__mode}] metric={self.metric} eps={self.eps} alpha={self.alpha}'
-        else:
-            return f"AdvRank (don't know how to deal with {self.attack_type}"
+        return f'>_< AdvRank[{self.attack_type}/{self.__mode}] metric={self.metric}'
 
     def set_mode(self, mode: str):
         assert mode in ('PGD', 'NES')
@@ -492,189 +490,221 @@ class AdvRank(object):
 
         # evaluate original samples, and set self.qcsel
         with th.no_grad():
-            output_orig, dist_orig, summary_orig = self.eval_advrank(
+            output_orig__, dist_orig__, summary_orig__ = self.eval_advrank(
                 images, labels, candi, resample=True)
         if self.verbose:
             tqdm.write(colored('* OriEval', 'green', None, ['bold']), end=' ')
-            tqdm.write(rjson(json.dumps(summary_orig)), end='')
+            tqdm.write(rjson(json.dumps(summary_orig__)), end='')
 
         # -> start NES optimization
         # truning the model into tranining mode triggers obscure problem:
         # incorrect validation performance due to BatchNorm. We do automatic
         # differentiation in evaluation mode instead.
         self.model.eval()
-        # for 32x32 or 28x28 input, we disable dimension reduction
-        # for 224x224 input, we enable dimension reduction
-        dimreduce = (images.shape[-1] > 64)
+        # NES does not make sense in single step mode
+        assert self.pgditer > 1, "NES mode needs the pgditer > 1 to make sense"
+        # for BxCx32x32 or BxCx28x28 input, we disable dimension reduction
+        # for BxCx224x224 input, we enable dimension reduction
+        dimreduce = (len(images.shape) == 4 and images.shape[-1] > 64)
+        # prepare
         batchsize = images.shape[0]
-        raise NotImplementedError
+        nes = [images[i].clone().detach() for i in range(batchsize)]
+        bperts = [None for _ in range(batchsize)]
+        qx = [None for _ in range(batchsize)]
+        outputs = [None for _ in range(batchsize)]
+        losses = [None for _ in range(batchsize)]
+        grads = [None for _ in range(batchsize)]
         for iteration in range(self.pgditer):
-            # >> prepare optimizer for SGD
-            optim = th.optim.SGD(self.model.parameters(), lr=1.)
-            optimx = th.optim.SGD([images], lr=1.)
-            optim.zero_grad()
-            optimx.zero_grad()
-            output = self.forwardmetric(images)
+            # >> create population `qx` based on current state `nes`
+            for i in range(batchsize):
+                if dimreduce:
+                    _tmp = self.__nes_params['sigma'] * th.randn(
+                            (self.__nes_params['Npop']//2, 3, 32, 32),
+                            device=images.device)
+                    perts = F.interpolate(_tmp, scale_factor=[7, 7])  # 224x224
+                else:
+                    perts = self.__nes_params['sigma'] * th.randn(
+                            (self.__nes_params['Npop']//2, *nes[i].shape[1:]),
+                            device=images.device)
+                perts = th.cat([perts, -perts], dim=0).clamp(min=-self.eps, max=+self.eps)
+                bperts[i] = perts.clone().detach()
+                qx[i] = (nes[i] + perts).clamp(min=0., max=1.)
+                qx[i] = th.min(images_orig[i].expand(self.__nes_params['Npop'],
+                    *images_orig[i].shape[1:]) + self.eps, qx[i])
+                qx[i] = th.max(images_orig[i].expand(self.__nes_params['Npop'],
+                    *images_orig[i].shape[1:]) + self.eps, qx[i])
 
-            # calculate differentiable loss
-            if (attack_type == 'ES'):
-                if iteration == 0:
-                    # avoid zero gradient
-                    loss, _ = AdvRankLoss('ES', self.metric)(
-                        output, output_orig + 1e-7)
-                else:
-                    loss, _ = AdvRankLoss('ES', self.metric)(
-                        output, output_orig)
-                itermsg = {'loss': loss.item()}
-            elif (attack_type == 'FOA') and (self.M == 2):
-                # >> reverse the inequalities (ordinary: d1 < d2, adversary: d1 > d2)
-                embpairs, _ = self.qcsel
-                loss, _ = AdvRankLoss('FOA2', self.metric)(
-                    output, embpairs[:, 1, :], embpairs[:, 0, :])
-                itermsg = {'loss': loss.item()}
-            elif (attack_type == 'SPFOA') and (self.M == 2):
-                embpairs, _, embgts, _ = self.qcsel
-                loss, _ = AdvRankLoss('FOA2', self.metric)(
-                    output, embpairs[:, 1, :], embpairs[:, 0, :])
-                loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
-                    output, embgts, candi[0])
-                loss = loss + self. XI * loss_sp
-                itermsg = {'loss': loss.item(), 'SP.QA+': loss_sp.item()}
-            elif (attack_type == 'FOA') and (self.M > 2):
-                # >> enforce the random inequality set (di < dj for all i,j where i<j)
-                embpairs, _ = self.qcsel
-                loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs)
-                itermsg = {'loss': loss.item()}
-            elif (attack_type == 'SPFOA') and (self.M > 2):
-                embpairs, _, embgts, _ = self.qcsel
-                loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs)
-                loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
-                    output, embgts, candi[0])
-                self.update_xi(loss_sp)
-                loss = loss + self.XI * loss_sp
-                itermsg = {'loss': loss.item(), 'SP.QA+': loss_sp.item()}
-            elif (attack_type == 'CA'):
-                embpairs, _ = self.qcsel
-                if int(os.getenv('DISTANCE', 0)) > 0:
-                    loss, _ = AdvRankLoss(
-                        'CA-DIST', self.metric)(output, embpairs, candi[0], pm=self.pm)
-                else:
+            # >> calculate score (scalar for each sample) for batch
+            itermsg = defaultdict(list)
+            for i in range(batchsize):
+                # >> prepare outputs
+                outputs[i] = self.forwardmetric(qx[i])
+                output = outputs[i]
+                if attack_type in ('ES',):
+                    output_orig = output_orig__[i].view(1, -1)
+                    output_orig = output_orig.expand(
+                            self.__nes_params['Npop'],
+                            output_orig.shape[-1])
+                    #print('DEBUG:', output.shape, output_orig__.shape)
+                # calculate scores for a sample
+                if (attack_type == 'ES'):
+                    if iteration == 0:
+                        # avoid zero gradient
+                        loss, _ = AdvRankLoss('ES', self.metric)(
+                            output, output_orig + 1e-7, reduction='none')
+                    else:
+                        loss, _ = AdvRankLoss('ES', self.metric)(
+                            output, output_orig, reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'FOA') and (self.M == 2):
+                    # >> reverse the inequalities (ordinary: d1 < d2, adversary: d1 > d2)
+                    embpairs, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    loss, _ = AdvRankLoss('FOA2', self.metric)(
+                        output, embpairs[:, 1, :], embpairs[:, 0, :], reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'SPFOA') and (self.M == 2):
+                    embpairs, _, embgts, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    embgts = embgts[i].view(1, *embgts.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embgts.shape[1:])
+                    loss, _ = AdvRankLoss('FOA2', self.metric)(
+                        output, embpairs[:, 1, :], embpairs[:, 0, :], reduction='none')
+                    loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
+                        output, embgts, candi[0], reduction='none')
+                    loss = loss + self. XI * loss_sp
+                    itermsg['loss'].append(loss.mean().item())
+                    itermsg['SP.QA+'].append(loss_sp.mean().item())
+                elif (attack_type == 'FOA') and (self.M > 2):
+                    # >> enforce the random inequality set (di < dj for all i,j where i<j)
+                    embpairs, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs, reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'SPFOA') and (self.M > 2):
+                    embpairs, _, embgts, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    embgts = embgts[i].view(1, *embgts.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embgts.shape[1:])
+                    loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs, reduction='none')
+                    loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
+                        output, embgts, candi[0], reduction='none')
+                    self.update_xi(loss_sp)
+                    loss = loss + self.XI * loss_sp
+                    itermsg['loss'].append(loss.mean().item())
+                    itermsg['SP.QA+'].append(loss_sp.mean().item())
+                elif (attack_type == 'CA'):
+                    embpairs, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    print('debug', output.shape, embpairs.shape, candi[0].shape)
                     loss, _ = AdvRankLoss(f'CA{self.pm}', self.metric)(
-                        output, embpairs, candi[0])
-                itermsg = {'loss': loss.item()}
-            elif (attack_type == 'QA'):
-                embpairs, _ = self.qcsel
-                # == enforce the target set of inequalities, while preserving the semantic
-                if int(os.getenv('DISTANCE', 0)) > 0:
-                    loss, _ = AdvRankLoss(
-                        'QA-DIST', self.metric)(output, embpairs, candi[0], pm=self.pm)
-                else:
+                            output, embpairs, candi[0], reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'QA'):
+                    embpairs, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    # == enforce the target set of inequalities, while preserving the semantic
                     loss, _ = AdvRankLoss('QA', self.metric)(
-                        output, embpairs, candi[0], pm=self.pm)
-                itermsg = {'loss': loss.item()}
-            elif (attack_type == 'SPQA') and int(os.getenv('PGD', -1)) > 0:
-                # THIS IS INTENDED FOR DEBUGGING AND DEVELOPING XI SCHEME
-                print('DEBUGGING MODE')
-                embpairs, cidx, embgts, gidx = self.qcsel
-                with th.no_grad():
-                    dist = th.cdist(output, candi[0])
-                loss_qa, crank = AdvRankLoss('QA', self.metric)(
-                    output, embpairs, candi[0], pm=self.pm,
-                    cidx=cidx, dist=dist)
-                loss_sp, grank = AdvRankLoss('QA', self.metric)(
-                    output, embgts, candi[0], pm='+',
-                    cidx=gidx, dist=dist)
-                self.update_xi(loss_sp)
-                loss = loss_qa + self.XI * loss_sp
-                itermsg = {'loss': loss.item(), 'loss_qa': loss_qa.item(),
-                           'loss_sp': loss_sp.item(), 'xi': self.XI,
-                           'crank': crank / candi[0].shape[0],
-                           'grank': grank / candi[0].shape[0]}
-            elif (attack_type == 'SPQA'):
-                embpairs, _, embgts, _ = self.qcsel
-                if int(os.getenv('DISTANCE', 0)) > 0:
-                    #raise NotImplementedError("SP for distance based objective makes no sense here")
-                    loss_qa, _ = AdvRankLoss(
-                        'QA-DIST', self.metric)(output, embpairs, candi[0], pm=self.pm)
-                    loss_sp, _ = AdvRankLoss(
-                        'QA-DIST', self.metric)(output, embgts, candi[0], pm='+')
-                    self.update_xi(loss_sp)
-                    loss = loss_qa + self.XI * loss_sp
-                else:
+                            output, embpairs, candi[0], pm=self.pm, reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'SPQA'):
+                    embpairs, _, embgts, _ = self.qcsel
+                    embpairs = embpairs[i].view(1, *embpairs.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embpairs.shape[1:])
+                    embgts = embgts[i].view(1, *embgts.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embgts.shape[1:])
                     loss_qa, _ = AdvRankLoss('QA', self.metric)(
-                        output, embpairs, candi[0], pm=self.pm)
+                        output, embpairs, candi[0], pm=self.pm, reduction='none')
                     loss_sp, _ = AdvRankLoss('QA', self.metric)(
-                        output, embgts, candi[0], pm='+')
+                        output, embgts, candi[0], pm='+', reduction='none')
                     self.update_xi(loss_sp)
                     loss = loss_qa + self.XI * loss_sp
-                itermsg = {'loss': loss.item(), 'loss_qa': loss_qa.item(),
-                           'loss_sp': loss_sp.item()}
-            elif (attack_type == 'GTM'):
-                ((emm, _), (emu, _), (ems, _)) = self.qcsel
-                loss = AdvRankLoss('GTM', self.metric)(
-                    output, emm, emu, ems, candi[0])
-                itermsg = {'loss': loss.item()}
-                # Note: greedy qc selection / resample harms performance
-                # with th.no_grad():
-                #    if self.metric in ('C',):
-                #        dist = 1 - output @ candi[0].t()
-                #    elif self.metric in ('E', 'N'):
-                #        dist = th.cdist(output, candi[0])
-                # self.qcsel = QCSelector('GTM', None, None)(dist, candi,
-                #        self.dist_orig)
-            elif (attack_type == 'GTT'):
-                ((emm, idm), (emu, idum), (ems, _)) = self.qcsel
-                loss = AdvRankLoss('GTT', self.metric)(
-                    output, emm, emu, ems, candi[0])
-                itermsg = {'loss': loss.item()}
-            elif attack_type == 'TMA':
-                (embrand, _) = self.qcsel
-                loss = AdvRankLoss('TMA', self.metric)(output, embrand)
-                itermsg = {'loss': loss.item()}
-            elif attack_type == 'LTM':
-                mask_same = (candi[1].view(1, -1) == labels.view(-1, 1))
-                mask_same.scatter(1, self.loc_self.view(-1, 1), False)
-                mask_diff = (candi[1].view(1, -1) != labels.view(-1, 1))
-                if self.metric in ('E', 'N'):
-                    dist = th.cdist(output, candi[0])
-                elif self.metric == 'C':
-                    dist = 1 - output @ candi[0].t()
-                maxdan = th.stack([dist[i, mask_diff[i]].max()
-                                   for i in range(dist.size(0))])
-                mindap = th.stack([dist[i, mask_same[i]].min()
-                                   for i in range(dist.size(0))])
-                loss = (maxdan - mindap).relu().sum()
-                itermsg = {'loss': loss.item()}
-            else:
-                raise Exception("Unknown attack")
+                    itermsg['loss'].append(loss.mean().item())
+                    itermsg['loss_qa'].append(loss_qa.mean().item())
+                    itermsg['loss_sp'].append(loss_sp.mean().item())
+                elif (attack_type == 'GTM'):
+                    ((emm, _), (emu, _), (ems, _)) = self.qcsel
+                    emm = emm[i].view(1, *emm.shape[1:]).expand(
+                        self.__nes_params['Npop'], *emm.shape[1:])
+                    emu = emu[i].view(1, *emu.shape[1:]).expand(
+                        self.__nes_params['Npop'], *emu.shape[1:])
+                    ems = ems[i].view(1, *ems.shape[1:]).expand(
+                        self.__nes_params['Npop'], *ems.shape[1:])
+                    loss = AdvRankLoss('GTM', self.metric)(
+                        output, emm, emu, ems, candi[0], reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif (attack_type == 'GTT'):
+                    ((emm, _), (emu, _), (ems, _)) = self.qcsel
+                    emm = emm[i].view(1, *emm.shape[1:]).expand(
+                        self.__nes_params['Npop'], *emm.shape[1:])
+                    emu = emu[i].view(1, *emu.shape[1:]).expand(
+                        self.__nes_params['Npop'], *emu.shape[1:])
+                    ems = ems[i].view(1, *ems.shape[1:]).expand(
+                        self.__nes_params['Npop'], *ems.shape[1:])
+                    loss = AdvRankLoss('GTT', self.metric)(
+                        output, emm, emu, ems, candi[0], reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif attack_type == 'TMA':
+                    (embrand, _) = self.qcsel
+                    embrand = embrand[i].view(1, *embrand.shape[1:]).expand(
+                            self.__nes_params['Npop'], *embrand.shape[1:])
+                    loss = AdvRankLoss('TMA', self.metric)(output, embrand, reduction='none')
+                    itermsg['loss'].append(loss.mean().item())
+                elif attack_type == 'LTM':
+                    mask_same = (candi[1].view(1, -1) == labels.view(-1, 1))
+                    mask_same.scatter(1, self.loc_self.view(-1, 1), False)
+                    mask_diff = (candi[1].view(1, -1) != labels.view(-1, 1))
+                    if self.metric in ('E', 'N'):
+                        dist = th.cdist(output, candi[0])
+                    elif self.metric == 'C':
+                        dist = 1 - output @ candi[0].t()
+                    maxdan = th.stack([dist[i, mask_diff[i]].max()
+                                       for i in range(dist.size(0))])
+                    mindap = th.stack([dist[i, mask_same[i]].min()
+                                       for i in range(dist.size(0))])
+                    loss = (maxdan - mindap).relu() #.sum()
+                    itermsg['loss'].append(loss.mean().item())
+                else:
+                    raise Exception("Unknown attack")
+                assert loss.nelement() == self.__nes_params['Npop']
+                losses[i] = loss  # this is the scores used by NES
+            for (k, v) in itermsg.items():
+                if isinstance(v, list):
+                    itermsg[k] = np.mean(v)  # yes, it is mean of min of scores
             if self.verbose and int(os.getenv('PGD', -1)) > 0:
-                tqdm.write(colored('(PGD)>\t' + json.dumps(itermsg), 'yellow'))
-            loss.backward()
+                tqdm.write(colored('(NES)>\t' + json.dumps(itermsg), 'yellow'))
+            # here we finished the forward pass calculating the scores for qx
 
-            # >> PGD: project SGD optimized result back to a valid region
-            if self.pgditer > 1:
-                images.grad.data.copy_(self.alpha * th.sign(images.grad))
-                # note: don't know whether this trick helps
-                #alpha = self.alpha if iteration %2 == 0 else 2. * self.alpha
-                #images.grad.data.copy_(alpha * th.sign(images.grad))
-            elif self.pgditer == 1:
-                images.grad.data.copy_(self.eps * th.sign(images.grad))  # FGSM
-            optimx.step()
-            # L_infty constraint
-            images = th.min(images, images_orig + self.eps)
-            # L_infty constraint
-            images = th.max(images, images_orig - self.eps)
-            images = th.clamp(images, min=0., max=1.)
-            images = images.clone().detach()
-            images.requires_grad = True
+            # >> NES: estimate gradient
+            for i in range(batchsize):
+                #print(losses[i].shape, bperts[i].shape)
+                grad = (losses[i].view(-1,*([1]*(len(bperts[i].shape)-1)))
+                        * bperts[i]).mean(dim=0) / self.__nes_params['sigma']
+                #print(grad.shape)
+                grads[i] = grad
 
-        optim.zero_grad()
-        optimx.zero_grad()
-        images.requires_grad = False
+            # >> NES: apply gradient to current state
+            for i in range(batchsize):
+                nes[i] += (self.__nes_params['lr'] * th.sign(grads[i]))
+                nes[i] = th.min(images_orig[i] + self.eps, nes[i])
+                nes[i] = th.max(images_orig[i] - self.eps, nes[i])
+                nes[i] = nes[i].clamp(min=0., max=1.)
+                nes[i] = nes[i].clone().detach()
+            # finished one iteration of NES for a single sample
 
+        # merge the per-sample results into a batch
+        nes = th.vstack([x.unsqueeze(0) for x in nes])
+        #print('images_orig', images_orig.shape, images_orig)
+        #print('nes', nes.shape, nes)
+        xr = nes.clone().detach()
+        r = (xr - images_orig).clone().detach()
         # evaluate adversarial samples
-        xr = images.clone().detach()
-        r = images - images_orig
         if self.verbose:
             tqdm.write(colored(' '.join(['r>',
                                          'Min', '%.3f' % r.min().item(),
@@ -686,28 +716,26 @@ class AdvRank(object):
                                'blue'))
         self.model.eval()
         with th.no_grad():
+            output = self.forwardmetric(nes)
             output_adv, dist_adv, summary_adv = self.eval_advrank(
                 xr, labels, candi, resample=False)
 
             # also calculate embedding shift
             if self.metric == 'C':
-                distance = 1 - th.mm(output, output_orig.t())
+                distance = 1 - th.mm(output, output_orig__.t())
                 # i.e. trace = diag.sum
                 embshift = distance.trace() / output.shape[0]
                 summary_adv['embshift'] = embshift.item()
             elif self.metric in ('E', 'N'):
                 distance = th.nn.functional.pairwise_distance(
-                    output, output_orig, p=2)
+                    output, output_orig__, p=2)
                 embshift = distance.sum() / output.shape[0]
                 summary_adv['embshift'] = embshift.item()
 
         if self.verbose:
             tqdm.write(colored('* AdvEval', 'red', None, ['bold']), end=' ')
             tqdm.write(rjson(json.dumps(summary_adv)), end='')
-        return (xr, r, summary_orig, summary_adv)
-
-
-
+        return (xr, r, summary_orig__, summary_adv)
 
 
     def attack(self, images: th.Tensor, labels: th.Tensor,
@@ -724,7 +752,9 @@ class AdvRank(object):
         '''
         # dispatch special mode
         if self.__mode == 'NES':
-            return self.__attack_NES(images, labels, candi)
+            with th.no_grad():
+                results = self.__attack_NES(images, labels, candi)
+            return results
         # prepare the current batch of data
         assert(isinstance(images, th.Tensor))
         images = images.clone().detach().to(self.device)
@@ -954,19 +984,19 @@ class AdvRank(object):
 
 
 @pytest.mark.parametrize('metric, pgditer, eps',
-                         it.product('CEN', (1,4), (0., 0.1)))
+                         it.product('CEN', (4,), (0., 0.1)))
 def test_es_nes(metric, pgditer, eps):
     '''
     additional tests in NES mode instead of PGD mode
     '''
-    return test_es(metric, pgditer, eps, mode_nes=True)
+    return test_es(metric, pgditer, eps, nes_mode=True)
 
 
 @pytest.mark.parametrize('metric, pgditer, eps',
                          it.product(('C', 'E', 'N'), (1, 4), (0., 0.1)))
-def test_es(metric, pgditer, eps, *, mode_nes: bool=False):
+def test_es(metric, pgditer, eps, *, nes_mode: bool=False):
     # pylint: disable=unused-variable
-    if mode_nes:
+    if nes_mode:
         model = th.nn.Sequential(th.nn.Flatten(), th.nn.Linear(8, 8))
     else:
         model = th.nn.Sequential(th.nn.Linear(8, 8))
@@ -983,7 +1013,7 @@ def test_es(metric, pgditer, eps, *, mode_nes: bool=False):
 
     advrank = AdvRank(model, attack_type='ES', eps=eps,
                       metric=metric, pgditer=pgditer, verbose=True)
-    if mode_nes:
+    if nes_mode:
         advrank.set_mode('NES')
         images = images.view(images.shape[0], 1, 1, -1)
     print(advrank)
@@ -998,10 +1028,19 @@ def test_es(metric, pgditer, eps, *, mode_nes: bool=False):
 
 
 @pytest.mark.parametrize('W, pm, metric, pgditer, eps',
+                         it.product((1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (4,), (0., 0.1)))
+def test_ca_nes(W, pm, metric, pgditer, eps):
+    return test_ca(W, pm, metric, pgditer, eps, nes_mode=True)
+
+
+@pytest.mark.parametrize('W, pm, metric, pgditer, eps',
                          it.product((1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (1, 4), (0., 0.1)))
-def test_ca(W, pm, metric, pgditer, eps):
+def test_ca(W, pm, metric, pgditer, eps, *, nes_mode:bool=False):
     # pylint: disable=unused-variable
-    model = th.nn.Sequential(th.nn.Linear(8, 8))
+    if nes_mode:
+        model = th.nn.Sequential(th.nn.Flatten(), th.nn.Linear(8, 8))
+    else:
+        model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
     with th.no_grad():
@@ -1015,6 +1054,9 @@ def test_ca(W, pm, metric, pgditer, eps):
 
     advrank = AdvRank(model, attack_type='CA', eps=eps, W=W,
                       pm=pm, metric=metric, pgditer=pgditer, verbose=True)
+    if nes_mode:
+        advrank.set_mode('NES')
+        images = images.view(images.shape[0], 1, 1, -1)
     print(advrank)
     xr, r, sumorig, sumadv = advrank(images, labels, candi)
     print('DEBUG: sumorig', sumorig)
@@ -1027,10 +1069,19 @@ def test_ca(W, pm, metric, pgditer, eps):
 
 
 @pytest.mark.parametrize('attack_type, M, pm, metric, pgditer, eps',
+                         it.product(('QA', 'SPQA'), (1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (4,), (0., 0.1)))
+def test_qa_nes(attack_type, M, pm, metric, pgditer, eps):
+    return test_qa(attack_type, M, pm, metric, pgditer, eps, nes_mode=True)
+
+
+@pytest.mark.parametrize('attack_type, M, pm, metric, pgditer, eps',
                          it.product(('QA', 'SPQA'), (1, 2, 5), ('+', '-'), ('C', 'E', 'N'), (1, 4), (0., 0.1)))
-def test_qa(attack_type, M, pm, metric, pgditer, eps):
+def test_qa(attack_type, M, pm, metric, pgditer, eps, *, nes_mode:bool=False):
     # pylint: disable=unused-variable
-    model = th.nn.Sequential(th.nn.Linear(8, 8))
+    if nes_mode:
+        model = th.nn.Sequential(th.nn.Flatten(), th.nn.Linear(8, 8))
+    else:
+        model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
     with th.no_grad():
@@ -1044,6 +1095,9 @@ def test_qa(attack_type, M, pm, metric, pgditer, eps):
 
     advrank = AdvRank(model, attack_type=attack_type, eps=eps,
                       M=M, pm=pm, metric=metric, pgditer=pgditer, verbose=True)
+    if nes_mode:
+        advrank.set_mode('NES')
+        images = images.view(images.shape[0], 1, 1, -1)
     print(advrank)
     xr, r, sumorig, sumadv = advrank(images, labels, candi)
     print('DEBUG: sumorig', sumorig)
@@ -1056,10 +1110,18 @@ def test_qa(attack_type, M, pm, metric, pgditer, eps):
 
 
 @pytest.mark.parametrize('metric, pgditer, eps',
+                         it.product(('N', 'E', 'C'), (4,), (0., 0.1)))
+def test_gtm_nes(metric: str, pgditer: int, eps: float):
+    return test_gtm(metric, pgditer, eps, nes_mode=True)
+
+@pytest.mark.parametrize('metric, pgditer, eps',
                          it.product(('N', 'E', 'C'), (1, 4), (0., 0.1)))
-def test_gtm(metric: str, pgditer: int, eps: float):
+def test_gtm(metric: str, pgditer: int, eps: float, *, nes_mode:bool=False):
     # pylint: disable=unused-variable
-    model = th.nn.Sequential(th.nn.Linear(8, 8))
+    if nes_mode:
+        model = th.nn.Sequential(th.nn.Flatten(), th.nn.Linear(8, 8))
+    else:
+        model = th.nn.Sequential(th.nn.Linear(8, 8))
     print(model)
     dataset = (th.rand(1000, 8), th.randint(0, 10, (1000,)))
     with th.no_grad():
@@ -1072,6 +1134,9 @@ def test_gtm(metric: str, pgditer: int, eps: float):
     images, labels = dataset[0][:8], dataset[1][:8]
     advrank = AdvRank(model, attack_type='GTM', eps=eps,
                       metric=metric, pgditer=pgditer, verbose=True)
+    if nes_mode:
+        advrank.set_mode('NES')
+        images = images.view(images.shape[0], 1, 1, -1)
     print(advrank)
     xr, r, sumorig, sumadv = advrank(images, labels, candi)
     print('DEBUG: sumorig', sumorig)
@@ -1104,6 +1169,6 @@ if __name__ == '__main__':
     console.print(ag)
 
     if ag.test == 'es':
-        test_es(ag.metric, ag.pgditer, ag.eps, mode_nes=ag.nes)
+        test_es(ag.metric, ag.pgditer, ag.eps, nes_mode=ag.nes)
     else:
         raise NotImplementedError

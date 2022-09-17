@@ -30,7 +30,8 @@ class AdvRankLoss(object):
     Factory of all types of loss functions used in ranking attacks
     '''
 
-    def RankLossEmbShift(self, repv: th.Tensor, repv_orig: th.Tensor):
+    def RankLossEmbShift(self, repv: th.Tensor, repv_orig: th.Tensor,
+            *, reduction:str='sum'):
         '''
         Computes the embedding shift, we want to maximize it by gradient descent
 
@@ -38,16 +39,21 @@ class AdvRankLoss(object):
             repv: size(batch, embdding_dim), requires_grad.
             repv_orig: size(batch, embedding_dim).
         '''
+        assert reduction in ('sum', 'none')  # 'mean' reduction does not make sense here
         if self.metric == 'C':
             distance = 1 - F.cosine_similarity(repv, repv_orig)
             # distance = -(1 - th.mm(repv, repv_orig)).trace() # not efficient
         elif self.metric in ('E', 'N'):
             distance = F.pairwise_distance(repv, repv_orig)
-        loss = -distance.sum()
+        if reduction == 'sum':
+            loss = -distance.sum()
+        else:
+            loss = -distance
         return (loss, None)
 
     def RankLossQueryAttack(self, qs: th.Tensor, Cs: th.Tensor, Xs: th.Tensor,
-                            *, pm: str, dist: th.Tensor = None, cidx: th.Tensor = None):
+                            *, pm: str, dist: th.Tensor = None, cidx: th.Tensor = None,
+                            reduction:str = 'mean'):
         '''
         Computes the loss function for pure query attack
 
@@ -59,6 +65,7 @@ class AdvRankLoss(object):
             dist: size(batch, testsize), pairwise distance matrix.
             cidx: size(batch, M), index of candidates in Xs.
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[1] == Cs.shape[2] == Xs.shape[1])
         NIter, M, D, NX = qs.shape[0], Cs.shape[1], Cs.shape[2], Xs.shape[0]
         DO_RANK = (dist is not None) and (cidx is not None)
@@ -89,15 +96,20 @@ class AdvRankLoss(object):
                                      [cidx[i, :].flatten()].float()).item())
             #refrank.append( ((A>B).float().mean()).item() )
         #print('(debug)', 'rank=', statistics.mean(refrank))
-        loss = th.stack(losses).mean()
+        if reduction == 'mean':
+            loss = th.stack(losses).mean()
+        else:
+            loss = th.stack(losses)
         rank = statistics.mean(ranks) if DO_RANK else None
         return (loss, rank)
 
     def RankLossQueryAttackDistance(self, qs: th.Tensor, Cs: th.Tensor, Xs: th.Tensor, *,
-                                    pm: str, dist: th.Tensor = None, cidx: th.Tensor = None):
+                                    pm: str, dist: th.Tensor = None, cidx: th.Tensor = None,
+                                    reduction: str = 'mean'):
         '''
         the distance based objective is worse.
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[1] == Cs.shape[2] == Xs.shape[1])  # D
         N, M, D, NX = qs.shape[0], Cs.shape[1], Cs.shape[2], Xs.shape[0]
         DO_RANK = (dist is not None) and (cidx is not None)
@@ -128,12 +140,16 @@ class AdvRankLoss(object):
                 # non-normalized result
                 rank = ((A > B).float().mean() * NX).item()
                 ranks.append(rank)
-        loss = th.stack(losses).mean()
+        if reduction == 'mean':
+            loss = th.stack(losses).mean()
+        else:
+            loss = th.stack(losses)
         rank = statistics.mean(ranks) if DO_RANK else None
         return (loss, rank)
 
     def RankLossCandidateAttack(
-            self, cs: th.Tensor, Qs: th.Tensor, Xs: th.Tensor, *, pm: str):
+            self, cs: th.Tensor, Qs: th.Tensor, Xs: th.Tensor, *, pm: str,
+            reduction: str = 'mean'):
         '''
         Computes the loss function for pure candidate attack
 
@@ -143,6 +159,7 @@ class AdvRankLoss(object):
             Xs: size(testsize, embedding_dim), embedding of test set.
             pm: either '+' or '-'
         '''
+        assert reduction in ('mean', 'none')
         assert(cs.shape[1] == Qs.shape[2] == Xs.shape[1])
         NIter, W, D, NX = cs.shape[0], Qs.shape[1], Qs.shape[2], Xs.shape[0]
         losses, ranks = [], []
@@ -168,16 +185,21 @@ class AdvRankLoss(object):
             # == compute the rank. Note, the > sign is correct
             rank = ((A > B).float().mean() * NX).item()
             ranks.append(rank)
-        loss = th.stack(losses).mean()
+        if reduction == 'mean':
+            loss = th.stack(losses).mean()
+        else:
+            loss = th.stack(losses)
         rank = statistics.mean(ranks)
         return (loss, rank)
 
     def RankLossCandidateAttackDistance(
-            self, cs: th.Tensor, Qs: th.Tensor, Xs: th.Tensor, *, pm: str):
+            self, cs: th.Tensor, Qs: th.Tensor, Xs: th.Tensor, *, pm: str,
+            reduction: str = 'mean'):
         '''
         Computes the loss function for pure candidate attack
         using the inferior distance objective
         '''
+        assert reduction in ('mean', 'none')
         assert(cs.shape[1] == Qs.shape[2] == Xs.shape[1])
         NIter, W, D, NX = cs.shape[0], Qs.shape[1], Qs.shape[2], Xs.shape[0]
         losses, ranks = [], []
@@ -206,12 +228,16 @@ class AdvRankLoss(object):
                      Q.view(1, W, D).expand(NX, W, D)).norm(2, dim=2)
             rank = ((A > B).float().mean() * NX).item()  # ">" sign is correct
             ranks.append(rank)
-        loss = th.stack(losses).mean()
+        if reduction == 'mean':
+            loss = th.stack(losses).mean()
+        else:
+            loss = th.stack(losses)
         rank = statistics.mean(ranks)
         return (loss, rank)
 
     def RankLossFullOrderM2Attack(
-            self, qs: th.Tensor, ps: th.Tensor, ns: th.Tensor):
+            self, qs: th.Tensor, ps: th.Tensor, ns: th.Tensor,
+            *, reduction='mean'):
         '''
         Computes the loss function for M=2 full-order attack
 
@@ -220,6 +246,7 @@ class AdvRankLoss(object):
             ps: size(batch, embedding_dim), positive samples
             ns: size(batch, embedding_dim), negative samples
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[0] == ps.shape[0] == ns.shape[0])
         assert(qs.shape[1] == ps.shape[1] == ns.shape[1])
         if self.metric == 'C':
@@ -230,11 +257,16 @@ class AdvRankLoss(object):
             dist2 = th.nn.functional.pairwise_distance(qs, ns, p=2)
         else:
             raise ValueError(self.metric)
-        loss = (dist1 - dist2).clamp(min=0.).mean()
+        if reduction == 'mean':
+            loss = (dist1 - dist2).clamp(min=0.).mean()
+        else:
+            loss = (dist1 - dist2).clamp(min=0.)
         acc = (dist1 <= dist2).sum().item() / qs.shape[0]
         return (loss, acc)
 
-    def RankLossFullOrderMXAttack(self, qs: th.Tensor, Cs: th.Tensor):
+    def RankLossFullOrderMXAttack(self, qs: th.Tensor, Cs: th.Tensor,
+            *, reduction: str = 'mean'):
+        assert reduction in ('mean', 'none')
         assert(qs.shape[1] == Cs.shape[2])
         NIter, M, D = qs.shape[0], Cs.shape[1], Cs.shape[2]
         losses, taus = [], []
@@ -251,12 +283,16 @@ class AdvRankLoss(object):
             dist = dist.expand(M, M)
             loss = (dist.t() - dist).triu(diagonal=1).clamp(min=0.).mean()
             losses.append(loss)
-        loss = th.stack(losses).mean()
+        if reduction == 'mean':
+            loss = th.stack(losses).mean()
+        else:
+            loss = th.stack(losses)
         tau = statistics.mean(taus)
         return (loss, tau)
 
     def RankLossGreedyTop1Misrank(self, qs: th.Tensor, emm: th.Tensor,
-                                  emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
+                                  emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor,
+                                  *, reduction:str = 'mean'):
         '''
         <Compound loss> Greedy Top-1 Misranking. (GTM)
         Goal: top1.class neq original class.
@@ -275,6 +311,7 @@ class AdvRankLoss(object):
             7) dist match
         [*] 8) dist unmatch (still best after qc selection bugfix)
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[1] == emm.shape[2] == emu.shape[2])
         #loss_match, _ = self.funcmap['QA-'](qs, emm, Xs)
         #loss_match, _ = self.funcmap['QA-DIST'](qs, emm, Xs, pm='-')
@@ -292,11 +329,15 @@ class AdvRankLoss(object):
             #l_m = -F.pairwise_distance(qs, emm)
             l_u = F.pairwise_distance(qs, emu)
             #l_s = -F.pairwise_distance(qs, ems)
-        loss = (l_u).mean()
+        if reduction == 'mean':
+            loss = (l_u).mean()
+        else:
+            loss = l_u
         return loss
 
     def RankLossGreedyTop1Translocation(self, qs: th.Tensor, emm: th.Tensor,
-                                        emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor):
+                                        emu: th.Tensor, ems: th.Tensor, Xs: th.Tensor,
+                                        *, reduction: str = 'mean'):
         '''
         <Compound loss> Greedy Top-1 Translocation (GTT)
         Goal: top1.identity neq original identity.
@@ -305,8 +346,9 @@ class AdvRankLoss(object):
         observations:
             1) TODO
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[1] == emm.shape[2] == emu.shape[2])
-        loss_match, _ = self.funcmap['QA-'](qs, emm, Xs)
+        loss_match, _ = self.funcmap['QA-'](qs, emm, Xs, reduction=reduction)
         #loss_match, _ = self.funcmap['QA-DIST'](qs, emm, Xs, pm='-')
         #loss_unmatch, _ = self.funcmap['QA+'](qs, emu, Xs)
         #loss_unmatch, _ = self.funcmap['QA-DIST'](qs, emu, Xs, pm='+')
@@ -326,23 +368,30 @@ class AdvRankLoss(object):
         return loss
 
     def RankLossTargetedMismatchAttack(
-            self, qs: th.Tensor, embrand: th.Tensor):
+            self, qs: th.Tensor, embrand: th.Tensor,
+            *, reduction: str = 'mean'):
         '''
         Targeted Mismatch Attack using Global Descriptor (ICCV'19)
         https://arxiv.org/pdf/1908.09163.pdf
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape[0] == embrand.shape[0])
         #assert(self.metric in ('C', 'N'))
-        loss = (1 - F.cosine_similarity(qs, embrand)).mean()
+        if reduction == 'mean':
+            loss = (1 - F.cosine_similarity(qs, embrand)).mean()
+        else:
+            loss = (1 - F.cosine_similarity(qs, embrand))
         return loss
 
     def RankLossLearningToMisrank(self, qs: th.Tensor, embp: th.Tensor,
-                                  embn: th.Tensor):
+                                  embn: th.Tensor,
+                                  *, reduction: str = 'mean'):
         '''
         Learning-To-Mis-Rank
         But the paper did not specify a margin.
         Following Eq.1 of https://arxiv.org/pdf/2004.04199.pdf
         '''
+        assert reduction in ('mean', 'none')
         assert(qs.shape == embp.shape == embn.shape)
         if self.metric == 'C':
             loss = (1 - F.cosine_similarity(qs, embn)) - \
@@ -350,7 +399,7 @@ class AdvRankLoss(object):
         elif self.metric in ('N', 'E'):
             loss = F.pairwise_distance(qs, embn) - \
                 F.pairwise_distance(qs, embp)
-        return loss.mean()
+        return loss.mean() if reduction == 'mean' else loss
 
     def __init__(self, request: str, metric: str):
         '''
