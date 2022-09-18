@@ -120,7 +120,9 @@ class AdvRank(object):
         # prevent overflow in np.exp
         if np.isnan(self.XI) or np.isinf(self.XI):
             self.XI = 1e7
-        #print(self.XI)  # XXX: weird: if we print it it no longer overflow
+        #print(type(self.XI), self.XI)  # XXX
+        # XXX: weird: if we print it it no longer overflow
+        #             this is a numpy (== 1.21.5) issue.
         assert not np.isnan(self.XI)
         assert not np.isinf(self.XI)
 
