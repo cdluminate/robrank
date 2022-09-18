@@ -119,7 +119,10 @@ class AdvRank(object):
             raise NotImplementedError
         # prevent overflow in np.exp
         if np.isnan(self.XI) or np.isinf(self.XI):
-            self.XI = 1e9
+            self.XI = 1e7
+        #print(self.XI)  # XXX: weird: if we print it it no longer overflow
+        assert not np.isnan(self.XI)
+        assert not np.isinf(self.XI)
 
     def forwardmetric(self, images: th.Tensor) -> th.Tensor:
         '''
