@@ -36,6 +36,9 @@ main:
 	fdfind $(FDFIND_FLAGS) -e py -x autopep8 -avi
 	$(MAKE) -C robrank
 
+clean:
+	-find . -name __pycache__ -exec rm -rfv '{}' +
+
 doc:
 	# clone this repo to the parent directory (..) before building doc
 	# https://github.com/jothepro/doxygen-awesome-css.git
