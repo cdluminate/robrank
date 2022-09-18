@@ -117,6 +117,9 @@ class AdvRank(object):
             self.XI = np.min((np.exp(loss_sp * 7e4), 1e9))
         else:
             raise NotImplementedError
+        # prevent overflow in np.exp
+        if np.isnan(self.XI) or np.isinf(self.XI):
+            self.XI = 1e9
 
     def forwardmetric(self, images: th.Tensor) -> th.Tensor:
         '''
@@ -876,7 +879,7 @@ class AdvRank(object):
                 itermsg = {'loss': loss.item()}
             elif (attack_type == 'SPQA') and int(os.getenv('PGD', -1)) > 0:
                 # THIS IS INTENDED FOR DEBUGGING AND DEVELOPING XI SCHEME
-                print('DEBUGGING MODE')
+                raise Exception("This DEBUGGING MODE, please don't toggle PGD=1")
                 embpairs, cidx, embgts, gidx = self.qcsel
                 with th.no_grad():
                     dist = th.cdist(output, candi[0])
