@@ -182,12 +182,12 @@ class Swipe:
     profile_qccurve28 = (
         *[':'.join(x) for x in it.product(
             ('CA',), ('pm=+', 'pm=-'), ('W=1',), (
-                f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+                f'eps={7*i/255.:.5f}:alpha=0.011764:pgditer=32'
                 for i in range(0, 11 + 1))
         )],
         *[':'.join(x) for x in it.product(
             ('SPQA',), ('pm=+', 'pm=-'), ('M=1',), (
-                f'eps={7*i/255.:.5f}:alpha={max(1,np.round(i*7/25))/255.:.5f}:pgditer=32'
+                f'eps={7*i/255.:.5f}:alpha=0.011764:pgditer=32'
                 for i in range(0, 11 + 1))
         )],
     )
