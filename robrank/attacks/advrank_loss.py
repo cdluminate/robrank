@@ -443,6 +443,8 @@ def test_arl_embshift(metric: str):
     reps1 = th.rand(N, D, requires_grad=True)
     reps2 = th.rand(N, D, requires_grad=True)
     loss, _ = AdvRankLoss('ES', metric)(reps1, reps2)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -452,6 +454,8 @@ def test_arl_qa(pm: str, metric: str):
     Cs = th.rand(10, 20, 8)
     Xs = th.rand(30, 8)
     loss, _ = AdvRankLoss(f'QA{pm}', metric)(qs, Cs, Xs)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -461,6 +465,9 @@ def test_arl_qadist(pm: str, metric: str):
     Cs = th.rand(10, 20, 8)
     Xs = th.rand(30, 8)
     loss, _ = AdvRankLoss(f'QA-DIST', metric)(qs, Cs, Xs, pm=pm)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
+    loss.backward()
 
 
 @pytest.mark.parametrize('pm, metric', it.product(('+', '-'), ('C', 'E', 'N')))
@@ -469,6 +476,8 @@ def test_arl_ca(pm: str, metric: str):
     Qs = th.rand(10, 20, 8)
     Xs = th.rand(30, 8)
     loss, _ = AdvRankLoss(f'CA{pm}', metric)(cs, Qs, Xs)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -478,6 +487,9 @@ def test_arl_cadist(pm: str, metric: str):
     Qs = th.rand(10, 20, 8)
     Xs = th.rand(30, 8)
     loss, _ = AdvRankLoss('CA-DIST', metric)(cs, Qs, Xs, pm=pm)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
+    loss.backward()
 
 
 @pytest.mark.parametrize('metric', ('C', 'E', 'N'))
@@ -486,6 +498,8 @@ def test_arl_foa2(metric: str):
     ps = th.rand(10, 8)
     ns = th.rand(10, 8)
     loss, _ = AdvRankLoss('FOA2', metric)(qs, ps, ns)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -494,6 +508,8 @@ def test_arl_foax(metric: str):
     qs = th.rand(10, 8, requires_grad=True)
     Cs = th.rand(10, 20, 8)
     loss, _ = AdvRankLoss('FOAX', metric)(qs, Cs)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -504,6 +520,8 @@ def test_arl_gtm(metric: str):
     emu = th.rand(10, 1, 8)
     Xs = th.rand(30, 8)
     loss = AdvRankLoss('GTM', metric)(qs, emm, emu, emm, Xs)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -514,6 +532,8 @@ def test_arl_gtt(metric: str):
     emu = th.rand(10, 1, 8)
     Xs = th.rand(30, 8)
     loss = AdvRankLoss('GTT', metric)(qs, emm, emu, emm, Xs)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -522,6 +542,8 @@ def test_arl_tma(metric: str):
     qs = th.rand(10, 8, requires_grad=True)
     embrand = th.rand(10, 8)
     loss = AdvRankLoss('TMA', metric)(qs, embrand)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
 
 
@@ -531,4 +553,6 @@ def test_arl_ltm(metric: str):
     emm = th.rand(10, 8)
     emu = th.rand(10, 8)
     loss = AdvRankLoss('LTM', metric)(qs, emm, emu)
+    assert not th.isnan(loss)
+    assert not th.isinf(loss)
     loss.backward()
