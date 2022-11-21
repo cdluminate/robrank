@@ -104,7 +104,7 @@ def assemble_same_class(tensors: List[th.Tensor], labels: List[th.Tensor], *,
 
     input:
       tensors: list of tensors
-        [z_a_1, z_b_1, z_a_2, z_b_2]
+        [z_a_1, z_b_1, z_a_2, z_b_2, ...]
       labels:
         labels corresponding to the above tensors
     output:
@@ -130,6 +130,7 @@ def assemble_same_class(tensors: List[th.Tensor], labels: List[th.Tensor], *,
     return asm
 
 
+@th.no_grad()
 def test_assemble_same_class():
     '''
     note, use the following command to enable stdout printing
@@ -161,4 +162,24 @@ def barlow_twins(z_a: th.Tensor, l_a: th.Tensor,
     z_b: another batch of arbitrary class
     note, class(z_a) should be aligned with class(z_b)
     '''
-    pass
+    # re-assemble vectors in the same class
+    asm = assemble_same_class([z_a, z_b], [l_a, l_b])
+    losses = []
+    for (za, zb) in asm:
+        loss = _barlow_twins(za, zb)
+        losses.append(loss)
+    #print(losses)
+    return sum(losses)
+
+
+#th.no_grad()  # XXX: don't use no_grad -- here we test backward pass as well
+def test_barlow_twins():
+    xa = th.rand(100, 10)
+    xa.requires_grad = True
+    xb = th.rand(100, 10)
+    xb.requires_grad = True
+    la = th.randint(0, 10, (100,))
+    lb = la.clone()
+    loss = barlow_twins(xa, la, xb, lb)
+    print(loss)
+    loss.backward()
