@@ -80,6 +80,7 @@ from . import rres18e
 from . import rres18p
 from . import rres18px
 from . import rres18pf
+from . import rres18pbt
 from . import rres18t
 from . import rres18r
 from . import rres18amd

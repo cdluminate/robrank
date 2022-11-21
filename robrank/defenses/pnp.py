@@ -29,6 +29,7 @@ import rich
 from ..losses.miner import miner
 from ..attacks import AdvRank
 from .. import configs
+from . import barlow
 c = rich.get_console()
 
 
@@ -459,7 +460,8 @@ class PositiveNegativePerplexing(object):
 
 
 def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
-                      pgditer: int = None):
+                      pgditer: int = None,
+                      use_barlow_twins: bool = False):
     '''
     Adversarial training with Positive/Negative Perplexing (PNP) Attack.
     Function signature follows pytorch_lightning.LightningModule.training_step,
@@ -560,6 +562,13 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
+    # XXX: use barlow twins?
+    if use_barlow_twins:
+        loss_bt = barlow.barlow_twins(aemb, labels[anc],
+                pnemb[:len(pnemb) // 2], labels[pos])
+        model.log('Train/loss_bt', loss_bt.item())
+        #print('loss_bt', loss_bt.item())
+        loss = loss + 1e-3 * loss_bt
     return loss
 
 

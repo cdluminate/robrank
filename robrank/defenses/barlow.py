@@ -169,7 +169,10 @@ def barlow_twins(z_a: th.Tensor, l_a: th.Tensor,
         loss = _barlow_twins(za, zb)
         losses.append(loss)
     #print(losses)
-    return sum(losses)
+    if losses:
+        return sum(losses)
+    else:
+        return th.tensor(0.0).to(z_a.device)
 
 
 #th.no_grad()  # XXX: don't use no_grad -- here we test backward pass as well
