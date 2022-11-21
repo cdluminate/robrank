@@ -36,9 +36,26 @@ def _off_diagonal(matrix: th.Tensor):
     return res
 
 
+@th.no_grad()
+def test__off_diagonal():
+    x = th.rand(10, 10)
+    ref = _off_diagonal(x).sum()
+    x.diagonal().zero_()
+    res = x.sum()
+    assert abs(res - ref) < 1e-5, 'implementation bug'
+
+
 def _diagonal(matrix: th.Tensor):
     assert matrix.dim() == 2
     return matrix.diagonal(dim1=-1, dim2=-2)
+
+
+@th.no_grad()
+def test__diagonal():
+    x = th.rand(10, 10)
+    ref = x.trace()
+    res = _diagonal(x).sum()
+    assert abs(res - ref) < 1e-5, 'implementation bug'
 
 
 def _barlow_twins(z_a: th.Tensor, z_b: th.Tensor, *, lam: float = 5e-3):
@@ -66,3 +83,11 @@ def _barlow_twins(z_a: th.Tensor, z_b: th.Tensor, *, lam: float = 5e-3):
     redundancy_term = (_off_diagonal(c_diff) * lam).sum()
     loss = invariance_term + redundancy_term
     return loss
+
+
+@th.no_grad()
+def test__barlow_twins():
+    a = th.rand(10, 10)
+    b = th.rand(10, 10)
+    bt = _barlow_twins(a, b)
+    assert not th.isnan(bt), 'implementation bug'
