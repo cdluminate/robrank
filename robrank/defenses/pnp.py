@@ -568,7 +568,7 @@ def pnp_training_step(model: th.nn.Module, batch, batch_idx, *,
                 pnemb[:len(pnemb) // 2], labels[pos])
         model.log('Train/loss_bt', loss_bt.item())
         #print('loss_bt', loss_bt.item())
-        loss = loss + 1e-3 * loss_bt
+        loss = loss + 1e-5 * loss_bt
     return loss
 
 
