@@ -785,7 +785,7 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
         loss_bt = barlow.barlow_twins(pnemb[:len(pnemb)//3], labels[anc],
                   pnemb[len(pnemb)//3:2*len(pnemb)//3], labels[pos])
         model.log('Train/loss_bt', loss_bt.item())
-        print('loss_bt', loss_bt.item())
+        #print('loss_bt', loss_bt.item())
         loss = loss + 1e-5 * loss_bt
     # return
     return loss
