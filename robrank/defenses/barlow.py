@@ -167,7 +167,8 @@ def barlow_twins(z_a: th.Tensor, l_a: th.Tensor,
     losses = []
     for (za, zb) in asm:
         loss = _barlow_twins(za, zb)
-        losses.append(loss)
+        if not th.isnan(loss):
+            losses.append(loss)
     #print(losses)
     if losses:
         return sum(losses)
