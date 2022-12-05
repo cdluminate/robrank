@@ -32,6 +32,7 @@ from ..losses.miner import miner
 from ..attacks import AdvRank
 from .. import configs
 from .pnp import PositiveNegativePerplexing
+from . import barlow
 c = rich.get_console()
 
 
@@ -684,7 +685,8 @@ def amdsemi_training_step(model: th.nn.Module, batch, batch_idx, *, aap=False):
 def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
                      srch: str, desth: str, hm: str = 'KL',
                      gradual: bool = False, ics: bool = False,
-                     fix_anchor: bool = False):
+                     fix_anchor: bool = False,
+                     use_barlow_twins: bool = False):
     '''
     Hardness manipulation.
 
@@ -778,5 +780,12 @@ def hm_training_step(model: th.nn.Module, batch, batch_idx, *,
     # logging
     model.log('Train/loss_orig', loss_orig.item())
     model.log('Train/loss_adv', loss.item())
+    # XXX: use barlow twins
+    if use_barlow_twins:
+        loss_bt = barlow.barlow_twins(pnemb[:len(pnemb)//3], labels[anc],
+                  pnemb[len(pnemb)//3:2*len(pnemb)//3], labels[pos])
+        model.log('Train/loss_bt', loss_bt.item())
+        print('loss_bt', loss_bt.item())
+        loss = loss + 1e-3 * loss_bt
     # return
     return loss

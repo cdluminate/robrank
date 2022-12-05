@@ -295,6 +295,7 @@ class MetricBase(thl.LightningModule):
                         in the following code in the .py file. Or just
                         generate a default set of configurations with
                         robrank/models/autogen/autogen.py''')
+            use_barlow_twins = getattr(self, 'use_barlow_twins', False)
             return defenses.hm_training_step(self, batch, batch_idx,
                                              srch=self.hm_spec['srch'],
                                              desth=self.hm_spec['desth'],
@@ -302,6 +303,7 @@ class MetricBase(thl.LightningModule):
                                              gradual=self.hm_spec['gradual'],
                                              ics=self.hm_spec['ics'],
                                              fix_anchor=self.hm_spec['fix_anchor'],
+                                             use_barlow_twins=use_barlow_twins,
                                              )
         elif getattr(self, 'is_advtrain_hmix', False):
             if np.random.random() > 0.5:
