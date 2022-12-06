@@ -238,6 +238,8 @@ class MetricBase(thl.LightningModule):
             return defenses.ses_training_step(self, batch, batch_idx)
         elif getattr(self, 'is_advtrain_pnp', False):
             use_barlow_twins = getattr(self, 'use_barlow_twins', False)
+            if use_barlow_twins:
+                c.print('[white on red]>_< Barlow-Twins is enabled.')
             return defenses.pnp_training_step(self, batch, batch_idx,
                             use_barlow_twins=use_barlow_twins)
         elif getattr(self, 'is_advtrain_pnp_cosine_only', False):
@@ -296,6 +298,8 @@ class MetricBase(thl.LightningModule):
                         generate a default set of configurations with
                         robrank/models/autogen/autogen.py''')
             use_barlow_twins = getattr(self, 'use_barlow_twins', False)
+            if use_barlow_twins:
+                c.print('[white on red]>_< Barlow-Twins is enabled.')
             return defenses.hm_training_step(self, batch, batch_idx,
                                              srch=self.hm_spec['srch'],
                                              desth=self.hm_spec['desth'],
