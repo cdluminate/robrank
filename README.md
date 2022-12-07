@@ -96,6 +96,13 @@ or defensive; (2) perform adversarial attack against the trained models;
 
 You can always specify the GPUs to use by `export CUDA_VISIBLE_DEVICES=<GPUs>`.
 
+**Environment Setup:** Use the command `$ pip install -r requirements.txt` to
+install all required python dependencies. Then you can use `pytest -v -x`
+to run the testsuite in order to make sure the code runs correctly. In case
+of pytest failure, you are welcome to
+[open a new issue](https://github.com/cdluminate/robrank/issues) for this
+code repository.
+
 ### 1.1. Training
 
 Training deep metric learning model or classification model, either normally or
