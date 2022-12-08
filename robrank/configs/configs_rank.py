@@ -59,6 +59,9 @@ class __ranking:
         'pcontN',
         'pncaN',
         'psnrN', 'psnrE', 'psnrC',
+        # barlow twins extension
+        'ptripletBTN', 'pmtripletBTN', 'pstripletBTN',
+        'pdtripletBTN', 'phtripletBTN',
     )
 
 
