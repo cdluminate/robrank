@@ -76,10 +76,11 @@ def fn_ptriplet(repres: th.Tensor, labels: th.Tensor,
     loss = fn_ptriplet_kernel(repres[anc, :], repres[pos, :], repres[neg, :],
                               metric=metric, margin=margin)
     if use_barlow:
-        loss_bt = barlow.barlow_twins(repres[anc, :], labels[anc],
-                                      repres[pos, :], labels[pos])
-        print('loss_bt', loss_bt.item())
-        loss = loss + 1e-4 * (loss_bt if not th.isnan(loss_bt) else 0.0)
+        # labels.shape == (56, 2)
+        loss_bt = barlow.barlow_twins(repres[anc, :], labels.view(-1)[anc],
+                                      repres[pos, :], labels.view(-1)[pos])
+        #print('loss_bt', loss_bt.item())
+        loss = loss + 1e-5 * (loss_bt if not th.isnan(loss_bt) else 0.0)
     return loss
 
 
