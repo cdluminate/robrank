@@ -26,6 +26,7 @@ import functools as ft
 import itertools as it
 import pytest
 import torch.nn.functional as F
+from ..defenses import barlow
 import random
 import rich
 c = rich.get_console()
@@ -51,7 +52,8 @@ def fn_ptriplet_kernel(repA: th.Tensor, repP: th.Tensor, repN: th.Tensor,
 
 
 def fn_ptriplet(repres: th.Tensor, labels: th.Tensor,
-                *, metric: str, minermethod: str, p_switch: float = -1.0, xa: bool = False):
+                *, metric: str, minermethod: str, p_switch: float = -1.0,
+                xa: bool = False, use_barlow: bool = False):
     '''
     Variant of triplet loss that accetps [cls=1,cls=1,cls=2,cls=2] batch.
     This corresponds to the SPC-2 setting in the ICML20 paper.
@@ -68,10 +70,16 @@ def fn_ptriplet(repres: th.Tensor, labels: th.Tensor,
     anc, pos, neg = miner(repres, labels, method=minermethod,
                           metric=metric, margin=margin, p_switch=p_switch)
     if xa:
+        assert not use_barlow, 'not implemented'
         return fn_ptriplet_kernel(repres[anc, :].detach(), repres[pos, :],
                                   repres[neg, :], metric=metric, margin=margin)
     loss = fn_ptriplet_kernel(repres[anc, :], repres[pos, :], repres[neg, :],
                               metric=metric, margin=margin)
+    if use_barlow:
+        loss_bt = barlow.barlow_twins(repres[anc, :], labels[anc],
+                                      repres[pos, :], labels[pos])
+        print('loss_bt', loss_bt.item())
+        loss = loss + 1e-4 * (loss_bt if not th.isnan(loss_bt) else 0.0)
     return loss
 
 
@@ -79,17 +87,22 @@ class ptriplet(th.nn.Module):
     _datasetspec = 'SPC-2'
     _minermethod = 'spc2-random'
     _xa = False
+    _use_barlow = False
 
     def __call__(self, *args, **kwargs):
         if hasattr(self, '_minermethod'):
             return ft.partial(fn_ptriplet,
                               metric=self._metric,
                               minermethod=self._minermethod,
-                              xa=self._xa)(*args, **kwargs)
+                              xa=self._xa,
+                              use_barlow=self._use_barlow,
+                              )(*args, **kwargs)
         else:
             return ft.partial(fn_ptriplet,
                               metric=self._metric,
-                              xa=self._xa)(*args, **kwargs)
+                              xa=self._xa,
+                              use_barlow=self._use_barlow,
+                              )(*args, **kwargs)
 
     def determine_metric(self):
         return self._metric
@@ -98,6 +111,7 @@ class ptriplet(th.nn.Module):
         return self._datasetspec
 
     def raw(self, repA, repP, repN, *, override_margin: float = None):
+        assert not self._use_barlow, 'not implemeneted'
         if self._metric in ('C', 'N'):
             margin = configs.triplet.margin_cosine
         elif self._metric in ('E',):
@@ -241,6 +255,10 @@ class ptripletN(ptriplet):
     _metric = 'N'
 
 
+class ptripletBTN(ptripletN):
+    _use_barlow = True
+
+
 class ptripxaN(ptriplet):
     _metric = 'N'
     _xa = True
@@ -262,6 +280,10 @@ class pmtripletN(pmtriplet):
     _metric = 'N'
 
 
+class pmtripletBTN(pmtripletN):
+    _use_barlow = True
+
+
 class phtriplet(ptriplet):
     _minermethod = 'spc2-hard'
 
@@ -276,6 +298,10 @@ class phtripletE(phtriplet):
 
 class phtripletN(phtriplet):
     _metric = 'N'
+
+
+class phtripletBTN(phtripletN):
+    _use_barlow = 'N'
 
 
 class pstriplet(ptriplet):
@@ -294,6 +320,10 @@ class pstripletN(pstriplet):
     _metric = 'N'
 
 
+class pstripletBTN(pstripletN):
+    _use_barlow = True
+
+
 class pdtriplet(ptriplet):
     _minermethod = 'spc2-distance'
 
@@ -308,6 +338,10 @@ class pdtripletE(pdtriplet):
 
 class pdtripletN(pdtriplet):
     _metric = 'N'
+
+
+class pdtripletBTN(pdtripletN):
+    _use_barlow = True
 
 
 class pDtripletN(pdtripletN):
@@ -332,5 +366,14 @@ def test_fn_ptriplet(metric: str, minermethod: str):
                                   phtripletN, phtripletE, phtripletC))
 def test_ptriplet(func: object):
     output, labels = th.rand(10, 32, requires_grad=True), th.randint(3, (10,))
+    loss = func()(output, labels)
+    loss.backward()
+
+
+@pytest.mark.parametrize('func', (ptripletBTN, pmtripletBTN, pstripletBTN,
+                                  pdtripletBTN, phtripletBTN))
+def test_ptriplet_w_barlow(func: object):
+    output = th.rand(10, 32, requires_grad=True)
+    labels = th.randint(3, (1, 5)).repeat(2,1).flatten()  # SPC-2 batch
     loss = func()(output, labels)
     loss.backward()

@@ -56,7 +56,7 @@ download:
 	python3 tools/download.py
 
 pytest:
-	pytest -v -x
+	pytest -v -x  # -s # XXX: flag -s enables stdout
 
 runtest:
 	$(MAKE) -C robrank runtest
