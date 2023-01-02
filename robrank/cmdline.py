@@ -315,6 +315,9 @@ class AdvRank:
                         help='override batchsize')
         ag.add_argument('--nes', action='store_true',
                         help='toggle NES mode to replace PGD')
+        ag.add_argument('-T', '--transfer_surrogate', type=str, default=None,
+                        help='toggle transfer attack and specify surrogate' +
+                        'grammar: <model_name>:<checkpoint_path>')
         ag.add_argument('-X', '--dumpaxd', type=str, default='',
                         help='path to dump the adversarial examples')
         ag = ag.parse_args(argv)
@@ -332,9 +335,19 @@ class AdvRank:
         if ag.batchsize > 0:
             model.config.valbatchsize = ag.batchsize
 
+        if ag.transfer_surrogate is not None:
+            su_name, su_path = ag.transfer_surrogate.split(':')
+            assert hasattr(rr.models, su_name)
+            assert os.path.exists(su_path)
+            c.print('[white on magenta]>_< Reading surrogate model from checkpoint ...')
+            surrogate = getattr(rr.models, su_name).Model.load_from_checkpoint(
+                checkpoint_path=su_path, dataset=ag.dataset, loss=ag.loss)
+            surrogate = surrogate.to(ag.device)
+
         c.print('[white on magenta]>_< Initializing Attack Launcher ...')
         atker = rr.attacks.AdvRankLauncher(
-            ag.attack, ag.device, ag.dumpaxd, ag.verbose, nes_mode=ag.nes)
+            ag.attack, ag.device, ag.dumpaxd, ag.verbose, nes_mode=ag.nes,
+            transfer_surrogate=None if ag.transfer_surrogate is None else surrogate)
         print(atker)
 
         c.print('[white on magenta]>_< Getting Validation Loader ...')

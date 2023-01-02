@@ -42,13 +42,15 @@ class AdvRankLauncher(object):
                  dumpaxd: str = '',
                  verbose: bool = False,
                  *,
-                 nes_mode: bool = False):
+                 nes_mode: bool = False,
+                 transfer_surrogate: object = None):
         self.device = device
         self.verbose = verbose
         self.kw = {}
         self.dumpaxd: str = dumpaxd
         self.dumpax_counter: int = 0
         self.nes_mode : bool = nes_mode
+        self.transfer_surrogate : bool = transfer_surrogate
         # parse the attack
         self.kw['device'] = device
         self.kw['verbose'] = verbose
@@ -93,6 +95,8 @@ class AdvRankLauncher(object):
         advrank = AdvRank(model, metric=model.metric, **self.kw)
         if self.nes_mode:
             advrank.set_mode('NES')
+        if self.transfer_surrogate is not None:
+            advrank.set_mode('Transfer', surrogate=self.transfer_surrogate)
 
         # let's start!
         Sumorig, Sumadv = [], []

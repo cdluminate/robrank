@@ -81,11 +81,15 @@ class AdvRank(object):
     def __str__(self):
         return f'>_< AdvRank[{self.attack_type}/{self.__mode}] metric={self.metric}'
 
-    def set_mode(self, mode: str):
-        assert mode in ('PGD', 'NES')
+    def set_mode(self, mode: str, *, surrogate: object = None):
+        assert mode in ('PGD', 'NES', 'Transfer')
+        if mode == 'Transfer' and surrogate is None:
+            raise ValueError('please pass in a surrogate model')
         if self.verbose:
-            print(f'>_< setting AdvRank class into {mode} mode.')
+            print(f'>_< setting AdvRank instance into {mode} mode.')
         self.__mode = mode
+        if surrogate is not None:
+            self.__transfer_surrogate = surrogate
 
     def __call__(self, images, labels, candi) -> tuple:
         '''
@@ -126,6 +130,7 @@ class AdvRank(object):
         assert not np.isnan(self.XI)
         assert not np.isinf(self.XI)
 
+
     def forwardmetric(self, images: th.Tensor) -> th.Tensor:
         '''
         metric-aware forwarding
@@ -135,6 +140,15 @@ class AdvRank(object):
             return F.normalize(output)
         elif self.metric in ('E', ):
             return output
+
+
+    def __surrogate_forwardmetric(self, images: th.Tensor) -> th.Tensor:
+        output = self.__transfer_surrogate.forward(images)
+        if self.metric in ('C', 'N'):
+            return F.normalize(output)
+        elif self.metric in ('E', ):
+            return output
+
 
     def outputdist(self, images: th.Tensor, labels: th.Tensor,
                    candi: tuple) -> tuple:
@@ -772,6 +786,198 @@ class AdvRank(object):
         return (xr, r, summary_orig__, summary_adv)
 
 
+    def __attack_Transfer(self,
+            images: th.Tensor,
+            labels: th.Tensor,
+            candi: tuple):
+        '''
+        This is the transferability variant of the default self.attack method.
+        This method is called at the dispatch part of self.attack.
+        Before calling this, you should use self.set_mode to specify this
+        mode and register a surrogate model.
+
+        The code in this function is copied from self.__attack_NES with minor
+        modifications.
+        '''
+        # prepare the current batch of data
+        assert(isinstance(images, th.Tensor))
+        images = images.clone().detach().to(self.device)
+        images_orig = images.clone().detach()
+        images.requires_grad = True
+        labels = labels.to(self.device).view(-1)
+        attack_type = self.attack_type
+
+        # evaluate original samples, and set self.qcsel
+        with th.no_grad():
+            output_orig__, dist_orig__, summary_orig__ = self.eval_advrank(
+                images, labels, candi, resample=True)
+        if self.verbose:
+            tqdm.write(colored('* OriEval', 'green', None, ['bold']), end=' ')
+            tqdm.write(rjson(json.dumps(summary_orig__)), end='')
+
+        # -> start PGD (surrogate) optimization
+        # truning the model into tranining mode triggers obscure problem:
+        # incorrect validation performance due to BatchNorm. We do automatic
+        # differentiation in evaluation mode instead.
+        self.model.eval()
+        self.__transfer_surrogate.eval()
+        for iteration in range(self.pgditer):
+            # >> prepare optimizer
+            optim = th.optim.SGD(self.__transfer_surrogate.parameters(), lr=0.)
+            optimx = th.optim.SGD([images], lr=1.)
+            optim.zero_grad()
+            optimx.zero_grad()
+            output = self.__surrogate_forwardmetric(images)
+
+            # >> calculate differentiable loss
+            if (attack_type == 'ES'):
+                if iteration == 0:
+                    # avoid zero gradient
+                    loss, _ = AdvRankLoss('ES', self.metric)(
+                        output, output_orig__ + 1e-7)
+                else:
+                    loss, _ = AdvRankLoss('ES', self.metric)(
+                        output, output_orig__)
+                #print(loss.shape, loss)
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'FOA') and (self.M == 2):
+                # >> reverse the inequalities (ordinary: d1 < d2, adversary: d1 > d2)
+                embpairs, _ = self.qcsel
+                loss, _ = AdvRankLoss('FOA2', self.metric)(
+                    output, embpairs[:, 1, :], embpairs[:, 0, :])
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'SPFOA') and (self.M == 2):
+                embpairs, _, embgts, _ = self.qcsel
+                loss, _ = AdvRankLoss('FOA2', self.metric)(
+                    output, embpairs[:, 1, :], embpairs[:, 0, :])
+                loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
+                    output, embgts, candi[0])
+                loss = loss + self. XI * loss_sp
+                itermsg = {'loss': loss.item(), 'SP.QA+': loss_sp.item()}
+            elif (attack_type == 'FOA') and (self.M > 2):
+                # >> enforce the random inequality set (di < dj for all i,j where i<j)
+                embpairs, _ = self.qcsel
+                loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs)
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'SPFOA') and (self.M > 2):
+                embpairs, _, embgts, _ = self.qcsel
+                loss, _ = AdvRankLoss('FOAX', self.metric)(output, embpairs)
+                loss_sp, _ = AdvRankLoss(f'QA{self.pm}', self.metric)(
+                    output, embgts, candi[0])
+                self.update_xi(loss_sp)
+                loss = loss + self.XI * loss_sp
+                itermsg = {'loss': loss.item(), 'SP.QA+': loss_sp.item()}
+            elif (attack_type == 'CA'):
+                embpairs, _ = self.qcsel
+                loss, _ = AdvRankLoss(f'CA{self.pm}', self.metric)(
+                        output, embpairs, candi[0])
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'QA'):
+                embpairs, _ = self.qcsel
+                # == enforce the target set of inequalities, while preserving the semantic
+                loss, _ = AdvRankLoss('QA', self.metric)(
+                        output, embpairs, candi[0], pm=self.pm)
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'SPQA'):
+                embpairs, _, embgts, _ = self.qcsel
+                loss_qa, _ = AdvRankLoss('QA', self.metric)(
+                    output, embpairs, candi[0], pm=self.pm)
+                loss_sp, _ = AdvRankLoss('QA', self.metric)(
+                    output, embgts, candi[0], pm='+')
+                self.update_xi(loss_sp)
+                loss = loss_qa + self.XI * loss_sp
+                itermsg = {'loss': loss.item(), 'loss_qa': loss_qa.item(),
+                           'loss_sp': loss_sp.item()}
+            elif (attack_type == 'GTM'):
+                ((emm, _), (emu, _), (ems, _)) = self.qcsel
+                loss = AdvRankLoss('GTM', self.metric)(
+                    output, emm, emu, ems, candi[0])
+                itermsg = {'loss': loss.item()}
+            elif (attack_type == 'GTT'):
+                ((emm, _), (emu, _), (ems, _)) = self.qcsel
+                loss = AdvRankLoss('GTT', self.metric)(
+                    output, emm, emu, ems, candi[0])
+                itermsg = {'loss': loss.item()}
+            elif attack_type == 'TMA':
+                (embrand, _) = self.qcsel
+                loss = AdvRankLoss('TMA', self.metric)(output, embrand)
+                itermsg = {'loss': loss.item()}
+            elif attack_type == 'LTM':
+                mask_same = (candi[1].view(1, -1) == labels.view(-1, 1))
+                mask_same.scatter(1, self.loc_self.view(-1, 1), False)
+                mask_diff = (candi[1].view(1, -1) != labels.view(-1, 1))
+                if self.metric in ('E', 'N'):
+                    dist = th.cdist(output, candi[0])
+                elif self.metric == 'C':
+                    dist = 1 - output @ candi[0].t()
+                maxdan = th.stack([dist[i, mask_diff[i]].max()
+                                   for i in range(dist.size(0))])
+                mindap = th.stack([dist[i, mask_same[i]].min()
+                                   for i in range(dist.size(0))])
+                loss = (maxdan - mindap).relu().sum()
+                itermsg = {'loss': loss.item()}
+            else:
+                raise Exception("Unknown attack")
+            raise NotImplementedError
+
+            if self.verbose and int(os.getenv('PGD', -1)) > 0:
+                tqdm.write(colored('(NES)>\t' + json.dumps(itermsg), 'yellow'))
+            # >> calculate gradient
+            loss.backward()
+
+            # >> update
+            if self.pgditer > 1:
+                images.grad.data.copy_(self.alpha * th.sign(images.grad))
+            elif self.pgditer == 1:
+                images.grad.data.copy_(self.eps * th.sign(images.grad))
+            optimx.step()
+            # projection to L-infty bound
+            images = th.min(images, images_orig + self.eps)
+            images = th.max(images, images_orig - self.eps)
+            images = th.clamp(images, min=0., max=1.)
+            images = images.clone().detach()
+            images.requires_grad = True
+
+        # finalize
+        optim.zero_grad()
+        optimx.zero_grad()
+        images.requires_grad = False
+
+        # evaluate adversarial samples
+        xr = images.clone().detach()
+        r = (images - images_orig).detach()
+        if self.verbose:
+            tqdm.write(colored(' '.join(['r>',
+                                         'Min', '%.3f' % r.min().item(),
+                                         'Max', '%.3f' % r.max().item(),
+                                         'Mean', '%.3f' % r.mean().item(),
+                                         'L0', '%.3f' % r.norm(0).item(),
+                                         'L1', '%.3f' % r.norm(1).item(),
+                                         'L2', '%.3f' % r.norm(2).item()]),
+                               'blue'))
+        self.model.eval()
+        with th.no_grad():
+            output_adv, dist_adv, summary_adv = self.eval_advrank(
+                xr, labels, candi, resample=False)
+
+            # also calculate embedding shift
+            if self.metric == 'C':
+                distance = 1 - th.mm(output_adv, output_orig__.t())
+                # i.e. trace = diag.sum
+                embshift = distance.trace() / output.shape[0]
+                summary_adv['embshift'] = embshift.item()
+            elif self.metric in ('E', 'N'):
+                distance = th.nn.functional.pairwise_distance(
+                    output_adv, output_orig__, p=2)
+                embshift = distance.sum() / output.shape[0]
+                summary_adv['embshift'] = embshift.item()
+
+        if self.verbose:
+            tqdm.write(colored('* AdvEval', 'red', None, ['bold']), end=' ')
+            tqdm.write(rjson(json.dumps(summary_adv)), end='')
+        return (xr, r, summary_orig__, summary_adv)
+
+
     def attack(self, images: th.Tensor, labels: th.Tensor,
                candi: tuple) -> tuple:
         '''
@@ -789,6 +995,9 @@ class AdvRank(object):
             with th.no_grad():
                 results = self.__attack_NES(images, labels, candi)
             return results
+        elif self.__mode == 'Transfer':
+            return self.__attack_Transfer(images, labels, candi)
+        # below is the PGD mode
         # prepare the current batch of data
         assert(isinstance(images, th.Tensor))
         images = images.clone().detach().to(self.device)
