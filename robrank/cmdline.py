@@ -237,8 +237,8 @@ class Swipe:
                 argv.append('-v')
             if ag.nes:
                 argv.append('--nes')
-			if ag.transfer:
-				argv.extend(['--transfer', ag.transfer])
+            if ag.transfer:
+                argv.extend(['--transfer', ag.transfer])
             print('Calling AdvRank with', argv)
             instance = AdvRank(argv)
             instances[atk] = instance.stats
