@@ -918,7 +918,6 @@ class AdvRank(object):
                 itermsg = {'loss': loss.item()}
             else:
                 raise Exception("Unknown attack")
-            raise NotImplementedError
 
             if self.verbose and int(os.getenv('PGD', -1)) > 0:
                 tqdm.write(colored('(NES)>\t' + json.dumps(itermsg), 'yellow'))
