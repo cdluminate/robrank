@@ -42,7 +42,10 @@ class C2F2(th.nn.Module):
         x = __pool(x, kernel_size=2, stride=2)  # -1, 32, 14, 14
         x = __relu(self.conv2(x))  # -1, 64, 14, 14
         x = __pool(x, kernel_size=2, stride=2)  # -1, 64, 7, 7
-        x = x.view(-1, 64 * 7 * 7)
+        if hasattr(th, 'compile'):
+            x = th.flatten(x, 1)
+        else:
+            x = x.view(-1, 64 * 7 * 7)
         x = __relu(self.fc1(x))  # -1, 1024
         x = th.nn.functional.dropout(x, p=0.4, training=self.training)
         x = self.fc2(x)
@@ -63,3 +66,7 @@ class Model(ClassifierTemplate, thl.LightningModule):
         self.config = getattr(configs, self.BACKBONE)(dataset, loss)
         # backbone
         self.backbone = C2F2()
+        if hasattr(th, 'compile'):
+            import torch._dynamo
+            torch._dynamo.config.verbose=True
+            self.backbone = th.compile(self.backbone, dynamic=True)
