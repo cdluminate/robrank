@@ -47,20 +47,6 @@ comparison in these tables.
 
 | Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
 | ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
-| MNIST | C2F2 | Triplet | N/A | 99.0 | 99.4 | 98.7 | 84.7 | 13.3 |
-| MNIST | C2F2 | Triplet | EST | 98.3 | 99.0 | 91.3 | 80.7 | 40.5 |
-| MNIST | C2F2 | Triplet | ACT | 98.6 | 99.1 | 98.1 | 86.4 | 78.6 |
-| MNIST | C2F2 | Triplet | HM  | 99.0 | 99.4 | 99.0 | 82.6 | 77.9 |
-
-| Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
-| ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
-| Fashion | C2F2 | Triplet | N/A | 87.6 | 92.7 | 84.9 | 77.8 | 4.5  |
-| Fashion | C2F2 | Triplet | EST | 78.6 | 86.8 | 64.6 | 64.9 | 36.4 |
-| Fashion | C2F2 | Triplet | ACT | 79.4 | 87.9 | 71.6 | 69.6 | 67.7 |
-| Fashion | C2F2 | Triplet | HM  | 88.0 | 92.9 | 85.6 | 77.2 | 83.9 |
-
-| Dataset | Model | Loss | Defense | R@1 | R@2 | mAP | NMI | ERS |
-| ---     | ---   | ---  | ---     | --- | --- | --- | --- | --- |
 | CUB | RN18 | Triplet | N/A | 53.9 | 66.4 | 26.1 | 59.5 | 3.8  |
 | CUB | RN18 | Triplet | EST | 8.5  | 13.0 | 2.6  | 25.2 | 5.3  |
 | CUB | RN18 | Triplet | ACT | 27.5 | 38.2 | 12.2 | 43.0 | 33.9 |
@@ -85,7 +71,10 @@ Source of these defense methods:
 1. N/A: Just standard classification network.
 2. EST: Adversarial Ranking Attack and Defense (ECCV2020)
 3. ACT: Adversarial Attack and Defense in Deep Ranking (arXiv:2106.03614)
-4. HM (or, concreately, ghmetsmi): Enhancing Adversarial Robustness for Deep Metric Learning (CVPR2022)
+4. HM (or, concreately, `ghmetsmi`): Enhancing Adversarial Robustness for Deep Metric Learning (CVPR2022)
+
+Datasets like MNIST and Fashion-MNIST are excluded here because they are
+simple toy datasets mostly for sanity testing, not for practical use.
 
 ## 1. Common Usage of CLI
 
