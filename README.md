@@ -212,6 +212,11 @@ let it print result of an old version, export `ITH=<version>` (e.g. `ITH=1`)
 and run again. If tested with multiple profiles, export `JTYPE` to select
 exact profile. Read the comments in `tools/pjswipe.py` for details.
 
+### 1.4 Scripts for Complete Pipeline
+
+Please browse the [`escript`](escript/) directory for the scripts containing
+the command pipelines to reproduce the experiments.
+
 ## 2. Project Information
 
 ### 2.1. Directory Hierarchy
