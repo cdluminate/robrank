@@ -394,30 +394,20 @@ to be identical. For the rest datasets, time consumption order is CUB < CARS < S
 | ---                                 | --- | ---       | ---            | ---            |
 | `fashion:rc2f2:ptripletN`           | N/A | Titan Xp  | 2 (DDP)        | 2 min          |
 | `fashion:rc2f2p:ptripletN`          | 32  | Titan Xp  | 2 (DDP)        | 10 min         |
-| `fashion:rc2f2ghmetsmi:ptripletN`   | 32  | RTX A5000 | 4 (DDP)        | 8 min          |
 | `cub:rres18:ptripletN`              | N/A | Titan Xp  | 2 (DDP)        | 30 min         |
-| `cub:rres18:ptripletN`              | N/A | RTX A5000 | 2 (DDP)        | 13 min         |
-| `cub:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 10 min         |
-| `cub:rres18:ptripletN`              | N/A | RTX A6000 | 2 (DDP)        | 14 min         |
 | `cub:rres18p:ptripletN`             | 8   | Titan Xp  | 2 (DDP)        | 130 min        |
-| `cub:rres18p:ptripletN`             | 8   | RTX A5000 | 2 (DDP)        | 70 min         |
-| `cub:rres18p:ptripletN`             | 8   | RTX A6000 | 2 (DDP)        | 60 min         |
 | `cub:rres18p:ptripletN`             | 32  | Titan Xp  | 2 (DDP)        | 420 min        |
-| `cub:rres18p:ptripletN`             | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
-| `cub:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        | 180 min        |
-| `cub:rres18ghmetsm:ptripletN`       | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
 | `cub:rres18ghmetsmi:ptripletN`      | 32  | Titan Xp  | 2 (DDP)        | 470 min        |
-| `cub:rres18ghmetsmi:ptripletN`      | 32  | RTX A5000 | 4 (DDP)        | 120 min        |
-| `cars:rres18:ptripletN`             | N/A | RTX A5000 | 4 (DDP)        | 15 min         |
 | `cars:rres18p:ptripletN`            | 8   | Titan Xp  | 2 (DDP)        | 180 min        |
-| `cars:rres18p:ptripletN`            | 8   | RTX A6000 | 2 (DDP)        | 80 min         |
-| `cars:rres18p:ptripletN`            | 32  | RTX A5000 | 4 (DDP)        | 150 min        |
 | `cars:rres18ghmetsmi:ptripletN`     | 32  | Titan Xp  | 2 (DDP)        | 530 min        |
 | `sop:rres18:ptripletN`              | N/A | RTX A5000 | 4 (DDP)        | 60 min         |
 | `sop:rres18:ptripletN`              | N/A | RTX A6000 | 2 (DDP)        | 120 min        |
 | `sop:rres18p:ptripletN`             | 8   | RTX A6000 | 2 (DDP)        | 560 min        |
 | `sop:rres18p:ptripletN`             | 32  | RTX A6000 | 2 (DDP)        | 1830 min       |
 
+* Q: Pre-trained models and logs?
+
+See the [model card](doc/model-card.md) for download links.
 
 ### Copyright and License
 
