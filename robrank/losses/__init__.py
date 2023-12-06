@@ -25,3 +25,4 @@ from .multisim import *
 from .snr import *
 # `extra` includes functions borrowed from pytorch-metric-learning
 from .extra import *
+from .infonce import *
